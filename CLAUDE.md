@@ -28,7 +28,13 @@
 
 ## 주요 기능
 
-- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(post/file/home/plan/notification)** 로 구성
+- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/file/home/plan/notification)** 로 구성
+- **인증(auth/member)**: JWT(HS256, jjwt) + HttpOnly·SameSite=Lax 쿠키, 세션 없음(STATELESS).
+  `JwtAuthenticationFilter` 가 쿠키를 검증해 `MemberPrincipal` 을 SecurityContext 에 채운다.
+  CSRF 는 `CookieCsrfTokenRepository` (JS fetch 는 헤더 프래그먼트의 data-csrf-* 사용)
+- **접근 정책**: 게시판 읽기 공개, 플래너·알림·모든 쓰기는 인증 필요. 미인증은 `/login?redirect=...`
+- **소유권**: 서비스 계층 `findOwned()` 로 본인 글/플랜만 수정·삭제 (위반 시 AccessDeniedException → 403)
+- **목록 조회**: 게시글 목록은 `PostSummary` DTO 프로젝션 (open-in-view=false + lazy 컬렉션 문제 회피, DB 페이징 유지)
 - **트랜잭션**: `@Transactional(readOnly = true)` 기본 적용, 쓰기 메서드만 `@Transactional` 추가
 - **파일 저장**: `FileStore`만 교체하면 S3 등 다른 저장소로 전환 가능
 - **AttachedFile.setPost()**: package-private — `Post.addFile()`을 통해서만 연관관계 설정
