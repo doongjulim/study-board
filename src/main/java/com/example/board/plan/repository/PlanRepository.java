@@ -21,13 +21,14 @@ public interface PlanRepository extends JpaRepository<Plan, Long> {
     @EntityGraph(attributePaths = "author")
     Optional<Plan> findById(Long id);
 
-    /** 하루 일정 (종일 일정이 먼저, 이후 시작 시간순) */
+    /** 회원의 하루 일정 (종일 일정이 먼저, 이후 시작 시간순) */
     @EntityGraph(attributePaths = "author")
-    List<Plan> findByPlanDateOrderByStartTimeAscIdAsc(LocalDate planDate);
+    List<Plan> findByAuthor_IdAndPlanDateOrderByStartTimeAscIdAsc(Long authorId, LocalDate planDate);
 
-    /** 기간 일정 - 주간/월간 뷰에서 사용 */
+    /** 회원의 기간 일정 - 주간/월간 뷰에서 사용 */
     @EntityGraph(attributePaths = "author")
-    List<Plan> findByPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(LocalDate start, LocalDate end);
+    List<Plan> findByAuthor_IdAndPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
+            Long authorId, LocalDate start, LocalDate end);
 
     /** 공유된 플랜 목록 */
     @EntityGraph(attributePaths = "author")

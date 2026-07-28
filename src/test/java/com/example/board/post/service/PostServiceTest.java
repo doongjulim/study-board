@@ -6,6 +6,7 @@ import com.example.board.member.repository.MemberRepository;
 import com.example.board.post.domain.AttachedFile;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
+import com.example.board.post.dto.PostSummary;
 import com.example.board.post.repository.AttachedFileRepository;
 import com.example.board.post.repository.PostRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -18,6 +19,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,7 +41,9 @@ class PostServiceTest {
     @InjectMocks PostService postService;
 
     private Member author() {
-        return new Member("tester1", "encoded-password", "작성자");
+        Member member = new Member("tester1", "encoded-password", "작성자");
+        ReflectionTestUtils.setField(member, "id", 1L);
+        return member;
     }
 
     private Post post() {
@@ -51,73 +56,73 @@ class PostServiceTest {
     @DisplayName("keyword 가 null 이면 전체 조회한다")
     void findAll_noKeyword() {
         Pageable pageable = PageRequest.of(0, 10);
-        Page<Post> page = new PageImpl<>(List.of());
-        given(postRepository.findAll(pageable)).willReturn(page);
+        Page<PostSummary> page = new PageImpl<>(List.of());
+        given(postRepository.findSummaries(pageable)).willReturn(page);
 
-        Page<Post> result = postService.findAll(null, pageable);
+        Page<PostSummary> result = postService.findAll(null, pageable);
 
         assertThat(result).isSameAs(page);
-        then(postRepository).should(never()).findByTitleContainingIgnoreCase(any(), any());
+        then(postRepository).should(never()).findSummariesByTitle(any(), any());
     }
 
     @Test
     @DisplayName("keyword 가 공백이면 전체 조회한다")
     void findAll_blankKeyword() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findAll(pageable)).willReturn(Page.empty());
+        given(postRepository.findSummaries(pageable)).willReturn(Page.empty());
 
         postService.findAll("   ", pageable);
 
-        then(postRepository).should().findAll(pageable);
-        then(postRepository).should(never()).findByTitleContainingIgnoreCase(any(), any());
+        then(postRepository).should().findSummaries(pageable);
+        then(postRepository).should(never()).findSummariesByTitle(any(), any());
     }
 
     @Test
     @DisplayName("keyword 가 있으면 제목 검색을 한다")
     void findAll_withKeyword() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findByTitleContainingIgnoreCase("spring", pageable))
+        given(postRepository.findSummariesByTitle("spring", pageable))
                 .willReturn(Page.empty());
 
         postService.findAll("spring", pageable);
 
-        then(postRepository).should().findByTitleContainingIgnoreCase("spring", pageable);
+        then(postRepository).should().findSummariesByTitle("spring", pageable);
     }
 
     @Test
     @DisplayName("TITLE_CONTENT 검색 타입이면 제목+내용 검색을 한다")
     void findAll_titleContent() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.searchByTitleOrContent("spring", pageable))
+        given(postRepository.findSummariesByTitleOrContent("spring", pageable))
                 .willReturn(Page.empty());
 
         postService.findAll("spring", com.example.board.post.dto.SearchType.TITLE_CONTENT, pageable);
 
-        then(postRepository).should().searchByTitleOrContent("spring", pageable);
+        then(postRepository).should().findSummariesByTitleOrContent("spring", pageable);
     }
 
     @Test
     @DisplayName("WRITER 검색 타입이면 작성자 닉네임 검색을 한다")
     void findAll_writer() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findByAuthor_NicknameContainingIgnoreCase("tester", pageable))
+        given(postRepository.findSummariesByAuthorNickname("tester", pageable))
                 .willReturn(Page.empty());
 
         postService.findAll("tester", com.example.board.post.dto.SearchType.WRITER, pageable);
 
-        then(postRepository).should().findByAuthor_NicknameContainingIgnoreCase("tester", pageable);
+        then(postRepository).should().findSummariesByAuthorNickname("tester", pageable);
     }
 
     @Test
     @DisplayName("searchType 이 null 이면 제목 검색으로 동작한다")
     void findAll_nullSearchType() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findByTitleContainingIgnoreCase("spring", pageable))
+        given(postRepository.findSummariesByTitle("spring", pageable))
                 .willReturn(Page.empty());
 
         postService.findAll("spring", null, pageable);
 
-        then(postRepository).should().findByTitleContainingIgnoreCase("spring", pageable);
+        then(postRepository).should().findSummariesByTitle("spring", pageable);
     }
 
     // ── findById ──────────────────────────────────────────────
@@ -183,7 +188,7 @@ class PostServiceTest {
         given(fileStore.storeFiles(any())).willReturn(List.of());
 
         PostForm form = postForm("새제목", "새내용");
-        postService.update(1L, form);
+        postService.update(1L, form, 1L);
 
         assertThat(post.getTitle()).isEqualTo("새제목");
         assertThat(post.getContent()).isEqualTo("새내용");
@@ -199,10 +204,20 @@ class PostServiceTest {
         post.addFile(file);
         given(postRepository.findById(1L)).willReturn(Optional.of(post));
 
-        postService.delete(1L);
+        postService.delete(1L, 1L);
 
         then(fileStore).should().deleteFile("uuid.txt");
         then(postRepository).should().delete(post);
+    }
+
+    @Test
+    @DisplayName("다른 회원의 게시글을 삭제하려 하면 AccessDeniedException 이 발생한다")
+    void delete_notOwner() {
+        given(postRepository.findById(1L)).willReturn(Optional.of(post()));
+
+        assertThatThrownBy(() -> postService.delete(1L, 999L))
+                .isInstanceOf(AccessDeniedException.class);
+        then(postRepository).should(never()).delete(any(Post.class));
     }
 
     // ── deleteFile ────────────────────────────────────────────
@@ -219,7 +234,7 @@ class PostServiceTest {
 
         given(postRepository.findById(1L)).willReturn(Optional.of(post));
 
-        postService.deleteFile(1L, 10L);
+        postService.deleteFile(1L, 10L, 1L);
 
         then(fileStore).should().deleteFile("uuid.txt");
         assertThat(post.getFiles()).doesNotContain(file);
@@ -231,7 +246,7 @@ class PostServiceTest {
         Post post = post();
         given(postRepository.findById(1L)).willReturn(Optional.of(post));
 
-        assertThatThrownBy(() -> postService.deleteFile(1L, 999L))
+        assertThatThrownBy(() -> postService.deleteFile(1L, 999L, 1L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("999");
     }

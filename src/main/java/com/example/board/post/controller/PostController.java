@@ -3,6 +3,7 @@ package com.example.board.post.controller;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
+import com.example.board.post.dto.PostSummary;
 import com.example.board.post.dto.SearchType;
 import com.example.board.post.service.PostService;
 import jakarta.validation.Valid;
@@ -44,7 +45,7 @@ public class PostController {
         };
         Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), order);
 
-        Page<Post> posts = postService.findAll(keyword, searchType, sorted);
+        Page<PostSummary> posts = postService.findAll(keyword, searchType, sorted);
 
         // 페이지 번호 블록 계산 (1~5, 6~10 …)
         int blockStart = (posts.getNumber() / PAGE_BLOCK_SIZE) * PAGE_BLOCK_SIZE;
@@ -90,8 +91,10 @@ public class PostController {
 
     /** 수정 폼 */
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
-        Post post = postService.findById(id);
+    public String editForm(@PathVariable Long id,
+                           @AuthenticationPrincipal MemberPrincipal principal,
+                           Model model) {
+        Post post = postService.findOwned(id, principal.id());
         PostForm form = new PostForm();
         form.setTitle(post.getTitle());
         form.setContent(post.getContent());
@@ -105,29 +108,33 @@ public class PostController {
     public String edit(@PathVariable Long id,
                        @Valid @ModelAttribute PostForm postForm,
                        BindingResult bindingResult,
+                       @AuthenticationPrincipal MemberPrincipal principal,
                        Model model,
                        RedirectAttributes redirectAttributes) throws IOException {
         if (bindingResult.hasErrors()) {
             model.addAttribute("post", postService.findById(id));
             return "posts/edit";
         }
-        postService.update(id, postForm);
+        postService.update(id, postForm, principal.id());
         redirectAttributes.addFlashAttribute("message", "게시글이 수정되었습니다.");
         return "redirect:/posts/" + id;
     }
 
     /** 삭제 */
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        postService.delete(id);
+    public String delete(@PathVariable Long id,
+                         @AuthenticationPrincipal MemberPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
+        postService.delete(id, principal.id());
         redirectAttributes.addFlashAttribute("message", "게시글이 삭제되었습니다.");
         return "redirect:/posts";
     }
 
     /** 첨부파일 개별 삭제 (수정 화면에서 사용) */
     @PostMapping("/{postId}/files/{fileId}/delete")
-    public String deleteFile(@PathVariable Long postId, @PathVariable Long fileId) {
-        postService.deleteFile(postId, fileId);
+    public String deleteFile(@PathVariable Long postId, @PathVariable Long fileId,
+                             @AuthenticationPrincipal MemberPrincipal principal) {
+        postService.deleteFile(postId, fileId, principal.id());
         return "redirect:/posts/" + postId + "/edit";
     }
 }

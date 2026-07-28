@@ -22,6 +22,8 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.security.access.AccessDeniedException;
+
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.*;
@@ -36,7 +38,9 @@ class PlanServiceTest {
     @InjectMocks PlanService planService;
 
     private Member author() {
-        return new Member("tester1", "encoded-password", "동주");
+        Member member = new Member("tester1", "encoded-password", "동주");
+        ReflectionTestUtils.setField(member, "id", 1L);
+        return member;
     }
 
     private PlanForm form() {
@@ -85,7 +89,7 @@ class PlanServiceTest {
 
         PlanForm form = form();
         form.setTitle("알고리즘 공부");
-        planService.update(1L, form);
+        planService.update(1L, form, 1L);
 
         assertThat(plan.getTitle()).isEqualTo("알고리즘 공부");
     }
@@ -96,9 +100,28 @@ class PlanServiceTest {
         Plan plan = plan();
         given(planRepository.findById(1L)).willReturn(Optional.of(plan));
 
-        planService.delete(1L);
+        planService.delete(1L, 1L);
 
         then(planRepository).should().delete(plan);
+    }
+
+    @Test
+    @DisplayName("다른 회원의 플랜을 수정하려 하면 AccessDeniedException 이 발생한다")
+    void update_notOwner() {
+        given(planRepository.findById(1L)).willReturn(Optional.of(plan()));
+
+        assertThatThrownBy(() -> planService.update(1L, form(), 999L))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("다른 회원의 플랜을 삭제하려 하면 AccessDeniedException 이 발생한다")
+    void delete_notOwner() {
+        given(planRepository.findById(1L)).willReturn(Optional.of(plan()));
+
+        assertThatThrownBy(() -> planService.delete(1L, 999L))
+                .isInstanceOf(AccessDeniedException.class);
+        then(planRepository).should(never()).delete(any(Plan.class));
     }
 
     @Test
@@ -117,27 +140,27 @@ class PlanServiceTest {
     @DisplayName("findWeek - 어떤 요일을 넘겨도 월~일 범위로 조회한다")
     void findWeek() {
         LocalDate wednesday = LocalDate.of(2026, 7, 8);
-        given(planRepository.findByPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 12)))
+        given(planRepository.findByAuthor_IdAndPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
+                1L, LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 12)))
                 .willReturn(List.of());
 
-        planService.findWeek(wednesday);
+        planService.findWeek(wednesday, 1L);
 
-        then(planRepository).should().findByPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
-                LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 12));
+        then(planRepository).should().findByAuthor_IdAndPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
+                1L, LocalDate.of(2026, 7, 6), LocalDate.of(2026, 7, 12));
     }
 
     @Test
     @DisplayName("findMonth - 해당 월의 1일부터 말일까지 조회한다")
     void findMonth() {
-        given(planRepository.findByPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
-                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31)))
+        given(planRepository.findByAuthor_IdAndPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
+                1L, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31)))
                 .willReturn(List.of());
 
-        planService.findMonth(YearMonth.of(2026, 7));
+        planService.findMonth(YearMonth.of(2026, 7), 1L);
 
-        then(planRepository).should().findByPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
-                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
+        then(planRepository).should().findByAuthor_IdAndPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
+                1L, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31));
     }
 
     // ── 상태 변경 ─────────────────────────────────────────────
@@ -148,7 +171,7 @@ class PlanServiceTest {
         Plan plan = plan();
         given(planRepository.findById(1L)).willReturn(Optional.of(plan));
 
-        planService.toggleCompleted(1L);
+        planService.toggleCompleted(1L, 1L);
 
         assertThat(plan.isCompleted()).isTrue();
     }
@@ -159,7 +182,7 @@ class PlanServiceTest {
         Plan plan = plan();
         given(planRepository.findById(1L)).willReturn(Optional.of(plan));
 
-        planService.toggleShared(1L);
+        planService.toggleShared(1L, 1L);
 
         assertThat(plan.isShared()).isTrue();
         ArgumentCaptor<PlanSharedEvent> captor = ArgumentCaptor.forClass(PlanSharedEvent.class);
@@ -175,7 +198,7 @@ class PlanServiceTest {
         plan.toggleShared(); // 이미 공유 상태
         given(planRepository.findById(1L)).willReturn(Optional.of(plan));
 
-        planService.toggleShared(1L);
+        planService.toggleShared(1L, 1L);
 
         assertThat(plan.isShared()).isFalse();
         then(eventPublisher).shouldHaveNoInteractions();

@@ -42,10 +42,11 @@ public class PlanController {
     /** 일간 뷰 */
     @GetMapping("/daily")
     public String daily(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                        @AuthenticationPrincipal MemberPrincipal principal,
                         Model model) {
         LocalDate target = (date != null) ? date : LocalDate.now();
         model.addAttribute("date", target);
-        model.addAttribute("plans", planService.findDaily(target));
+        model.addAttribute("plans", planService.findDaily(target, principal.id()));
         model.addAttribute("prevDate", target.minusDays(1));
         model.addAttribute("nextDate", target.plusDays(1));
         model.addAttribute("today", LocalDate.now());
@@ -55,6 +56,7 @@ public class PlanController {
     /** 주간 뷰 */
     @GetMapping("/weekly")
     public String weekly(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                         @AuthenticationPrincipal MemberPrincipal principal,
                          Model model) {
         LocalDate target = (date != null) ? date : LocalDate.now();
         LocalDate weekStart = target.with(DayOfWeek.MONDAY);
@@ -66,7 +68,7 @@ public class PlanController {
             weekDays.add(day);
             plansByDate.put(day, new ArrayList<>());
         }
-        planService.findWeek(target).forEach(plan -> plansByDate.get(plan.getPlanDate()).add(plan));
+        planService.findWeek(target, principal.id()).forEach(plan -> plansByDate.get(plan.getPlanDate()).add(plan));
 
         model.addAttribute("date", target);
         model.addAttribute("weekStart", weekStart);
@@ -80,10 +82,12 @@ public class PlanController {
 
     /** 월간 캘린더 뷰 */
     @GetMapping("/monthly")
-    public String monthly(@RequestParam(required = false) String month, Model model) {
+    public String monthly(@RequestParam(required = false) String month,
+                          @AuthenticationPrincipal MemberPrincipal principal,
+                          Model model) {
         YearMonth target = (month != null && !month.isBlank()) ? YearMonth.parse(month) : YearMonth.now();
 
-        Map<LocalDate, List<Plan>> plansByDate = planService.findMonth(target).stream()
+        Map<LocalDate, List<Plan>> plansByDate = planService.findMonth(target, principal.id()).stream()
                 .collect(Collectors.groupingBy(Plan::getPlanDate));
 
         model.addAttribute("month", target);
@@ -134,8 +138,10 @@ public class PlanController {
 
     /** 수정 폼 */
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
-        Plan plan = planService.findById(id);
+    public String editForm(@PathVariable Long id,
+                           @AuthenticationPrincipal MemberPrincipal principal,
+                           Model model) {
+        Plan plan = planService.findOwned(id, principal.id());
         PlanForm form = new PlanForm();
         form.setTitle(plan.getTitle());
         form.setContent(plan.getContent());
@@ -153,6 +159,7 @@ public class PlanController {
     public String edit(@PathVariable Long id,
                        @Valid @ModelAttribute PlanForm planForm,
                        BindingResult bindingResult,
+                       @AuthenticationPrincipal MemberPrincipal principal,
                        Model model,
                        RedirectAttributes redirectAttributes) {
         validateTimeRange(planForm, bindingResult);
@@ -161,31 +168,36 @@ public class PlanController {
             model.addAttribute("planId", id);
             return "plans/form";
         }
-        planService.update(id, planForm);
+        planService.update(id, planForm, principal.id());
         redirectAttributes.addFlashAttribute("message", "일정이 수정되었습니다.");
         return "redirect:/plans/daily?date=" + planForm.getPlanDate();
     }
 
     /** 삭제 */
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        LocalDate date = planService.findById(id).getPlanDate();
-        planService.delete(id);
+    public String delete(@PathVariable Long id,
+                         @AuthenticationPrincipal MemberPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
+        LocalDate date = planService.findOwned(id, principal.id()).getPlanDate();
+        planService.delete(id, principal.id());
         redirectAttributes.addFlashAttribute("message", "일정이 삭제되었습니다.");
         return "redirect:/plans/daily?date=" + date;
     }
 
     /** 완료 상태 전환 */
     @PostMapping("/{id}/toggle")
-    public String toggleCompleted(@PathVariable Long id) {
-        Plan plan = planService.toggleCompleted(id);
+    public String toggleCompleted(@PathVariable Long id,
+                                  @AuthenticationPrincipal MemberPrincipal principal) {
+        Plan plan = planService.toggleCompleted(id, principal.id());
         return "redirect:/plans/daily?date=" + plan.getPlanDate();
     }
 
     /** 공유 상태 전환 */
     @PostMapping("/{id}/share")
-    public String toggleShared(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        Plan plan = planService.toggleShared(id);
+    public String toggleShared(@PathVariable Long id,
+                               @AuthenticationPrincipal MemberPrincipal principal,
+                               RedirectAttributes redirectAttributes) {
+        Plan plan = planService.toggleShared(id, principal.id());
         redirectAttributes.addFlashAttribute("message",
                 plan.isShared() ? "플랜을 공유했습니다." : "플랜 공유를 해제했습니다.");
         return "redirect:/plans/daily?date=" + plan.getPlanDate();

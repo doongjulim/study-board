@@ -1,5 +1,6 @@
 package com.example.board.notification.controller;
 
+import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
@@ -10,12 +11,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
 import static org.mockito.BDDMockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -27,12 +32,19 @@ class NotificationControllerTest {
     @Autowired MockMvc mockMvc;
     @MockBean NotificationService notificationService;
 
+    /** 알림은 로그인한 회원만 사용할 수 있다 */
+    private static RequestPostProcessor memberAuth() {
+        return authentication(new UsernamePasswordAuthenticationToken(
+                new MemberPrincipal(1L, "tester1", "테스터"), null,
+                List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+    }
+
     @Test
     @DisplayName("GET /notifications/subscribe - SSE 스트림으로 응답한다")
     void subscribe() throws Exception {
         given(notificationService.subscribe()).willReturn(new SseEmitter());
 
-        mockMvc.perform(get("/notifications/subscribe"))
+        mockMvc.perform(get("/notifications/subscribe").with(memberAuth()))
                 .andExpect(status().isOk());
     }
 
@@ -42,7 +54,7 @@ class NotificationControllerTest {
         given(notificationService.countUnread()).willReturn(3L);
         given(notificationService.findRecent()).willReturn(List.of());
 
-        mockMvc.perform(get("/notifications"))
+        mockMvc.perform(get("/notifications").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.unreadCount").value(3))
                 .andExpect(jsonPath("$.notifications").isArray());
@@ -51,7 +63,7 @@ class NotificationControllerTest {
     @Test
     @DisplayName("POST /notifications/read-all - 모두 읽음 처리한다")
     void readAll() throws Exception {
-        mockMvc.perform(post("/notifications/read-all").with(csrf()))
+        mockMvc.perform(post("/notifications/read-all").with(csrf()).with(memberAuth()))
                 .andExpect(status().isOk());
 
         then(notificationService).should().markAllAsRead();

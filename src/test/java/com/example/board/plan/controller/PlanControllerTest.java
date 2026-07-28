@@ -35,6 +35,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class PlanControllerTest {
 
+    private static final long MEMBER_ID = 1L;
+
     @Autowired MockMvc mockMvc;
     @MockBean PlanService planService;
 
@@ -47,8 +49,18 @@ class PlanControllerTest {
     /** 로그인한 회원(id=1)으로 요청을 보낸다 */
     private static RequestPostProcessor memberAuth() {
         return authentication(new UsernamePasswordAuthenticationToken(
-                new MemberPrincipal(1L, "tester1", "테스터"), null,
+                new MemberPrincipal(MEMBER_ID, "tester1", "테스터"), null,
                 List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+    }
+
+    // ── 접근 제어 ─────────────────────────────────────────────
+
+    @Test
+    @DisplayName("비로그인으로 플래너에 접근하면 로그인 페이지로 리다이렉트한다")
+    void daily_requiresLogin() throws Exception {
+        mockMvc.perform(get("/plans/daily"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/login*"));
     }
 
     // ── 조회 화면 ─────────────────────────────────────────────
@@ -56,28 +68,30 @@ class PlanControllerTest {
     @Test
     @DisplayName("GET /plans - 일간 뷰로 리다이렉트한다")
     void home() throws Exception {
-        mockMvc.perform(get("/plans"))
+        mockMvc.perform(get("/plans").with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily"));
     }
 
     @Test
-    @DisplayName("GET /plans/daily - 일간 뷰가 200 을 반환한다")
+    @DisplayName("GET /plans/daily - 로그인 회원의 일간 뷰가 200 을 반환한다")
     void daily() throws Exception {
-        given(planService.findDaily(any(LocalDate.class))).willReturn(List.of());
+        given(planService.findDaily(any(LocalDate.class), eq(MEMBER_ID))).willReturn(List.of());
 
-        mockMvc.perform(get("/plans/daily"))
+        mockMvc.perform(get("/plans/daily").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("plans/daily"))
                 .andExpect(model().attributeExists("date", "plans", "prevDate", "nextDate"));
+
+        then(planService).should().findDaily(any(LocalDate.class), eq(MEMBER_ID));
     }
 
     @Test
     @DisplayName("GET /plans/daily?date=2026-07-09 - 지정한 날짜가 모델에 담긴다")
     void daily_withDate() throws Exception {
-        given(planService.findDaily(LocalDate.of(2026, 7, 9))).willReturn(List.of());
+        given(planService.findDaily(LocalDate.of(2026, 7, 9), MEMBER_ID)).willReturn(List.of());
 
-        mockMvc.perform(get("/plans/daily").param("date", "2026-07-09"))
+        mockMvc.perform(get("/plans/daily").param("date", "2026-07-09").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("date", LocalDate.of(2026, 7, 9)));
     }
@@ -85,9 +99,9 @@ class PlanControllerTest {
     @Test
     @DisplayName("GET /plans/weekly - 주간 뷰는 항상 7일을 보여준다")
     void weekly() throws Exception {
-        given(planService.findWeek(any(LocalDate.class))).willReturn(List.of());
+        given(planService.findWeek(any(LocalDate.class), eq(MEMBER_ID))).willReturn(List.of());
 
-        mockMvc.perform(get("/plans/weekly").param("date", "2026-07-08"))
+        mockMvc.perform(get("/plans/weekly").param("date", "2026-07-08").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("plans/weekly"))
                 .andExpect(model().attribute("weekDays", hasSize(7)))
@@ -97,9 +111,9 @@ class PlanControllerTest {
     @Test
     @DisplayName("GET /plans/monthly - 월간 캘린더가 200 을 반환한다")
     void monthly() throws Exception {
-        given(planService.findMonth(any())).willReturn(List.of());
+        given(planService.findMonth(any(), eq(MEMBER_ID))).willReturn(List.of());
 
-        mockMvc.perform(get("/plans/monthly").param("month", "2026-07"))
+        mockMvc.perform(get("/plans/monthly").param("month", "2026-07").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("plans/monthly"))
                 .andExpect(model().attributeExists("weeks", "plansByDate"));
@@ -110,7 +124,7 @@ class PlanControllerTest {
     void shared() throws Exception {
         given(planService.findShared(any())).willReturn(new PageImpl<>(List.of()));
 
-        mockMvc.perform(get("/plans/shared"))
+        mockMvc.perform(get("/plans/shared").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("plans/shared"));
     }
@@ -120,7 +134,7 @@ class PlanControllerTest {
     @Test
     @DisplayName("GET /plans/new - 작성 폼이 200 을 반환한다")
     void createForm() throws Exception {
-        mockMvc.perform(get("/plans/new"))
+        mockMvc.perform(get("/plans/new").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("plans/form"))
                 .andExpect(model().attributeExists("planForm"));
@@ -129,7 +143,7 @@ class PlanControllerTest {
     @Test
     @DisplayName("POST /plans - 유효한 입력이면 저장 후 해당 날짜 일간 뷰로 이동한다")
     void create() throws Exception {
-        given(planService.create(any(), eq(1L))).willReturn(1L);
+        given(planService.create(any(), eq(MEMBER_ID))).willReturn(1L);
 
         mockMvc.perform(post("/plans").with(csrf()).with(memberAuth())
                         .param("title", "자료구조 공부")
@@ -138,7 +152,7 @@ class PlanControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
 
-        then(planService).should().create(any(), eq(1L));
+        then(planService).should().create(any(), eq(MEMBER_ID));
     }
 
     @Test
@@ -170,13 +184,13 @@ class PlanControllerTest {
     @Test
     @DisplayName("POST /plans/{id}/delete - 삭제 후 해당 날짜 일간 뷰로 이동한다")
     void deletePlan() throws Exception {
-        given(planService.findById(1L)).willReturn(plan());
+        given(planService.findOwned(1L, MEMBER_ID)).willReturn(plan());
 
-        mockMvc.perform(post("/plans/1/delete").with(csrf()))
+        mockMvc.perform(post("/plans/1/delete").with(csrf()).with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
 
-        then(planService).should().delete(1L);
+        then(planService).should().delete(1L, MEMBER_ID);
     }
 
     // ── 상태 변경 ─────────────────────────────────────────────
@@ -184,9 +198,9 @@ class PlanControllerTest {
     @Test
     @DisplayName("POST /plans/{id}/toggle - 완료 전환 후 해당 날짜로 이동한다")
     void toggle() throws Exception {
-        given(planService.toggleCompleted(1L)).willReturn(plan());
+        given(planService.toggleCompleted(1L, MEMBER_ID)).willReturn(plan());
 
-        mockMvc.perform(post("/plans/1/toggle").with(csrf()))
+        mockMvc.perform(post("/plans/1/toggle").with(csrf()).with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
     }
@@ -194,9 +208,9 @@ class PlanControllerTest {
     @Test
     @DisplayName("POST /plans/{id}/share - 공유 전환 후 해당 날짜로 이동한다")
     void share() throws Exception {
-        given(planService.toggleShared(1L)).willReturn(plan());
+        given(planService.toggleShared(1L, MEMBER_ID)).willReturn(plan());
 
-        mockMvc.perform(post("/plans/1/share").with(csrf()))
+        mockMvc.perform(post("/plans/1/share").with(csrf()).with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
     }

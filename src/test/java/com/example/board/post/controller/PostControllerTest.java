@@ -31,6 +31,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
@@ -128,12 +129,20 @@ class PostControllerTest {
     // ── GET /posts/new ────────────────────────────────────────
 
     @Test
-    @DisplayName("GET /posts/new - 작성 폼이 200 을 반환한다")
+    @DisplayName("GET /posts/new - 로그인 상태면 작성 폼이 200 을 반환한다")
     void createForm() throws Exception {
-        mockMvc.perform(get("/posts/new"))
+        mockMvc.perform(get("/posts/new").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/form"))
                 .andExpect(model().attributeExists("postForm"));
+    }
+
+    @Test
+    @DisplayName("비로그인으로 글쓰기 폼에 접근하면 로그인 페이지로 리다이렉트한다")
+    void createForm_requiresLogin() throws Exception {
+        mockMvc.perform(get("/posts/new"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/login*"));
     }
 
     // ── POST /posts ───────────────────────────────────────────
@@ -166,9 +175,9 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /posts/{id}/edit - 수정 폼이 200 을 반환한다")
     void editForm() throws Exception {
-        given(postService.findById(1L)).willReturn(postFixture());
+        given(postService.findOwned(1L, 1L)).willReturn(postFixture());
 
-        mockMvc.perform(get("/posts/1/edit"))
+        mockMvc.perform(get("/posts/1/edit").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/edit"))
                 .andExpect(model().attributeExists("postForm", "post"));
@@ -179,13 +188,13 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{id}/edit - 유효한 폼이면 상세 페이지로 리다이렉트한다")
     void edit_success() throws Exception {
-        mockMvc.perform(multipart("/posts/1/edit").with(csrf())
+        mockMvc.perform(multipart("/posts/1/edit").with(csrf()).with(memberAuth())
                         .param("title", "새제목")
                         .param("content", "새내용"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts/1"));
 
-        then(postService).should().update(eq(1L), any(PostForm.class));
+        then(postService).should().update(eq(1L), any(PostForm.class), eq(1L));
     }
 
     @Test
@@ -193,7 +202,7 @@ class PostControllerTest {
     void edit_validationFail() throws Exception {
         given(postService.findById(1L)).willReturn(postFixture());
 
-        mockMvc.perform(multipart("/posts/1/edit").with(csrf())
+        mockMvc.perform(multipart("/posts/1/edit").with(csrf()).with(memberAuth())
                         .param("title", "새제목")
                         .param("content", ""))
                 .andExpect(status().isOk())
@@ -206,11 +215,11 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{id}/delete - 삭제 후 목록으로 리다이렉트한다")
     void delete() throws Exception {
-        mockMvc.perform(post("/posts/1/delete").with(csrf()))
+        mockMvc.perform(post("/posts/1/delete").with(csrf()).with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts"));
 
-        then(postService).should().delete(1L);
+        then(postService).should().delete(1L, 1L);
     }
 
     // ── POST /posts/{postId}/files/{fileId}/delete ────────────
@@ -218,10 +227,10 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{postId}/files/{fileId}/delete - 파일 삭제 후 수정 폼으로 리다이렉트한다")
     void deleteFile() throws Exception {
-        mockMvc.perform(post("/posts/1/files/5/delete").with(csrf()))
+        mockMvc.perform(post("/posts/1/files/5/delete").with(csrf()).with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts/1/edit"));
 
-        then(postService).should().deleteFile(1L, 5L);
+        then(postService).should().deleteFile(1L, 5L, 1L);
     }
 }

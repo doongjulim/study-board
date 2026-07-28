@@ -52,10 +52,10 @@
             <td class="num" th:text="${post.id}">1</td>
             <td>
                 <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">제목</a>
-                <span class="clip" th:if="${!post.files.isEmpty()}"
-                      th:text="'📎 ' + ${post.files.size()}"></span>
+                <span class="clip" th:if="${post.fileCount > 0}"
+                      th:text="'📎 ' + ${post.fileCount}"></span>
             </td>
-            <td th:text="${post.author.nickname}">작성자</td>
+            <td th:text="${post.authorNickname}">작성자</td>
             <td class="date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">날짜</td>
         </tr>
         </tbody>

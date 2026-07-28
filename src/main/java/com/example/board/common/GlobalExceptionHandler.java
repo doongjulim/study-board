@@ -3,6 +3,7 @@ package com.example.board.common;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.ui.Model;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -20,6 +21,15 @@ public class GlobalExceptionHandler {
         log.warn("잘못된 요청: {}", e.getMessage());
         model.addAttribute("message", e.getMessage());
         return "error/404";
+    }
+
+    /** 남의 글/플랜 수정·삭제 시도 → 403 페이지 */
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public String handleAccessDenied(AccessDeniedException e, Model model) {
+        log.warn("접근 거부: {}", e.getMessage());
+        model.addAttribute("message", e.getMessage());
+        return "error/403";
     }
 
     /** 업로드 용량 초과 → 목록으로 리다이렉트 + 안내 메시지 */

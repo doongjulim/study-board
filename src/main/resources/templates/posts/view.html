@@ -40,11 +40,14 @@
 
     <div class="actions">
         <a th:href="@{/posts}" class="btn">목록</a>
-        <a th:href="@{/posts/{id}/edit(id=${post.id})}" class="btn">수정</a>
-        <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post"
-              onsubmit="return confirm('정말 삭제하시겠습니까?');">
-            <button type="submit" class="btn btn-danger">삭제</button>
-        </form>
+        <!-- 수정/삭제는 작성자 본인에게만 노출 (서버에서도 소유권을 재검증한다) -->
+        <th:block th:if="${currentMember != null and currentMember.id == post.author.id}">
+            <a th:href="@{/posts/{id}/edit(id=${post.id})}" class="btn">수정</a>
+            <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post"
+                  onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                <button type="submit" class="btn btn-danger">삭제</button>
+            </form>
+        </th:block>
     </div>
 </main>
 </body>

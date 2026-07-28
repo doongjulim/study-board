@@ -4,6 +4,7 @@ import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
+import com.example.board.post.dto.PostSummary;
 import com.example.board.post.repository.AttachedFileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -77,7 +78,7 @@ class PostServiceIntegrationTest {
     void update() throws IOException {
         Long id = postService.create(form("원래제목", "원래내용"), author.getId());
 
-        postService.update(id, form("새제목", "새내용"));
+        postService.update(id, form("새제목", "새내용"), author.getId());
 
         Post updated = postService.findById(id);
         assertThat(updated.getTitle()).isEqualTo("새제목");
@@ -91,7 +92,7 @@ class PostServiceIntegrationTest {
     void delete() throws IOException {
         Long id = postService.create(form("삭제테스트", "내용"), author.getId());
 
-        postService.delete(id);
+        postService.delete(id, author.getId());
 
         assertThatThrownBy(() -> postService.findById(id))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -107,7 +108,7 @@ class PostServiceIntegrationTest {
         }
 
         PageRequest pageable = PageRequest.of(0, 10, Sort.by("id").descending());
-        Page<Post> page = postService.findAll(null, pageable);
+        Page<PostSummary> page = postService.findAll(null, pageable);
 
         assertThat(page.getContent()).hasSize(10);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(15);
@@ -119,11 +120,12 @@ class PostServiceIntegrationTest {
         postService.create(form("Spring Boot 입문", "내용"), author.getId());
         postService.create(form("JPA 활용", "내용"), author.getId());
 
-        Page<Post> result = postService.findAll("spring",
+        Page<PostSummary> result = postService.findAll("spring",
                 PageRequest.of(0, 10));
 
         assertThat(result.getContent())
-                .allMatch(p -> p.getTitle().toLowerCase().contains("spring"));
+                .isNotEmpty()
+                .allMatch(s -> s.title().toLowerCase().contains("spring"));
     }
 
     @Test
@@ -131,11 +133,11 @@ class PostServiceIntegrationTest {
     void findAll_searchTitleOrContent() throws IOException {
         postService.create(form("아무제목", "본문에 Spring 키워드가 있음"), author.getId());
 
-        Page<Post> result = postService.findAll("spring",
+        Page<PostSummary> result = postService.findAll("spring",
                 com.example.board.post.dto.SearchType.TITLE_CONTENT, PageRequest.of(0, 10));
 
         assertThat(result.getContent())
-                .anyMatch(p -> p.getContent().contains("Spring"));
+                .anyMatch(s -> s.title().equals("아무제목"));
     }
 
     @Test
@@ -146,12 +148,12 @@ class PostServiceIntegrationTest {
         postService.create(form("제목A", "내용"), kim.getId());
         postService.create(form("제목B", "내용"), park.getId());
 
-        Page<Post> result = postService.findAll("김코딩",
+        Page<PostSummary> result = postService.findAll("김코딩",
                 com.example.board.post.dto.SearchType.WRITER, PageRequest.of(0, 10));
 
         assertThat(result.getContent())
                 .isNotEmpty()
-                .allMatch(p -> p.getAuthor().getNickname().contains("김코딩"));
+                .allMatch(s -> s.authorNickname().contains("김코딩"));
     }
 
     // ── deleteFile ────────────────────────────────────────────
@@ -166,7 +168,7 @@ class PostServiceIntegrationTest {
         Long postId = postService.create(f, author.getId());
         Long fileId = postService.findById(postId).getFiles().get(0).getId();
 
-        postService.deleteFile(postId, fileId);
+        postService.deleteFile(postId, fileId, author.getId());
         em.flush();
         em.clear();
 

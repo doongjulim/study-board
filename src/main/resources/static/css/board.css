@@ -338,3 +338,8 @@ table.board { min-width: 480px; }
   .toast-box { bottom: 16px; right: 12px; }
   .toast { max-width: calc(100vw - 32px); }
 }
+
+/* ── 헤더 로그인 메뉴 ───────────────────────────── */
+.auth-menu { display: flex; align-items: center; gap: 8px; }
+.auth-menu .nickname { font-size: 14px; color: var(--text); white-space: nowrap; }
+.inline-form { display: inline; margin: 0; }
