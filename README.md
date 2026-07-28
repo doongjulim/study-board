@@ -21,7 +21,7 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2 / 로컬 파일 저장 기반의 게�
 > Gradle Wrapper가 없다면 프로젝트 루트에서 `gradle wrapper` 를 한 번 실행해 생성하세요.
 
 - 게시판: http://localhost:8080/posts
-- H2 콘솔: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:boarddb`, 사용자: `sa`)
+- H2 콘솔: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:file:./data/boarddb`, 사용자: `sa`)
 
 ## 파일 저장 위치
 
@@ -58,8 +58,8 @@ src/main/resources
 
 ## 참고
 
-- H2 인메모리 DB라서 재시작 시 데이터가 사라집니다. 유지하려면 `application.yml` 의
-  datasource URL을 `jdbc:h2:file:./data/boarddb` 로 바꾸세요.
-- 실서비스 전환 시 `ddl-auto: create-drop` 을 `validate` 또는 마이그레이션 도구(Flyway)로 교체하고,
-  파일 저장을 S3 등으로 옮기려면 `FileStore` 만 구현체를 바꾸면 됩니다.
+- H2 파일 DB(`./data/boarddb`)를 사용하므로 재시작해도 데이터가 유지됩니다.
+- 스키마는 Flyway 마이그레이션(`src/main/resources/db/migration`)으로 관리하고
+  `ddl-auto: validate` 로 엔티티-스키마 일치를 검증합니다. 스키마 변경 시 새 `V{n}__*.sql` 을 추가하세요.
+- 파일 저장을 S3 등으로 옮기려면 `FileStore` 만 구현체를 바꾸면 됩니다.
 # study-board

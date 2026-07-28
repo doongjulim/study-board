@@ -16,8 +16,8 @@
 ./gradlew bootRun
 ```
 
-- H2 콘솔: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:boarddb`, 사용자: `sa`)
-- H2 인메모리 DB — 재시작 시 데이터 초기화됨
+- H2 콘솔: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:file:./data/boarddb`, 사용자: `sa`)
+- H2 파일 DB(`./data/`) — 재시작해도 데이터 유지, 스키마는 Flyway로 관리
 
 ## 빌드 & 테스트
 
@@ -51,7 +51,7 @@ file:
 spring:
   jpa:
     hibernate:
-      ddl-auto: create-drop   # 운영 전환 시 validate 또는 Flyway로 교체
+      ddl-auto: validate   # 스키마는 Flyway(db/migration)로 관리
 ```
 
 ## 기술 스택
