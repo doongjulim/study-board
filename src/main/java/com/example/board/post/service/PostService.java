@@ -1,5 +1,7 @@
 package com.example.board.post.service;
 
+import com.example.board.member.domain.Member;
+import com.example.board.member.repository.MemberRepository;
 import com.example.board.post.domain.AttachedFile;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
@@ -23,6 +25,7 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final AttachedFileRepository fileRepository;
+    private final MemberRepository memberRepository;
     private final FileStore fileStore;
 
     public Page<Post> findAll(String keyword, Pageable pageable) {
@@ -37,7 +40,7 @@ public class PostService {
         return switch (type) {
             case TITLE -> postRepository.findByTitleContainingIgnoreCase(keyword, pageable);
             case TITLE_CONTENT -> postRepository.searchByTitleOrContent(keyword, pageable);
-            case WRITER -> postRepository.findByWriterContainingIgnoreCase(keyword, pageable);
+            case WRITER -> postRepository.findByAuthor_NicknameContainingIgnoreCase(keyword, pageable);
         };
     }
 
@@ -47,8 +50,9 @@ public class PostService {
     }
 
     @Transactional
-    public Long create(PostForm form) throws IOException {
-        Post post = new Post(form.getTitle(), form.getWriter(), form.getContent());
+    public Long create(PostForm form, Long authorId) throws IOException {
+        Member author = memberRepository.getReferenceById(authorId);
+        Post post = new Post(form.getTitle(), form.getContent(), author);
         List<AttachedFile> files = fileStore.storeFiles(form.getFiles());
         files.forEach(post::addFile);
         return postRepository.save(post).getId();

@@ -1,6 +1,8 @@
 package com.example.board.post.service;
 
 import com.example.board.file.store.FileStore;
+import com.example.board.member.domain.Member;
+import com.example.board.member.repository.MemberRepository;
 import com.example.board.post.domain.AttachedFile;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
@@ -30,9 +32,18 @@ class PostServiceTest {
 
     @Mock PostRepository postRepository;
     @Mock AttachedFileRepository fileRepository;
+    @Mock MemberRepository memberRepository;
     @Mock FileStore fileStore;
 
     @InjectMocks PostService postService;
+
+    private Member author() {
+        return new Member("tester1", "encoded-password", "작성자");
+    }
+
+    private Post post() {
+        return new Post("제목", "내용", author());
+    }
 
     // ── findAll ────────────────────────────────────────────────
 
@@ -86,15 +97,15 @@ class PostServiceTest {
     }
 
     @Test
-    @DisplayName("WRITER 검색 타입이면 작성자 검색을 한다")
+    @DisplayName("WRITER 검색 타입이면 작성자 닉네임 검색을 한다")
     void findAll_writer() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findByWriterContainingIgnoreCase("tester", pageable))
+        given(postRepository.findByAuthor_NicknameContainingIgnoreCase("tester", pageable))
                 .willReturn(Page.empty());
 
         postService.findAll("tester", com.example.board.post.dto.SearchType.WRITER, pageable);
 
-        then(postRepository).should().findByWriterContainingIgnoreCase("tester", pageable);
+        then(postRepository).should().findByAuthor_NicknameContainingIgnoreCase("tester", pageable);
     }
 
     @Test
@@ -114,7 +125,7 @@ class PostServiceTest {
     @Test
     @DisplayName("존재하는 id 로 조회하면 Post 를 반환한다")
     void findById_found() {
-        Post post = new Post("제목", "작성자", "내용");
+        Post post = post();
         given(postRepository.findById(1L)).willReturn(Optional.of(post));
 
         Post result = postService.findById(1L);
@@ -135,27 +146,29 @@ class PostServiceTest {
     // ── create ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("파일 없이 게시글을 생성하면 PostRepository.save 가 호출된다")
-    void create_noFiles() throws IOException {
-        PostForm form = postForm("제목", "작성자", "내용");
-        Post savedPost = new Post("제목", "작성자", "내용");
+    @DisplayName("게시글 생성 시 현재 회원이 작성자로 설정된다")
+    void create_setsAuthor() throws IOException {
+        Member author = author();
+        PostForm form = postForm("제목", "내용");
+        given(memberRepository.getReferenceById(1L)).willReturn(author);
         given(fileStore.storeFiles(any())).willReturn(List.of());
-        given(postRepository.save(any())).willReturn(savedPost);
+        given(postRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        postService.create(form);
+        postService.create(form, 1L);
 
-        then(postRepository).should().save(any(Post.class));
+        then(postRepository).should().save(argThat(p -> p.getAuthor() == author));
     }
 
     @Test
     @DisplayName("파일이 포함된 게시글 생성 시 파일이 Post 에 추가된다")
     void create_withFiles() throws IOException {
-        PostForm form = postForm("제목", "작성자", "내용");
+        PostForm form = postForm("제목", "내용");
         AttachedFile file = new AttachedFile("a.txt", "uuid.txt", "text/plain", 10L);
+        given(memberRepository.getReferenceById(1L)).willReturn(author());
         given(fileStore.storeFiles(any())).willReturn(List.of(file));
         given(postRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        postService.create(form);
+        postService.create(form, 1L);
 
         then(postRepository).should().save(argThat(p -> p.getFiles().contains(file)));
     }
@@ -165,11 +178,11 @@ class PostServiceTest {
     @Test
     @DisplayName("게시글 수정 시 제목·내용이 변경된다")
     void update() throws IOException {
-        Post post = new Post("원래제목", "작성자", "원래내용");
+        Post post = new Post("원래제목", "원래내용", author());
         given(postRepository.findById(1L)).willReturn(Optional.of(post));
         given(fileStore.storeFiles(any())).willReturn(List.of());
 
-        PostForm form = postForm("새제목", "작성자", "새내용");
+        PostForm form = postForm("새제목", "새내용");
         postService.update(1L, form);
 
         assertThat(post.getTitle()).isEqualTo("새제목");
@@ -181,7 +194,7 @@ class PostServiceTest {
     @Test
     @DisplayName("게시글 삭제 시 첨부파일도 디스크에서 삭제되고 Repository.delete 가 호출된다")
     void delete() {
-        Post post = new Post("제목", "작성자", "내용");
+        Post post = post();
         AttachedFile file = new AttachedFile("a.txt", "uuid.txt", "text/plain", 10L);
         post.addFile(file);
         given(postRepository.findById(1L)).willReturn(Optional.of(post));
@@ -197,7 +210,7 @@ class PostServiceTest {
     @Test
     @DisplayName("게시글의 첨부파일을 삭제하면 디스크 파일이 삭제되고 컬렉션에서 제거된다")
     void deleteFile() {
-        Post post = new Post("제목", "작성자", "내용");
+        Post post = post();
         AttachedFile file = new AttachedFile("a.txt", "uuid.txt", "text/plain", 10L);
         post.addFile(file);
 
@@ -215,7 +228,7 @@ class PostServiceTest {
     @Test
     @DisplayName("존재하지 않는 첨부파일 id 로 삭제하면 예외가 발생한다")
     void deleteFile_notFound() {
-        Post post = new Post("제목", "작성자", "내용");
+        Post post = post();
         given(postRepository.findById(1L)).willReturn(Optional.of(post));
 
         assertThatThrownBy(() -> postService.deleteFile(1L, 999L))
@@ -225,10 +238,9 @@ class PostServiceTest {
 
     // ── helpers ───────────────────────────────────────────────
 
-    private PostForm postForm(String title, String writer, String content) {
+    private PostForm postForm(String title, String content) {
         PostForm form = new PostForm();
         form.setTitle(title);
-        form.setWriter(writer);
         form.setContent(content);
         return form;
     }

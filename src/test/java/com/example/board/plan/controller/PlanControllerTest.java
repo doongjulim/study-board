@@ -1,8 +1,10 @@
 package com.example.board.plan.controller;
 
+import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
+import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.service.PlanService;
 import org.junit.jupiter.api.DisplayName;
@@ -12,7 +14,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -21,6 +26,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -33,8 +39,16 @@ class PlanControllerTest {
     @MockBean PlanService planService;
 
     private Plan plan() {
-        return new Plan("자료구조 공부", "스택, 큐 복습", "동주",
+        return new Plan("자료구조 공부", "스택, 큐 복습",
+                new Member("tester1", "encoded-password", "동주"),
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(12, 0));
+    }
+
+    /** 로그인한 회원(id=1)으로 요청을 보낸다 */
+    private static RequestPostProcessor memberAuth() {
+        return authentication(new UsernamePasswordAuthenticationToken(
+                new MemberPrincipal(1L, "tester1", "테스터"), null,
+                List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
     }
 
     // ── 조회 화면 ─────────────────────────────────────────────
@@ -115,45 +129,42 @@ class PlanControllerTest {
     @Test
     @DisplayName("POST /plans - 유효한 입력이면 저장 후 해당 날짜 일간 뷰로 이동한다")
     void create() throws Exception {
-        given(planService.create(any())).willReturn(1L);
+        given(planService.create(any(), eq(1L))).willReturn(1L);
 
-        mockMvc.perform(post("/plans").with(csrf())
+        mockMvc.perform(post("/plans").with(csrf()).with(memberAuth())
                         .param("title", "자료구조 공부")
-                        .param("writer", "동주")
                         .param("planDate", "2026-07-09")
                         .param("startTime", "10:00"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
 
-        then(planService).should().create(any());
+        then(planService).should().create(any(), eq(1L));
     }
 
     @Test
     @DisplayName("POST /plans - 제목이 비면 폼으로 돌아가고 저장하지 않는다")
     void create_invalid() throws Exception {
-        mockMvc.perform(post("/plans").with(csrf())
+        mockMvc.perform(post("/plans").with(csrf()).with(memberAuth())
                         .param("title", "")
-                        .param("writer", "동주")
                         .param("planDate", "2026-07-09"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("plans/form"));
 
-        then(planService).should(never()).create(any());
+        then(planService).should(never()).create(any(), any());
     }
 
     @Test
     @DisplayName("POST /plans - 종료 시간이 시작 시간보다 빠르면 폼으로 돌아간다")
     void create_invalidTimeRange() throws Exception {
-        mockMvc.perform(post("/plans").with(csrf())
+        mockMvc.perform(post("/plans").with(csrf()).with(memberAuth())
                         .param("title", "자료구조 공부")
-                        .param("writer", "동주")
                         .param("planDate", "2026-07-09")
                         .param("startTime", "12:00")
                         .param("endTime", "10:00"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("plans/form"));
 
-        then(planService).should(never()).create(any());
+        then(planService).should(never()).create(any(), any());
     }
 
     @Test

@@ -29,7 +29,7 @@
                 <div class="plan-content" th:if="${plan.content != null && !plan.content.isBlank()}"
                      th:text="${plan.content}"></div>
                 <div class="plan-meta">
-                    <span th:text="${plan.writer}">작성자</span>
+                    <span th:text="${plan.author.nickname}">작성자</span>
                     <span th:if="${plan.completed}">✅ 완료한 플랜</span>
                 </div>
             </div>

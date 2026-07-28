@@ -1,5 +1,7 @@
 package com.example.board.plan.service;
 
+import com.example.board.member.domain.Member;
+import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.event.PlanSharedEvent;
@@ -22,6 +24,7 @@ import java.util.List;
 public class PlanService {
 
     private final PlanRepository planRepository;
+    private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public List<Plan> findDaily(LocalDate date) {
@@ -49,8 +52,9 @@ public class PlanService {
     }
 
     @Transactional
-    public Long create(PlanForm form) {
-        Plan plan = new Plan(form.getTitle(), form.getContent(), form.getWriter(),
+    public Long create(PlanForm form, Long authorId) {
+        Member author = memberRepository.getReferenceById(authorId);
+        Plan plan = new Plan(form.getTitle(), form.getContent(), author,
                 form.getPlanDate(), form.getStartTime(), form.getEndTime());
         return planRepository.save(plan).getId();
     }
@@ -77,7 +81,8 @@ public class PlanService {
     public Plan toggleShared(Long id) {
         Plan plan = findById(id);
         if (plan.toggleShared()) {
-            eventPublisher.publishEvent(new PlanSharedEvent(plan.getId(), plan.getWriter(), plan.getTitle()));
+            eventPublisher.publishEvent(
+                    new PlanSharedEvent(plan.getId(), plan.getAuthor().getNickname(), plan.getTitle()));
         }
         return plan;
     }

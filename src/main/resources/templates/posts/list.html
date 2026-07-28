@@ -55,7 +55,7 @@
                 <span class="clip" th:if="${!post.files.isEmpty()}"
                       th:text="'📎 ' + ${post.files.size()}"></span>
             </td>
-            <td th:text="${post.writer}">작성자</td>
+            <td th:text="${post.author.nickname}">작성자</td>
             <td class="date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">날짜</td>
         </tr>
         </tbody>

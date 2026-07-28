@@ -1,11 +1,13 @@
 package com.example.board.post.controller;
 
+import com.example.board.auth.MemberPrincipal;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.SearchType;
 import com.example.board.post.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -76,11 +78,12 @@ public class PostController {
     @PostMapping
     public String create(@Valid @ModelAttribute PostForm postForm,
                          BindingResult bindingResult,
+                         @AuthenticationPrincipal MemberPrincipal principal,
                          RedirectAttributes redirectAttributes) throws IOException {
         if (bindingResult.hasErrors()) {
             return "posts/form";
         }
-        Long id = postService.create(postForm);
+        Long id = postService.create(postForm, principal.id());
         redirectAttributes.addFlashAttribute("message", "게시글이 등록되었습니다.");
         return "redirect:/posts/" + id;
     }
@@ -91,7 +94,6 @@ public class PostController {
         Post post = postService.findById(id);
         PostForm form = new PostForm();
         form.setTitle(post.getTitle());
-        form.setWriter(post.getWriter());
         form.setContent(post.getContent());
         model.addAttribute("postForm", form);
         model.addAttribute("post", post);

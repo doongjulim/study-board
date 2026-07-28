@@ -21,7 +21,7 @@ public class NotificationEventListener {
     @EventListener
     public void handlePlanShared(PlanSharedEvent event) {
         notificationService.notify(
-                event.writer() + "님이 플랜을 공유했습니다: " + event.title(),
+                event.nickname() + "님이 플랜을 공유했습니다: " + event.title(),
                 "/plans/shared");
     }
 

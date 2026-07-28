@@ -23,12 +23,6 @@
         </div>
 
         <div class="form-group">
-            <label for="writer">작성자</label>
-            <input type="text" id="writer" th:field="*{writer}" placeholder="이름 또는 닉네임">
-            <p class="error" th:if="${#fields.hasErrors('writer')}" th:errors="*{writer}"></p>
-        </div>
-
-        <div class="form-group">
             <label for="planDate">날짜</label>
             <input type="date" id="planDate" th:field="*{planDate}">
             <p class="error" th:if="${#fields.hasErrors('planDate')}" th:errors="*{planDate}"></p>

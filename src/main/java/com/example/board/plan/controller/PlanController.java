@@ -1,10 +1,12 @@
 package com.example.board.plan.controller;
 
+import com.example.board.auth.MemberPrincipal;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.service.PlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -117,6 +119,7 @@ public class PlanController {
     @PostMapping
     public String create(@Valid @ModelAttribute PlanForm planForm,
                          BindingResult bindingResult,
+                         @AuthenticationPrincipal MemberPrincipal principal,
                          Model model,
                          RedirectAttributes redirectAttributes) {
         validateTimeRange(planForm, bindingResult);
@@ -124,7 +127,7 @@ public class PlanController {
             model.addAttribute("mode", "create");
             return "plans/form";
         }
-        planService.create(planForm);
+        planService.create(planForm, principal.id());
         redirectAttributes.addFlashAttribute("message", "일정이 등록되었습니다.");
         return "redirect:/plans/daily?date=" + planForm.getPlanDate();
     }
@@ -136,7 +139,6 @@ public class PlanController {
         PlanForm form = new PlanForm();
         form.setTitle(plan.getTitle());
         form.setContent(plan.getContent());
-        form.setWriter(plan.getWriter());
         form.setPlanDate(plan.getPlanDate());
         form.setStartTime(plan.getStartTime());
         form.setEndTime(plan.getEndTime());

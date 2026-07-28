@@ -1,5 +1,7 @@
 package com.example.board.plan.service;
 
+import com.example.board.member.domain.Member;
+import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.event.PlanSharedEvent;
@@ -28,15 +30,19 @@ import static org.mockito.BDDMockito.*;
 class PlanServiceTest {
 
     @Mock PlanRepository planRepository;
+    @Mock MemberRepository memberRepository;
     @Mock ApplicationEventPublisher eventPublisher;
 
     @InjectMocks PlanService planService;
+
+    private Member author() {
+        return new Member("tester1", "encoded-password", "동주");
+    }
 
     private PlanForm form() {
         PlanForm form = new PlanForm();
         form.setTitle("자료구조 공부");
         form.setContent("스택, 큐 복습");
-        form.setWriter("동주");
         form.setPlanDate(LocalDate.of(2026, 7, 9));
         form.setStartTime(LocalTime.of(10, 0));
         form.setEndTime(LocalTime.of(12, 0));
@@ -44,27 +50,30 @@ class PlanServiceTest {
     }
 
     private Plan plan() {
-        return new Plan("자료구조 공부", "스택, 큐 복습", "동주",
+        return new Plan("자료구조 공부", "스택, 큐 복습", author(),
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(12, 0));
     }
 
     // ── create / update / delete ─────────────────────────────
 
     @Test
-    @DisplayName("create - 폼 값으로 플랜을 저장하고 id 를 반환한다")
+    @DisplayName("create - 현재 회원을 작성자로 플랜을 저장하고 id 를 반환한다")
     void create() {
+        Member author = author();
+        given(memberRepository.getReferenceById(1L)).willReturn(author);
         given(planRepository.save(any(Plan.class))).willAnswer(inv -> {
             Plan saved = inv.getArgument(0);
             ReflectionTestUtils.setField(saved, "id", 1L);
             return saved;
         });
 
-        Long id = planService.create(form());
+        Long id = planService.create(form(), 1L);
 
         assertThat(id).isEqualTo(1L);
         ArgumentCaptor<Plan> captor = ArgumentCaptor.forClass(Plan.class);
         then(planRepository).should().save(captor.capture());
         assertThat(captor.getValue().getTitle()).isEqualTo("자료구조 공부");
+        assertThat(captor.getValue().getAuthor()).isSameAs(author);
         assertThat(captor.getValue().getPlanDate()).isEqualTo(LocalDate.of(2026, 7, 9));
     }
 
@@ -145,7 +154,7 @@ class PlanServiceTest {
     }
 
     @Test
-    @DisplayName("toggleShared - 공유로 전환되면 PlanSharedEvent 를 발행한다")
+    @DisplayName("toggleShared - 공유로 전환되면 작성자 닉네임과 함께 PlanSharedEvent 를 발행한다")
     void toggleShared_publishesEvent() {
         Plan plan = plan();
         given(planRepository.findById(1L)).willReturn(Optional.of(plan));
@@ -156,6 +165,7 @@ class PlanServiceTest {
         ArgumentCaptor<PlanSharedEvent> captor = ArgumentCaptor.forClass(PlanSharedEvent.class);
         then(eventPublisher).should().publishEvent(captor.capture());
         assertThat(captor.getValue().title()).isEqualTo("자료구조 공부");
+        assertThat(captor.getValue().nickname()).isEqualTo("동주");
     }
 
     @Test
