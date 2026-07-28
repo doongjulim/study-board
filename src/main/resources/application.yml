@@ -23,3 +23,8 @@ spring:
 
 file:
   upload-dir: ${user.home}/board-uploads/
+
+jwt:
+  # 로컬 개발용 시크릿 - 운영 환경에서는 반드시 환경변수(JWT_SECRET)로 교체할 것 (HS256, 32바이트 이상)
+  secret: ${JWT_SECRET:study-board-local-dev-secret-key-please-override}
+  access-token-minutes: 60

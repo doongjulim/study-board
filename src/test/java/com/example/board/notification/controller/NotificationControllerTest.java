@@ -1,21 +1,27 @@
 package com.example.board.notification.controller;
 
+import com.example.board.auth.jwt.JwtAuthenticationFilter;
+import com.example.board.auth.jwt.JwtTokenProvider;
+import com.example.board.config.SecurityConfig;
 import com.example.board.notification.service.NotificationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
 import static org.mockito.BDDMockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(NotificationController.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class NotificationControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -45,7 +51,7 @@ class NotificationControllerTest {
     @Test
     @DisplayName("POST /notifications/read-all - 모두 읽음 처리한다")
     void readAll() throws Exception {
-        mockMvc.perform(post("/notifications/read-all"))
+        mockMvc.perform(post("/notifications/read-all").with(csrf()))
                 .andExpect(status().isOk());
 
         then(notificationService).should().markAllAsRead();

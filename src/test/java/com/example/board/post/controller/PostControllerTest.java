@@ -1,5 +1,8 @@
 package com.example.board.post.controller;
 
+import com.example.board.auth.jwt.JwtAuthenticationFilter;
+import com.example.board.auth.jwt.JwtTokenProvider;
+import com.example.board.config.SecurityConfig;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.SearchType;
@@ -8,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -17,6 +21,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -24,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(PostController.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class PostControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -120,7 +126,7 @@ class PostControllerTest {
     void create_success() throws Exception {
         given(postService.create(any(PostForm.class))).willReturn(1L);
 
-        mockMvc.perform(multipart("/posts")
+        mockMvc.perform(multipart("/posts").with(csrf())
                         .param("title", "제목")
                         .param("writer", "작성자")
                         .param("content", "내용"))
@@ -131,7 +137,7 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts - 제목이 없으면 폼으로 돌아온다")
     void create_validationFail() throws Exception {
-        mockMvc.perform(multipart("/posts")
+        mockMvc.perform(multipart("/posts").with(csrf())
                         .param("title", "")
                         .param("writer", "작성자")
                         .param("content", "내용"))
@@ -158,7 +164,7 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{id}/edit - 유효한 폼이면 상세 페이지로 리다이렉트한다")
     void edit_success() throws Exception {
-        mockMvc.perform(multipart("/posts/1/edit")
+        mockMvc.perform(multipart("/posts/1/edit").with(csrf())
                         .param("title", "새제목")
                         .param("writer", "작성자")
                         .param("content", "새내용"))
@@ -173,7 +179,7 @@ class PostControllerTest {
     void edit_validationFail() throws Exception {
         given(postService.findById(1L)).willReturn(new Post("제목", "작성자", "내용"));
 
-        mockMvc.perform(multipart("/posts/1/edit")
+        mockMvc.perform(multipart("/posts/1/edit").with(csrf())
                         .param("title", "새제목")
                         .param("writer", "작성자")
                         .param("content", ""))
@@ -187,7 +193,7 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{id}/delete - 삭제 후 목록으로 리다이렉트한다")
     void delete() throws Exception {
-        mockMvc.perform(post("/posts/1/delete"))
+        mockMvc.perform(post("/posts/1/delete").with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts"));
 
@@ -199,7 +205,7 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{postId}/files/{fileId}/delete - 파일 삭제 후 수정 폼으로 리다이렉트한다")
     void deleteFile() throws Exception {
-        mockMvc.perform(post("/posts/1/files/5/delete"))
+        mockMvc.perform(post("/posts/1/files/5/delete").with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts/1/edit"));
 

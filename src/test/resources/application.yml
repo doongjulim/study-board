@@ -17,3 +17,7 @@ spring:
 
 file:
   upload-dir: ${java.io.tmpdir}/board-test-uploads/
+
+jwt:
+  secret: test-only-secret-key-must-be-32-bytes-min!
+  access-token-minutes: 60

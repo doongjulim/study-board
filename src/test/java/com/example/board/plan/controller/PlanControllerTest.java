@@ -1,5 +1,8 @@
 package com.example.board.plan.controller;
 
+import com.example.board.auth.jwt.JwtAuthenticationFilter;
+import com.example.board.auth.jwt.JwtTokenProvider;
+import com.example.board.config.SecurityConfig;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.service.PlanService;
 import org.junit.jupiter.api.DisplayName;
@@ -7,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -17,10 +21,12 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(PlanController.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
 class PlanControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -111,7 +117,7 @@ class PlanControllerTest {
     void create() throws Exception {
         given(planService.create(any())).willReturn(1L);
 
-        mockMvc.perform(post("/plans")
+        mockMvc.perform(post("/plans").with(csrf())
                         .param("title", "자료구조 공부")
                         .param("writer", "동주")
                         .param("planDate", "2026-07-09")
@@ -125,7 +131,7 @@ class PlanControllerTest {
     @Test
     @DisplayName("POST /plans - 제목이 비면 폼으로 돌아가고 저장하지 않는다")
     void create_invalid() throws Exception {
-        mockMvc.perform(post("/plans")
+        mockMvc.perform(post("/plans").with(csrf())
                         .param("title", "")
                         .param("writer", "동주")
                         .param("planDate", "2026-07-09"))
@@ -138,7 +144,7 @@ class PlanControllerTest {
     @Test
     @DisplayName("POST /plans - 종료 시간이 시작 시간보다 빠르면 폼으로 돌아간다")
     void create_invalidTimeRange() throws Exception {
-        mockMvc.perform(post("/plans")
+        mockMvc.perform(post("/plans").with(csrf())
                         .param("title", "자료구조 공부")
                         .param("writer", "동주")
                         .param("planDate", "2026-07-09")
@@ -155,7 +161,7 @@ class PlanControllerTest {
     void deletePlan() throws Exception {
         given(planService.findById(1L)).willReturn(plan());
 
-        mockMvc.perform(post("/plans/1/delete"))
+        mockMvc.perform(post("/plans/1/delete").with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
 
@@ -169,7 +175,7 @@ class PlanControllerTest {
     void toggle() throws Exception {
         given(planService.toggleCompleted(1L)).willReturn(plan());
 
-        mockMvc.perform(post("/plans/1/toggle"))
+        mockMvc.perform(post("/plans/1/toggle").with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
     }
@@ -179,7 +185,7 @@ class PlanControllerTest {
     void share() throws Exception {
         given(planService.toggleShared(1L)).willReturn(plan());
 
-        mockMvc.perform(post("/plans/1/share"))
+        mockMvc.perform(post("/plans/1/share").with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
     }
