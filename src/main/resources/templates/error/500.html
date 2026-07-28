@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>서버 오류</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('')}"></header>
+
+<main class="container" style="text-align:center;padding:80px 20px;">
+    <h1 style="font-size:64px;margin:0;">500</h1>
+    <p style="font-size:18px;color:#666;">서버에서 오류가 발생했습니다.</p>
+    <p th:if="${message}" th:text="${message}" style="color:#999;"></p>
+    <a th:href="@{/posts}" class="btn btn-primary" style="margin-top:20px;display:inline-block;">목록으로 돌아가기</a>
+</main>
+</body>
+</html>

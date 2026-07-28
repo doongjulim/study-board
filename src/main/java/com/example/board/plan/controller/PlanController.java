@@ -1,0 +1,216 @@
+package com.example.board.plan.controller;
+
+import com.example.board.plan.domain.Plan;
+import com.example.board.plan.dto.PlanForm;
+import com.example.board.plan.service.PlanService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Controller
+@RequiredArgsConstructor
+@RequestMapping("/plans")
+public class PlanController {
+
+    private final PlanService planService;
+
+    @GetMapping
+    public String home() {
+        return "redirect:/plans/daily";
+    }
+
+    /** 일간 뷰 */
+    @GetMapping("/daily")
+    public String daily(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                        Model model) {
+        LocalDate target = (date != null) ? date : LocalDate.now();
+        model.addAttribute("date", target);
+        model.addAttribute("plans", planService.findDaily(target));
+        model.addAttribute("prevDate", target.minusDays(1));
+        model.addAttribute("nextDate", target.plusDays(1));
+        model.addAttribute("today", LocalDate.now());
+        return "plans/daily";
+    }
+
+    /** 주간 뷰 */
+    @GetMapping("/weekly")
+    public String weekly(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                         Model model) {
+        LocalDate target = (date != null) ? date : LocalDate.now();
+        LocalDate weekStart = target.with(DayOfWeek.MONDAY);
+
+        List<LocalDate> weekDays = new ArrayList<>();
+        Map<LocalDate, List<Plan>> plansByDate = new LinkedHashMap<>();
+        for (int i = 0; i < 7; i++) {
+            LocalDate day = weekStart.plusDays(i);
+            weekDays.add(day);
+            plansByDate.put(day, new ArrayList<>());
+        }
+        planService.findWeek(target).forEach(plan -> plansByDate.get(plan.getPlanDate()).add(plan));
+
+        model.addAttribute("date", target);
+        model.addAttribute("weekStart", weekStart);
+        model.addAttribute("weekDays", weekDays);
+        model.addAttribute("plansByDate", plansByDate);
+        model.addAttribute("prevWeek", weekStart.minusWeeks(1));
+        model.addAttribute("nextWeek", weekStart.plusWeeks(1));
+        model.addAttribute("today", LocalDate.now());
+        return "plans/weekly";
+    }
+
+    /** 월간 캘린더 뷰 */
+    @GetMapping("/monthly")
+    public String monthly(@RequestParam(required = false) String month, Model model) {
+        YearMonth target = (month != null && !month.isBlank()) ? YearMonth.parse(month) : YearMonth.now();
+
+        Map<LocalDate, List<Plan>> plansByDate = planService.findMonth(target).stream()
+                .collect(Collectors.groupingBy(Plan::getPlanDate));
+
+        model.addAttribute("month", target);
+        model.addAttribute("weeks", buildCalendarWeeks(target));
+        model.addAttribute("plansByDate", plansByDate);
+        model.addAttribute("prevMonth", target.minusMonths(1));
+        model.addAttribute("nextMonth", target.plusMonths(1));
+        model.addAttribute("today", LocalDate.now());
+        return "plans/monthly";
+    }
+
+    /** 공유된 플랜 목록 */
+    @GetMapping("/shared")
+    public String shared(@PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
+                         Model model) {
+        Page<Plan> plans = planService.findShared(pageable);
+        model.addAttribute("plans", plans);
+        return "plans/shared";
+    }
+
+    /** 작성 폼 */
+    @GetMapping("/new")
+    public String createForm(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                             Model model) {
+        PlanForm form = new PlanForm();
+        form.setPlanDate(date != null ? date : LocalDate.now());
+        model.addAttribute("planForm", form);
+        model.addAttribute("mode", "create");
+        return "plans/form";
+    }
+
+    /** 작성 처리 */
+    @PostMapping
+    public String create(@Valid @ModelAttribute PlanForm planForm,
+                         BindingResult bindingResult,
+                         Model model,
+                         RedirectAttributes redirectAttributes) {
+        validateTimeRange(planForm, bindingResult);
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("mode", "create");
+            return "plans/form";
+        }
+        planService.create(planForm);
+        redirectAttributes.addFlashAttribute("message", "일정이 등록되었습니다.");
+        return "redirect:/plans/daily?date=" + planForm.getPlanDate();
+    }
+
+    /** 수정 폼 */
+    @GetMapping("/{id}/edit")
+    public String editForm(@PathVariable Long id, Model model) {
+        Plan plan = planService.findById(id);
+        PlanForm form = new PlanForm();
+        form.setTitle(plan.getTitle());
+        form.setContent(plan.getContent());
+        form.setWriter(plan.getWriter());
+        form.setPlanDate(plan.getPlanDate());
+        form.setStartTime(plan.getStartTime());
+        form.setEndTime(plan.getEndTime());
+        model.addAttribute("planForm", form);
+        model.addAttribute("mode", "edit");
+        model.addAttribute("planId", id);
+        return "plans/form";
+    }
+
+    /** 수정 처리 */
+    @PostMapping("/{id}/edit")
+    public String edit(@PathVariable Long id,
+                       @Valid @ModelAttribute PlanForm planForm,
+                       BindingResult bindingResult,
+                       Model model,
+                       RedirectAttributes redirectAttributes) {
+        validateTimeRange(planForm, bindingResult);
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("mode", "edit");
+            model.addAttribute("planId", id);
+            return "plans/form";
+        }
+        planService.update(id, planForm);
+        redirectAttributes.addFlashAttribute("message", "일정이 수정되었습니다.");
+        return "redirect:/plans/daily?date=" + planForm.getPlanDate();
+    }
+
+    /** 삭제 */
+    @PostMapping("/{id}/delete")
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        LocalDate date = planService.findById(id).getPlanDate();
+        planService.delete(id);
+        redirectAttributes.addFlashAttribute("message", "일정이 삭제되었습니다.");
+        return "redirect:/plans/daily?date=" + date;
+    }
+
+    /** 완료 상태 전환 */
+    @PostMapping("/{id}/toggle")
+    public String toggleCompleted(@PathVariable Long id) {
+        Plan plan = planService.toggleCompleted(id);
+        return "redirect:/plans/daily?date=" + plan.getPlanDate();
+    }
+
+    /** 공유 상태 전환 */
+    @PostMapping("/{id}/share")
+    public String toggleShared(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        Plan plan = planService.toggleShared(id);
+        redirectAttributes.addFlashAttribute("message",
+                plan.isShared() ? "플랜을 공유했습니다." : "플랜 공유를 해제했습니다.");
+        return "redirect:/plans/daily?date=" + plan.getPlanDate();
+    }
+
+    /** 시작/종료 시간 교차 검증 - 필드 단일 검증으로는 잡을 수 없어 별도 처리 */
+    private void validateTimeRange(PlanForm form, BindingResult bindingResult) {
+        if (form.getStartTime() != null && form.getEndTime() != null
+                && form.getEndTime().isBefore(form.getStartTime())) {
+            bindingResult.rejectValue("endTime", "invalidTimeRange", "종료 시간은 시작 시간보다 빠를 수 없습니다.");
+        }
+    }
+
+    /** 월간 캘린더 그리드 (월요일 시작, 앞뒤 달 날짜 포함) */
+    private List<List<LocalDate>> buildCalendarWeeks(YearMonth month) {
+        LocalDate cursor = month.atDay(1).with(DayOfWeek.MONDAY);
+        LocalDate lastDay = month.atEndOfMonth();
+
+        List<List<LocalDate>> weeks = new ArrayList<>();
+        while (!cursor.isAfter(lastDay)) {
+            List<LocalDate> week = new ArrayList<>();
+            for (int i = 0; i < 7; i++) {
+                week.add(cursor);
+                cursor = cursor.plusDays(1);
+            }
+            weeks.add(week);
+        }
+        return weeks;
+    }
+}

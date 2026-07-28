@@ -1,0 +1,340 @@
+:root {
+  --ink: #1f2a24;
+  --ink-soft: #5c6b62;
+  --paper: #fafaf7;
+  --card: #ffffff;
+  --line: #e3e6e0;
+  --accent: #2f6b4f;
+  --accent-soft: #eaf2ed;
+  --danger: #b0453b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.container { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+
+header.site {
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+header.site .container {
+  padding: 18px 20px;
+  display: flex; align-items: baseline; gap: 12px;
+}
+header.site a { text-decoration: none; color: var(--ink); font-weight: 700; font-size: 1.15rem; }
+header.site span { color: var(--ink-soft); font-size: .85rem; }
+
+.flash {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: .9rem;
+}
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar form { display: flex; gap: 8px; }
+
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: .9rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: #275a42; color: #fff; }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: #fff; }
+.btn-sm { padding: 4px 10px; font-size: .8rem; }
+
+table.board { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+table.board th, table.board td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: .92rem; }
+table.board th { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+table.board tr:last-child td { border-bottom: none; }
+table.board td.num { width: 64px; color: var(--ink-soft); }
+table.board td.date { width: 130px; color: var(--ink-soft); font-size: .85rem; }
+table.board a { color: var(--ink); text-decoration: none; }
+table.board a:hover { color: var(--accent); text-decoration: underline; }
+.clip { color: var(--ink-soft); font-size: .8rem; margin-left: 4px; }
+
+.empty { text-align: center; color: var(--ink-soft); padding: 48px 0; }
+
+.pagination { display: flex; justify-content: center; gap: 6px; margin-top: 24px; }
+.pagination a, .pagination span {
+  padding: 6px 12px; border-radius: 6px; text-decoration: none;
+  border: 1px solid var(--line); color: var(--ink); font-size: .85rem; background: var(--card);
+}
+.pagination .current { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pagination a:hover { border-color: var(--accent); color: var(--accent); }
+
+.post-title { margin: 0 0 8px; font-size: 1.5rem; }
+.post-meta { color: var(--ink-soft); font-size: .85rem; margin-bottom: 20px; display: flex; gap: 14px; }
+.post-body {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 24px; white-space: pre-wrap; margin-bottom: 24px; min-height: 160px;
+}
+
+.attach { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
+.attach h3 { margin: 0 0 10px; font-size: .95rem; color: var(--ink-soft); }
+.attach ul { margin: 0; padding-left: 18px; }
+.attach li { font-size: .9rem; margin-bottom: 4px; }
+.attach .size { color: var(--ink-soft); font-size: .8rem; }
+.attach img { max-width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
+
+.actions { display: flex; gap: 8px; }
+.actions form { margin: 0; }
+
+.form-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 28px; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: 6px; }
+.form-group input[type=text], .form-group textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+  font: inherit; background: var(--paper);
+}
+.form-group input:focus, .form-group textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.form-group textarea { min-height: 220px; resize: vertical; }
+.error { color: var(--danger); font-size: .82rem; margin-top: 4px; }
+.hint { color: var(--ink-soft); font-size: .8rem; margin-top: 4px; }
+
+/* ── 상단 내비게이션 ─────────────────────────────────────── */
+header.site .container { align-items: center; }
+header.site .brand { text-decoration: none; color: var(--ink); font-weight: 700; font-size: 1.1rem; white-space: nowrap; }
+header.site .gnb { display: flex; gap: 2px; flex: 1; }
+header.site .gnb a {
+  font-weight: 500; font-size: .92rem; padding: 6px 12px; border-radius: 8px;
+  color: var(--ink-soft); text-decoration: none;
+}
+header.site .gnb a:hover { color: var(--accent); background: var(--accent-soft); }
+header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(--accent-soft); }
+
+/* ── 실시간 알림 ─────────────────────────────────────────── */
+.notif { position: relative; margin-left: auto; }
+.bell { background: none; border: none; font-size: 1.15rem; cursor: pointer; position: relative; padding: 4px 6px; }
+.badge {
+  position: absolute; top: -4px; right: -6px;
+  background: var(--danger); color: #fff; border-radius: 10px;
+  font-size: .65rem; font-weight: 700; padding: 1px 5px; line-height: 1.4;
+}
+.notif-panel {
+  position: absolute; right: 0; top: 38px; width: 300px; max-height: 360px; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12); z-index: 50;
+}
+.notif-head { padding: 10px 14px; font-weight: 700; font-size: .9rem; border-bottom: 1px solid var(--line); }
+.notif-panel ul { list-style: none; margin: 0; padding: 0; }
+.notif-item { padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: .85rem; display: flex; flex-direction: column; gap: 2px; }
+.notif-item:last-child { border-bottom: none; }
+.notif-item a { color: var(--ink); text-decoration: none; }
+.notif-item a:hover { color: var(--accent); }
+.notif-item.unread { background: var(--accent-soft); }
+.notif-time { color: var(--ink-soft); font-size: .75rem; }
+.notif-empty { padding: 24px; text-align: center; color: var(--ink-soft); font-size: .85rem; }
+
+.toast-box { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+.toast {
+  background: var(--ink); color: var(--paper);
+  padding: 12px 16px; border-radius: 10px; font-size: .88rem; max-width: 320px;
+  opacity: 0; transform: translateY(8px); transition: opacity .3s, transform .3s;
+}
+.toast.show { opacity: 1; transform: none; }
+
+/* ── 플래너 공통 ─────────────────────────────────────────── */
+.container-wide { max-width: 1080px; }
+.page-title { margin: 0 0 4px; font-size: 1.4rem; }
+.plan-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.plan-nav h2 { margin: 0; font-size: 1.15rem; }
+.plan-nav h2.accent { color: var(--accent); }
+.btn-group { display: flex; gap: 8px; }
+.view-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+.view-tabs a {
+  padding: 6px 16px; border-radius: 20px; border: 1px solid var(--line);
+  background: var(--card); color: var(--ink-soft); text-decoration: none; font-size: .85rem;
+}
+.view-tabs a:hover { border-color: var(--accent); color: var(--accent); }
+.view-tabs a.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* 일간 뷰 */
+.plan-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.plan-empty { background: var(--card); border: 1px dashed var(--line); border-radius: 10px; }
+.plan-card {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+}
+.plan-card.done .plan-title { text-decoration: line-through; color: var(--ink-soft); }
+.plan-card .check { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 2px; }
+.plan-main { flex: 1; min-width: 0; }
+.plan-time { font-size: .8rem; color: var(--accent); font-weight: 600; display: flex; gap: 8px; }
+.plan-title { font-weight: 600; }
+.plan-content { font-size: .86rem; color: var(--ink-soft); white-space: pre-wrap; }
+.plan-meta { display: flex; gap: 8px; align-items: center; font-size: .78rem; color: var(--ink-soft); margin-top: 4px; }
+.tag-shared { background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 1px 8px; font-size: .72rem; }
+
+/* 주간 뷰 */
+.week-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.week-day { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px; min-height: 150px; }
+.week-day.today { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.week-day h3 { margin: 0 0 8px; font-size: .8rem; }
+.week-day h3 a { color: var(--ink); text-decoration: none; }
+.week-day h3 a:hover { color: var(--accent); }
+.week-plan {
+  font-size: .75rem; background: var(--accent-soft); color: var(--accent);
+  border-radius: 6px; padding: 2px 6px; margin-bottom: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.week-plan.done { text-decoration: line-through; opacity: .6; }
+.week-add { display: inline-block; font-size: .75rem; color: var(--ink-soft); text-decoration: none; margin-top: 4px; }
+.week-add:hover { color: var(--accent); }
+
+/* 월간 캘린더 */
+.calendar {
+  width: 100%; border-collapse: collapse; table-layout: fixed;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+}
+.calendar th { padding: 8px; background: var(--accent-soft); color: var(--accent); font-size: .8rem; }
+.calendar td { border: 1px solid var(--line); vertical-align: top; height: 96px; padding: 6px; font-size: .78rem; }
+.calendar td.muted { background: var(--paper); opacity: .55; }
+.calendar td.today { background: var(--accent-soft); }
+.calendar td.today .day-num { background: var(--accent); color: #fff; border-radius: 50%; }
+.day-num {
+  display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center;
+  text-decoration: none; color: inherit; font-weight: 600; margin-bottom: 4px;
+}
+.day-num:hover { color: var(--accent); }
+.cal-plan {
+  font-size: .72rem; background: var(--accent-soft); color: var(--accent);
+  border-radius: 5px; padding: 1px 5px; margin-bottom: 3px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cal-plan.done { text-decoration: line-through; opacity: .6; }
+.cal-more { font-size: .7rem; color: var(--ink-soft); }
+
+/* 폼 보조 */
+.form-row { display: flex; gap: 16px; }
+.form-row .form-group { flex: 1; }
+.textarea-short { min-height: 120px; }
+
+/* ── 반응형 ──────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .week-grid { grid-template-columns: 1fr; }
+  .week-day { min-height: auto; }
+  .calendar td { height: 68px; }
+  .plan-card { flex-wrap: wrap; }
+  .plan-card .actions { width: 100%; justify-content: flex-end; }
+  .form-row { flex-direction: column; gap: 0; }
+  header.site .gnb a { padding: 6px 8px; font-size: .85rem; }
+}
+
+/* ── 다크모드 (시스템 설정) ──────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e6ebe7;
+    --ink-soft: #98a69d;
+    --paper: #141917;
+    --card: #1d2320;
+    --line: #313a34;
+    --accent: #69b48d;
+    --accent-soft: #25352c;
+    --danger: #e08379;
+  }
+  :root:not([data-theme="light"]) .btn-primary { color: #10150f; }
+  :root:not([data-theme="light"]) .view-tabs a.on { color: #10150f; }
+  :root:not([data-theme="light"]) .pagination .current { color: #10150f; }
+  :root:not([data-theme="light"]) .calendar td.today .day-num { color: #10150f; }
+  :root:not([data-theme="light"]) .notif-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+}
+
+/* ── 다크모드 (수동 토글) ────────────────────────────────── */
+[data-theme="dark"] {
+  --ink: #e6ebe7;
+  --ink-soft: #98a69d;
+  --paper: #141917;
+  --card: #1d2320;
+  --line: #313a34;
+  --accent: #69b48d;
+  --accent-soft: #25352c;
+  --danger: #e08379;
+}
+[data-theme="dark"] .btn-primary { color: #10150f; }
+[data-theme="dark"] .view-tabs a.on { color: #10150f; }
+[data-theme="dark"] .pagination .current { color: #10150f; }
+[data-theme="dark"] .calendar td.today .day-num { color: #10150f; }
+[data-theme="dark"] .notif-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+
+/* ── 헤더 sticky + 추가 컴포넌트 ────────────────────────── */
+header.site {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+
+/* 헤더 우측 컨트롤 묶음 (알림 + 다크모드 버튼) */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* 다크모드 토글 버튼 */
+.theme-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  font-size: .95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  transition: border-color .15s, background .15s;
+}
+.theme-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+/* 테이블 가로 스크롤 래퍼 */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.board { min-width: 480px; }
+
+/* 주간·월간 가로 스크롤 래퍼 */
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* 읽기 전용 input */
+.input-readonly {
+  background: var(--line) !important;
+  color: var(--ink-soft) !important;
+  cursor: not-allowed;
+}
+
+/* ── 모바일 추가 브레이크포인트 (≤ 480px) ───────────────── */
+@media (max-width: 480px) {
+  .container, .container-wide { padding: 14px 12px 56px; }
+  header.site .container { gap: 6px; padding: 0 12px; }
+  .brand { font-size: .9rem; }
+  .gnb a { padding: 4px 7px; font-size: .8rem; }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar form { flex-wrap: wrap; }
+  .plan-nav { flex-direction: column; align-items: center; text-align: center; }
+  .pagination { flex-wrap: wrap; }
+  .notif-panel { width: calc(100vw - 24px); right: -40px; }
+  .toast-box { bottom: 16px; right: 12px; }
+  .toast { max-width: calc(100vw - 32px); }
+}

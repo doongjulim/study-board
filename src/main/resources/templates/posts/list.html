@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>게시판</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('posts')}"></header>
+
+<main class="container">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <div class="toolbar">
+        <form th:action="@{/posts}" method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select name="searchType"
+                    style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);">
+                <option th:each="type : ${searchTypes}"
+                        th:value="${type}" th:text="${type.label}"
+                        th:selected="${type == searchType}"></option>
+            </select>
+            <input type="text" name="keyword" th:value="${keyword}" placeholder="검색어"
+                   style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);">
+            <select name="sort" onchange="this.form.submit()"
+                    style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);">
+                <option value="latest" th:selected="${sort == 'latest'}">최신순</option>
+                <option value="oldest" th:selected="${sort == 'oldest'}">오래된순</option>
+                <option value="title" th:selected="${sort == 'title'}">제목순</option>
+            </select>
+            <button type="submit" class="btn">검색</button>
+        </form>
+        <a th:href="@{/posts/new}" class="btn btn-primary">글쓰기</a>
+    </div>
+
+    <div class="table-wrap">
+    <table class="board">
+        <thead>
+        <tr>
+            <th>번호</th>
+            <th>제목</th>
+            <th>작성자</th>
+            <th>작성일</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:if="${posts.isEmpty()}">
+            <td colspan="4" class="empty">등록된 게시글이 없습니다.</td>
+        </tr>
+        <tr th:each="post : ${posts.content}">
+            <td class="num" th:text="${post.id}">1</td>
+            <td>
+                <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">제목</a>
+                <span class="clip" th:if="${!post.files.isEmpty()}"
+                      th:text="'📎 ' + ${post.files.size()}"></span>
+            </td>
+            <td th:text="${post.writer}">작성자</td>
+            <td class="date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">날짜</td>
+        </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <nav class="pagination" th:if="${posts.totalPages > 1}">
+        <a th:if="${blockStart > 0}"
+           th:href="@{/posts(page=0, keyword=${keyword}, searchType=${searchType}, sort=${sort})}">≪</a>
+        <a th:if="${posts.hasPrevious()}"
+           th:href="@{/posts(page=${posts.number - 1}, keyword=${keyword}, searchType=${searchType}, sort=${sort})}">이전</a>
+        <th:block th:each="i : ${#numbers.sequence(blockStart, blockEnd)}">
+            <span th:if="${i == posts.number}" class="current" th:text="${i + 1}"></span>
+            <a th:unless="${i == posts.number}"
+               th:href="@{/posts(page=${i}, keyword=${keyword}, searchType=${searchType}, sort=${sort})}"
+               th:text="${i + 1}"></a>
+        </th:block>
+        <a th:if="${posts.hasNext()}"
+           th:href="@{/posts(page=${posts.number + 1}, keyword=${keyword}, searchType=${searchType}, sort=${sort})}">다음</a>
+        <a th:if="${blockEnd < posts.totalPages - 1}"
+           th:href="@{/posts(page=${posts.totalPages - 1}, keyword=${keyword}, searchType=${searchType}, sort=${sort})}">≫</a>
+    </nav>
+</main>
+</body>
+</html>

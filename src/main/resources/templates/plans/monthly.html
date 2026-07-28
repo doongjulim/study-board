@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>플래너 - 월간</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('plans')}"></header>
+
+<main class="container container-wide">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <nav class="view-tabs">
+        <a th:href="@{/plans/daily}">일간</a>
+        <a th:href="@{/plans/weekly}">주간</a>
+        <a class="on" th:href="@{/plans/monthly(month=${month})}">월간</a>
+    </nav>
+
+    <div class="plan-nav">
+        <a class="btn" th:href="@{/plans/monthly(month=${prevMonth})}">← 이전 달</a>
+        <h2 th:text="|${month.year}년 ${month.monthValue}월|">월</h2>
+        <div class="btn-group">
+            <a class="btn" th:href="@{/plans/monthly}">이번 달</a>
+            <a class="btn" th:href="@{/plans/monthly(month=${nextMonth})}">다음 달 →</a>
+        </div>
+    </div>
+
+    <div class="scroll-x">
+    <table class="calendar">
+        <thead>
+        <tr>
+            <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th><th>일</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="week : ${weeks}">
+            <td th:each="day : ${week}"
+                th:classappend="${(day.monthValue != month.monthValue ? 'muted ' : '') + (day == today ? 'today' : '')}">
+                <a class="day-num" th:href="@{/plans/daily(date=${day})}" th:text="${day.dayOfMonth}">1</a>
+                <th:block th:with="dayPlans=${plansByDate[day]}">
+                    <th:block th:if="${dayPlans != null}">
+                        <div class="cal-plan" th:each="plan, stat : ${dayPlans}" th:if="${stat.index < 3}"
+                             th:classappend="${plan.completed} ? 'done'" th:text="${plan.title}"></div>
+                        <div class="cal-more" th:if="${dayPlans.size() > 3}"
+                             th:text="|+${dayPlans.size() - 3}개 더|"></div>
+                    </th:block>
+                </th:block>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    </div>
+</main>
+</body>
+</html>

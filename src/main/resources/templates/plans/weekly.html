@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>플래너 - 주간</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('plans')}"></header>
+
+<main class="container container-wide">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <nav class="view-tabs">
+        <a th:href="@{/plans/daily(date=${date})}">일간</a>
+        <a class="on" th:href="@{/plans/weekly(date=${date})}">주간</a>
+        <a th:href="@{/plans/monthly(month=${#temporals.format(date, 'yyyy-MM')})}">월간</a>
+    </nav>
+
+    <div class="plan-nav">
+        <a class="btn" th:href="@{/plans/weekly(date=${prevWeek})}">← 이전 주</a>
+        <h2 th:text="|${#temporals.format(weekStart, 'yyyy.MM.dd')} ~ ${#temporals.format(weekStart.plusDays(6), 'MM.dd')}|">주간</h2>
+        <div class="btn-group">
+            <a class="btn" th:href="@{/plans/weekly}">이번 주</a>
+            <a class="btn" th:href="@{/plans/weekly(date=${nextWeek})}">다음 주 →</a>
+        </div>
+    </div>
+
+    <div class="scroll-x">
+    <div class="week-grid">
+        <div class="week-day" th:each="day : ${weekDays}" th:classappend="${day == today} ? 'today'">
+            <h3>
+                <a th:href="@{/plans/daily(date=${day})}"
+                   th:text="${#temporals.format(day, 'M/d (E)')}">날짜</a>
+            </h3>
+            <div class="week-plan" th:each="plan : ${plansByDate.get(day)}"
+                 th:classappend="${plan.completed} ? 'done'"
+                 th:text="${plan.startTime != null} ? |${#temporals.format(plan.startTime, 'HH:mm')} ${plan.title}| : ${plan.title}"></div>
+            <a class="week-add" th:href="@{/plans/new(date=${day})}">+ 추가</a>
+        </div>
+    </div>
+    </div>
+</main>
+</body>
+</html>

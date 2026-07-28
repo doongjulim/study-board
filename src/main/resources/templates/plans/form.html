@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${mode == 'edit'} ? '일정 수정' : '일정 추가'">일정</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('plans')}"></header>
+
+<main class="container">
+    <h2 class="page-title" th:text="${mode == 'edit'} ? '일정 수정' : '일정 추가'">일정</h2>
+
+    <form class="form-card" method="post" th:object="${planForm}"
+          th:action="${mode == 'edit'} ? @{/plans/{id}/edit(id=${planId})} : @{/plans}">
+
+        <div class="form-group">
+            <label for="title">제목</label>
+            <input type="text" id="title" th:field="*{title}" placeholder="예) 자료구조 스터디">
+            <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+        </div>
+
+        <div class="form-group">
+            <label for="writer">작성자</label>
+            <input type="text" id="writer" th:field="*{writer}" placeholder="이름 또는 닉네임">
+            <p class="error" th:if="${#fields.hasErrors('writer')}" th:errors="*{writer}"></p>
+        </div>
+
+        <div class="form-group">
+            <label for="planDate">날짜</label>
+            <input type="date" id="planDate" th:field="*{planDate}">
+            <p class="error" th:if="${#fields.hasErrors('planDate')}" th:errors="*{planDate}"></p>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="startTime">시작 시간</label>
+                <input type="time" id="startTime" th:field="*{startTime}">
+                <p class="hint">비워두면 종일 일정이 됩니다. 시작 10분 전에 알림을 보내드려요.</p>
+            </div>
+            <div class="form-group">
+                <label for="endTime">종료 시간</label>
+                <input type="time" id="endTime" th:field="*{endTime}">
+                <p class="error" th:if="${#fields.hasErrors('endTime')}" th:errors="*{endTime}"></p>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="content">메모</label>
+            <textarea id="content" th:field="*{content}" class="textarea-short"
+                      placeholder="공부할 내용, 목표 등을 적어보세요."></textarea>
+            <p class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary"
+                    th:text="${mode == 'edit'} ? '수정' : '등록'">등록</button>
+            <a class="btn" th:href="@{/plans/daily(date=${planForm.planDate})}">취소</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

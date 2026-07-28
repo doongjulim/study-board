@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>글 수정</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('posts')}"></header>
+
+<main class="container">
+    <h1 class="post-title">글 수정</h1>
+
+    <form class="form-card" th:action="@{/posts/{id}/edit(id=${post.id})}" th:object="${postForm}"
+          method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="title">제목</label>
+            <input type="text" id="title" th:field="*{title}">
+            <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+        </div>
+        <div class="form-group">
+            <label>작성자</label>
+            <input type="text" th:field="*{writer}" readonly class="input-readonly">
+        </div>
+        <div class="form-group">
+            <label for="content">내용</label>
+            <textarea id="content" th:field="*{content}"></textarea>
+            <p class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
+        </div>
+        <div class="form-group">
+            <label for="files">파일 추가</label>
+            <input type="file" id="files" name="files" multiple>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">저장</button>
+            <a th:href="@{/posts/{id}(id=${post.id})}" class="btn">취소</a>
+        </div>
+    </form>
+
+    <!-- 기존 첨부파일: 개별 삭제 -->
+    <div class="attach" th:if="${!post.files.isEmpty()}" style="margin-top:20px;">
+        <h3>기존 첨부파일</h3>
+        <ul>
+            <li th:each="file : ${post.files}" style="display:flex;align-items:center;gap:10px;">
+                <span th:text="${file.originalName}">파일명</span>
+                <form th:action="@{/posts/{postId}/files/{fileId}/delete(postId=${post.id}, fileId=${file.id})}"
+                      method="post" onsubmit="return confirm('이 파일을 삭제하시겠습니까?');">
+                    <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</main>
+</body>
+</html>

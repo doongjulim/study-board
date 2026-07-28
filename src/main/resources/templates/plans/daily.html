@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>플래너 - 일간</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('plans')}"></header>
+
+<main class="container">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <nav class="view-tabs">
+        <a class="on" th:href="@{/plans/daily(date=${date})}">일간</a>
+        <a th:href="@{/plans/weekly(date=${date})}">주간</a>
+        <a th:href="@{/plans/monthly(month=${#temporals.format(date, 'yyyy-MM')})}">월간</a>
+    </nav>
+
+    <div class="plan-nav">
+        <a class="btn" th:href="@{/plans/daily(date=${prevDate})}">← 이전 날</a>
+        <h2 th:text="${#temporals.format(date, 'yyyy년 M월 d일 (E)')}"
+            th:classappend="${date == today} ? 'accent'">날짜</h2>
+        <div class="btn-group">
+            <a class="btn" th:href="@{/plans/daily}">오늘</a>
+            <a class="btn" th:href="@{/plans/daily(date=${nextDate})}">다음 날 →</a>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <span class="hint" th:text="|총 ${plans.size()}개 일정|"></span>
+        <a class="btn btn-primary" th:href="@{/plans/new(date=${date})}">+ 일정 추가</a>
+    </div>
+
+    <ul class="plan-list">
+        <li th:if="${plans.isEmpty()}" class="empty plan-empty">등록된 일정이 없습니다.</li>
+        <li th:each="plan : ${plans}" class="plan-card" th:classappend="${plan.completed} ? 'done'">
+            <form th:action="@{/plans/{id}/toggle(id=${plan.id})}" method="post">
+                <button type="submit" class="check" title="완료 상태 전환"
+                        th:text="${plan.completed} ? '✅' : '⬜'"></button>
+            </form>
+            <div class="plan-main">
+                <div class="plan-time" th:if="${plan.startTime == null}">종일</div>
+                <div class="plan-time" th:if="${plan.startTime != null}"
+                     th:with="start=${#temporals.format(plan.startTime, 'HH:mm')}"
+                     th:text="${plan.endTime != null} ? |${start} ~ ${#temporals.format(plan.endTime, 'HH:mm')}| : ${start}"></div>
+                <div class="plan-title" th:text="${plan.title}">제목</div>
+                <div class="plan-content" th:if="${plan.content != null && !plan.content.isBlank()}"
+                     th:text="${plan.content}"></div>
+                <div class="plan-meta">
+                    <span th:text="${plan.writer}">작성자</span>
+                    <span class="tag-shared" th:if="${plan.shared}">공유됨</span>
+                </div>
+            </div>
+            <div class="actions">
+                <form th:action="@{/plans/{id}/share(id=${plan.id})}" method="post">
+                    <button type="submit" class="btn btn-sm"
+                            th:text="${plan.shared} ? '공유 해제' : '공유'"></button>
+                </form>
+                <a class="btn btn-sm" th:href="@{/plans/{id}/edit(id=${plan.id})}">수정</a>
+                <form th:action="@{/plans/{id}/delete(id=${plan.id})}" method="post"
+                      onsubmit="return confirm('일정을 삭제할까요?');">
+                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+                </form>
+            </div>
+        </li>
+    </ul>
+</main>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 모든 페이지 공통 헤더: 내비게이션 + 다크모드 + 실시간 알림 벨 -->
+<header class="site" th:fragment="siteHeader(active)">
+    <div class="container">
+        <a th:href="@{/}" class="brand">🎯 스터디플랜</a>
+        <nav class="gnb">
+            <a th:href="@{/plans/daily}" th:classappend="${active == 'plans'} ? 'on'">플래너</a>
+            <a th:href="@{/plans/shared}" th:classappend="${active == 'shared'} ? 'on'">공유 플랜</a>
+            <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">게시판</a>
+        </nav>
+        <div class="header-controls">
+            <button id="theme-toggle" type="button" class="theme-btn" aria-label="다크 모드로 전환">🌙</button>
+            <div class="notif">
+                <button id="notif-bell" type="button" class="bell" aria-label="알림">
+                    🔔<span id="notif-badge" class="badge" hidden></span>
+                </button>
+                <div id="notif-panel" class="notif-panel" hidden>
+                    <div class="notif-head">알림</div>
+                    <ul id="notif-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="toast-box" class="toast-box"></div>
+    <script th:src="@{/js/theme.js}" defer></script>
+    <script th:src="@{/js/notification.js}" defer></script>
+</header>
+</body>
+</html>

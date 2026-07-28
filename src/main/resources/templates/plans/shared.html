@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>공유 플랜</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('shared')}"></header>
+
+<main class="container">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <h2 class="page-title">공유된 플랜</h2>
+    <p class="hint">다른 취업준비생들이 공유한 공부 플랜을 둘러보세요.</p>
+
+    <ul class="plan-list">
+        <li th:if="${plans.isEmpty()}" class="empty plan-empty">아직 공유된 플랜이 없습니다.</li>
+        <li th:each="plan : ${plans.content}" class="plan-card" th:classappend="${plan.completed} ? 'done'">
+            <div class="plan-main">
+                <div class="plan-time">
+                    <span th:text="${#temporals.format(plan.planDate, 'yyyy-MM-dd (E)')}"></span>
+                    <span th:if="${plan.startTime != null}"
+                          th:text="${#temporals.format(plan.startTime, 'HH:mm')}"></span>
+                </div>
+                <div class="plan-title" th:text="${plan.title}">제목</div>
+                <div class="plan-content" th:if="${plan.content != null && !plan.content.isBlank()}"
+                     th:text="${plan.content}"></div>
+                <div class="plan-meta">
+                    <span th:text="${plan.writer}">작성자</span>
+                    <span th:if="${plan.completed}">✅ 완료한 플랜</span>
+                </div>
+            </div>
+        </li>
+    </ul>
+
+    <nav class="pagination" th:if="${plans.totalPages > 1}">
+        <a th:if="${plans.hasPrevious()}" th:href="@{/plans/shared(page=${plans.number - 1})}">이전</a>
+        <th:block th:each="i : ${#numbers.sequence(0, plans.totalPages - 1)}">
+            <span th:if="${i == plans.number}" class="current" th:text="${i + 1}"></span>
+            <a th:unless="${i == plans.number}" th:href="@{/plans/shared(page=${i})}" th:text="${i + 1}"></a>
+        </th:block>
+        <a th:if="${plans.hasNext()}" th:href="@{/plans/shared(page=${plans.number + 1})}">다음</a>
+    </nav>
+</main>
+</body>
+</html>
