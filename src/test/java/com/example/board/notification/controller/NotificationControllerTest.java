@@ -42,7 +42,7 @@ class NotificationControllerTest {
     @Test
     @DisplayName("GET /notifications/subscribe - SSE 스트림으로 응답한다")
     void subscribe() throws Exception {
-        given(notificationService.subscribe()).willReturn(new SseEmitter());
+        given(notificationService.subscribe(1L)).willReturn(new SseEmitter());
 
         mockMvc.perform(get("/notifications/subscribe").with(memberAuth()))
                 .andExpect(status().isOk());
@@ -51,8 +51,8 @@ class NotificationControllerTest {
     @Test
     @DisplayName("GET /notifications - 읽지 않은 개수와 최근 알림을 JSON 으로 반환한다")
     void list() throws Exception {
-        given(notificationService.countUnread()).willReturn(3L);
-        given(notificationService.findRecent()).willReturn(List.of());
+        given(notificationService.countUnread(1L)).willReturn(3L);
+        given(notificationService.findRecent(1L)).willReturn(List.of());
 
         mockMvc.perform(get("/notifications").with(memberAuth()))
                 .andExpect(status().isOk())
@@ -66,6 +66,6 @@ class NotificationControllerTest {
         mockMvc.perform(post("/notifications/read-all").with(csrf()).with(memberAuth()))
                 .andExpect(status().isOk());
 
-        then(notificationService).should().markAllAsRead();
+        then(notificationService).should().markAllAsRead(1L);
     }
 }

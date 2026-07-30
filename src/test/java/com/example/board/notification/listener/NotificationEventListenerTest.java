@@ -24,20 +24,20 @@ class NotificationEventListenerTest {
     @InjectMocks NotificationEventListener listener;
 
     @Test
-    @DisplayName("플랜 공유 이벤트를 받으면 공유 알림을 만든다")
+    @DisplayName("플랜 공유 이벤트를 받으면 공유한 본인을 제외한 전체에게 알림을 만든다")
     void handlePlanShared() {
-        listener.handlePlanShared(new PlanSharedEvent(1L, "동주", "면접 준비"));
+        listener.handlePlanShared(new PlanSharedEvent(1L, 7L, "동주", "면접 준비"));
 
         then(notificationService).should()
-                .notify(contains("면접 준비"), eq("/plans/shared"));
+                .notifyAllExcept(eq(7L), contains("면접 준비"), eq("/plans/shared"));
     }
 
     @Test
-    @DisplayName("리마인더 이벤트를 받으면 일정 시작 알림을 만든다")
+    @DisplayName("리마인더 이벤트를 받으면 일정 작성자에게만 알림을 만든다")
     void handlePlanReminder() {
-        listener.handlePlanReminder(new PlanReminderEvent(1L, "영어 스터디", LocalTime.of(10, 5)));
+        listener.handlePlanReminder(new PlanReminderEvent(1L, 7L, "영어 스터디", LocalTime.of(10, 5)));
 
         then(notificationService).should()
-                .notify(contains("영어 스터디"), eq("/plans/daily"));
+                .notify(eq(7L), contains("영어 스터디"), eq("/plans/daily"));
     }
 }

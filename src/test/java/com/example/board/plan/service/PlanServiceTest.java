@@ -189,6 +189,7 @@ class PlanServiceTest {
         then(eventPublisher).should().publishEvent(captor.capture());
         assertThat(captor.getValue().title()).isEqualTo("자료구조 공부");
         assertThat(captor.getValue().nickname()).isEqualTo("동주");
+        assertThat(captor.getValue().authorId()).isEqualTo(1L);
     }
 
     @Test

@@ -93,8 +93,8 @@ public class PlanService {
     public Plan toggleShared(Long id, Long memberId) {
         Plan plan = findOwned(id, memberId);
         if (plan.toggleShared()) {
-            eventPublisher.publishEvent(
-                    new PlanSharedEvent(plan.getId(), plan.getAuthor().getNickname(), plan.getTitle()));
+            eventPublisher.publishEvent(new PlanSharedEvent(
+                    plan.getId(), plan.getAuthor().getId(), plan.getAuthor().getNickname(), plan.getTitle()));
         }
         return plan;
     }
