@@ -40,7 +40,10 @@
 - **AttachedFile.setPost()**: package-private — `Post.addFile()`을 통해서만 연관관계 설정
 - **orphanRemoval = true**: `post.getFiles().remove(target)` 만으로 DB 삭제 처리
 - **플래너(plan)**: 단일 `Plan` 엔티티를 일간/주간/월간 3가지 뷰로 표시 (`/plans/daily|weekly|monthly`), 완료 토글·공유 지원
-- **실시간 알림(notification)**: SSE(`SseEmitter`) 기반, 추가 의존성 없음. `/notifications/subscribe` 구독 → `static/js/notification.js`가 토스트/벨 배지 표시
+- **실시간 알림(notification)**: SSE(`SseEmitter`) 기반, 추가 의존성 없음. `/notifications/subscribe` 구독 → `static/js/notification.js`가 토스트/벨 배지 표시.
+  **사용자별 알림**: `Notification.recipient` FK + 회원별 `SseEmitterRegistry`(멀티 탭 지원). 리마인더 → 작성자 본인, 플랜 공유 → 본인 제외 전체(fanout), 댓글 → 대상 작성자(셀프 제외)
+- **댓글(comment)**: 단일 `Comment` 엔티티가 게시글/공유 플랜 중 하나에 달림(DB check 제약, on delete cascade). 댓글 UI 는 `fragments/comments.html` 재사용, 알림은 `CommentAddedEvent` 로 결합 차단
+- **업로드 보안(file)**: `FileStore` 확장자 화이트리스트(무확장자 거부), `/files/{id}/view` 는 이미지만 인라인·그 외 다운로드 리다이렉트
 - **모듈 간 결합 차단**: plan 모듈은 `PlanSharedEvent`/`PlanReminderEvent`만 발행하고, notification 모듈의 `NotificationEventListener`가 구독 (Spring 이벤트로 DIP 준수)
 - **리마인더**: `PlanReminderScheduler`가 1분마다 시작 10분 전 일정을 찾아 알림 발행 (`reminderSent` 플래그로 중복 방지)
 - **공통 헤더**: `templates/fragments/header.html` 프래그먼트를 모든 페이지에서 `th:replace`로 재사용
