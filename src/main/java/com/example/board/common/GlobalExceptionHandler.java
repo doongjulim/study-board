@@ -42,6 +42,15 @@ public class GlobalExceptionHandler {
         return "redirect:/posts";
     }
 
+    /** 허용되지 않는 파일 형식 업로드 → 목록으로 리다이렉트 + 안내 메시지 */
+    @ExceptionHandler(com.example.board.file.exception.UnsupportedFileTypeException.class)
+    public String handleUnsupportedFileType(com.example.board.file.exception.UnsupportedFileTypeException e,
+                                            RedirectAttributes redirectAttributes) {
+        log.warn("허용되지 않는 파일 업로드 차단: {}", e.getMessage());
+        redirectAttributes.addFlashAttribute("message", e.getMessage());
+        return "redirect:/posts";
+    }
+
     /** 그 외 예상치 못한 오류 → 500 페이지 */
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
