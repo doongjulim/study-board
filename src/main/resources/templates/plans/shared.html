@@ -25,7 +25,9 @@
                     <span th:if="${plan.startTime != null}"
                           th:text="${#temporals.format(plan.startTime, 'HH:mm')}"></span>
                 </div>
-                <div class="plan-title" th:text="${plan.title}">제목</div>
+                <div class="plan-title">
+                    <a th:href="@{/plans/shared/{id}(id=${plan.id})}" th:text="${plan.title}">제목</a>
+                </div>
                 <div class="plan-content" th:if="${plan.content != null && !plan.content.isBlank()}"
                      th:text="${plan.content}"></div>
                 <div class="plan-meta">

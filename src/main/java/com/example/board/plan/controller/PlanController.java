@@ -1,6 +1,8 @@
 package com.example.board.plan.controller;
 
 import com.example.board.auth.MemberPrincipal;
+import com.example.board.comment.dto.CommentForm;
+import com.example.board.comment.service.CommentService;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.service.PlanService;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 public class PlanController {
 
     private final PlanService planService;
+    private final CommentService commentService;
 
     @GetMapping
     public String home() {
@@ -106,6 +109,22 @@ public class PlanController {
         Page<Plan> plans = planService.findShared(pageable);
         model.addAttribute("plans", plans);
         return "plans/shared";
+    }
+
+    /** 공유 플랜 상세 + 응원 댓글 */
+    @GetMapping("/shared/{id}")
+    public String sharedDetail(@PathVariable Long id,
+                               @AuthenticationPrincipal MemberPrincipal principal,
+                               Model model) {
+        Plan plan = planService.findById(id);
+        if (!plan.isShared() && !plan.isAuthoredBy(principal.id())) {
+            // 공유가 해제된 플랜은 작성자 본인 외에는 존재를 노출하지 않는다
+            throw new IllegalArgumentException("공유된 플랜이 아닙니다. id=" + id);
+        }
+        model.addAttribute("plan", plan);
+        model.addAttribute("comments", commentService.findForPlan(id));
+        model.addAttribute("commentForm", new CommentForm());
+        return "plans/shared-detail";
     }
 
     /** 작성 폼 */

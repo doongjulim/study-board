@@ -1,5 +1,6 @@
 package com.example.board.notification.listener;
 
+import com.example.board.comment.event.CommentAddedEvent;
 import com.example.board.notification.service.NotificationService;
 import com.example.board.plan.event.PlanReminderEvent;
 import com.example.board.plan.event.PlanSharedEvent;
@@ -30,6 +31,15 @@ class NotificationEventListenerTest {
 
         then(notificationService).should()
                 .notifyAllExcept(eq(7L), contains("면접 준비"), eq("/plans/shared"));
+    }
+
+    @Test
+    @DisplayName("댓글 이벤트를 받으면 대상 글 작성자에게 알림을 만든다")
+    void handleCommentAdded() {
+        listener.handleCommentAdded(new CommentAddedEvent(7L, "댓글러", "면접 후기", "/posts/3"));
+
+        then(notificationService).should()
+                .notify(eq(7L), contains("면접 후기"), eq("/posts/3"));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.example.board.plan.controller;
 
 import com.example.board.auth.MemberPrincipal;
+import com.example.board.comment.service.CommentService;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
@@ -16,6 +17,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -39,10 +41,16 @@ class PlanControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean PlanService planService;
+    @MockBean CommentService commentService;
 
     private Plan plan() {
-        return new Plan("자료구조 공부", "스택, 큐 복습",
-                new Member("tester1", "encoded-password", "동주"),
+        return planOwnedBy(MEMBER_ID);
+    }
+
+    private Plan planOwnedBy(long authorId) {
+        Member author = new Member("tester" + authorId, "encoded-password", "동주");
+        ReflectionTestUtils.setField(author, "id", authorId);
+        return new Plan("자료구조 공부", "스택, 큐 복습", author,
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(12, 0));
     }
 
@@ -127,6 +135,42 @@ class PlanControllerTest {
         mockMvc.perform(get("/plans/shared").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("plans/shared"));
+    }
+
+    // ── 공유 플랜 상세 ────────────────────────────────────────
+
+    @Test
+    @DisplayName("GET /plans/shared/{id} - 공유된 플랜이면 상세와 댓글을 보여준다")
+    void sharedDetail() throws Exception {
+        Plan shared = planOwnedBy(999L);
+        shared.toggleShared();
+        given(planService.findById(2L)).willReturn(shared);
+        given(commentService.findForPlan(2L)).willReturn(List.of());
+
+        mockMvc.perform(get("/plans/shared/2").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("plans/shared-detail"))
+                .andExpect(model().attributeExists("plan", "comments", "commentForm"));
+    }
+
+    @Test
+    @DisplayName("GET /plans/shared/{id} - 공유되지 않은 타인의 플랜은 404 를 반환한다")
+    void sharedDetail_notShared() throws Exception {
+        given(planService.findById(2L)).willReturn(planOwnedBy(999L));
+
+        mockMvc.perform(get("/plans/shared/2").with(memberAuth()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /plans/shared/{id} - 공유 해제된 플랜이라도 본인은 볼 수 있다")
+    void sharedDetail_ownerCanSeeUnshared() throws Exception {
+        given(planService.findById(2L)).willReturn(planOwnedBy(MEMBER_ID));
+        given(commentService.findForPlan(2L)).willReturn(List.of());
+
+        mockMvc.perform(get("/plans/shared/2").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("plans/shared-detail"));
     }
 
     // ── 등록 / 수정 / 삭제 ────────────────────────────────────

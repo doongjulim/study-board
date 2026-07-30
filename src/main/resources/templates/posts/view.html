@@ -49,6 +49,8 @@
             </form>
         </th:block>
     </div>
+
+    <div th:replace="~{fragments/comments :: commentSection(${comments}, '/posts/' + ${post.id} + '/comments')}"></div>
 </main>
 </body>
 </html>

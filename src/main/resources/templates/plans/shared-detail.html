@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${plan.title}">공유 플랜</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('shared')}"></header>
+
+<main class="container">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <div class="plan-card" th:classappend="${plan.completed} ? 'done'">
+        <div class="plan-main">
+            <div class="plan-time">
+                <span th:text="${#temporals.format(plan.planDate, 'yyyy-MM-dd (E)')}">날짜</span>
+                <span th:if="${plan.startTime != null}"
+                      th:with="start=${#temporals.format(plan.startTime, 'HH:mm')}"
+                      th:text="${plan.endTime != null} ? |${start} ~ ${#temporals.format(plan.endTime, 'HH:mm')}| : ${start}"></span>
+            </div>
+            <h2 class="plan-title" th:text="${plan.title}">제목</h2>
+            <div class="plan-content" th:if="${plan.content != null && !plan.content.isBlank()}"
+                 th:text="${plan.content}"></div>
+            <div class="plan-meta">
+                <span th:text="${plan.author.nickname}">작성자</span>
+                <span th:if="${plan.completed}">✅ 완료한 플랜</span>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/comments :: commentSection(${comments}, '/plans/' + ${plan.id} + '/comments')}"></div>
+
+    <div class="actions">
+        <a th:href="@{/plans/shared}" class="btn">목록으로</a>
+    </div>
+</main>
+</body>
+</html>

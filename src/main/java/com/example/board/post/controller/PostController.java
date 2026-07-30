@@ -1,6 +1,8 @@
 package com.example.board.post.controller;
 
 import com.example.board.auth.MemberPrincipal;
+import com.example.board.comment.dto.CommentForm;
+import com.example.board.comment.service.CommentService;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.PostSummary;
@@ -28,6 +30,7 @@ import java.io.IOException;
 public class PostController {
 
     private final PostService postService;
+    private final CommentService commentService;
 
     private static final int PAGE_BLOCK_SIZE = 5;
 
@@ -65,6 +68,8 @@ public class PostController {
     @GetMapping("/{id}")
     public String view(@PathVariable Long id, Model model) {
         model.addAttribute("post", postService.findById(id));
+        model.addAttribute("comments", commentService.findForPost(id));
+        model.addAttribute("commentForm", new CommentForm());
         return "posts/view";
     }
 

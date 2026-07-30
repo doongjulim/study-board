@@ -1,6 +1,7 @@
 package com.example.board.post.controller;
 
 import com.example.board.auth.MemberPrincipal;
+import com.example.board.comment.service.CommentService;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
@@ -41,6 +42,7 @@ class PostControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean PostService postService;
+    @MockBean CommentService commentService;
 
     private Post postFixture() {
         return new Post("제목", "내용", new Member("tester1", "encoded-password", "작성자"));
