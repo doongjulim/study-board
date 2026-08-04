@@ -32,6 +32,9 @@
 - **인증(auth/member)**: JWT(HS256, jjwt) + HttpOnly·SameSite=Lax 쿠키, 세션 없음(STATELESS).
   `JwtAuthenticationFilter` 가 쿠키를 검증해 `MemberPrincipal` 을 SecurityContext 에 채운다.
   CSRF 는 `CookieCsrfTokenRepository` (JS fetch 는 헤더 프래그먼트의 data-csrf-* 사용)
+- **리프레시 토큰**: 액세스 15분 / 리프레시 14일. `RefreshToken` 은 DB 에 SHA-256 해시만 저장.
+  액세스 만료 시 필터가 자동 재발급하며 **회전**(쓴 토큰 즉시 폐기)한다. 로그아웃 = DB 행 삭제 → 즉시 무효화.
+  쿠키 읽기/쓰기는 `AuthCookies` 한 곳에서만 처리한다
 - **접근 정책**: 게시판 읽기 공개, 플래너·알림·모든 쓰기는 인증 필요. 미인증은 `/login?redirect=...`
 - **소유권**: 서비스 계층 `findOwned()` 로 본인 글/플랜만 수정·삭제 (위반 시 AccessDeniedException → 403)
 - **목록 조회**: 게시글 목록은 `PostSummary` DTO 프로젝션 (open-in-view=false + lazy 컬렉션 문제 회피, DB 페이징 유지)
