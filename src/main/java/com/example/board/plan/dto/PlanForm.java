@@ -21,10 +21,6 @@ public class PlanForm {
     @Size(max = 1000, message = "메모는 1000자 이하로 입력하세요.")
     private String content;
 
-    @NotBlank(message = "작성자를 입력하세요.")
-    @Size(max = 50, message = "작성자는 50자 이하로 입력하세요.")
-    private String writer;
-
     @NotNull(message = "날짜를 선택하세요.")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate planDate;

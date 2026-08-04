@@ -1,5 +1,6 @@
 package com.example.board.notification.listener;
 
+import com.example.board.comment.event.CommentAddedEvent;
 import com.example.board.notification.service.NotificationService;
 import com.example.board.plan.event.PlanReminderEvent;
 import com.example.board.plan.event.PlanSharedEvent;
@@ -24,20 +25,29 @@ class NotificationEventListenerTest {
     @InjectMocks NotificationEventListener listener;
 
     @Test
-    @DisplayName("플랜 공유 이벤트를 받으면 공유 알림을 만든다")
+    @DisplayName("플랜 공유 이벤트를 받으면 공유한 본인을 제외한 전체에게 알림을 만든다")
     void handlePlanShared() {
-        listener.handlePlanShared(new PlanSharedEvent(1L, "동주", "면접 준비"));
+        listener.handlePlanShared(new PlanSharedEvent(1L, 7L, "동주", "면접 준비"));
 
         then(notificationService).should()
-                .notify(contains("면접 준비"), eq("/plans/shared"));
+                .notifyAllExcept(eq(7L), contains("면접 준비"), eq("/plans/shared"));
     }
 
     @Test
-    @DisplayName("리마인더 이벤트를 받으면 일정 시작 알림을 만든다")
-    void handlePlanReminder() {
-        listener.handlePlanReminder(new PlanReminderEvent(1L, "영어 스터디", LocalTime.of(10, 5)));
+    @DisplayName("댓글 이벤트를 받으면 대상 글 작성자에게 알림을 만든다")
+    void handleCommentAdded() {
+        listener.handleCommentAdded(new CommentAddedEvent(7L, "댓글러", "면접 후기", "/posts/3"));
 
         then(notificationService).should()
-                .notify(contains("영어 스터디"), eq("/plans/daily"));
+                .notify(eq(7L), contains("면접 후기"), eq("/posts/3"));
+    }
+
+    @Test
+    @DisplayName("리마인더 이벤트를 받으면 일정 작성자에게만 알림을 만든다")
+    void handlePlanReminder() {
+        listener.handlePlanReminder(new PlanReminderEvent(1L, 7L, "영어 스터디", LocalTime.of(10, 5)));
+
+        then(notificationService).should()
+                .notify(eq(7L), contains("영어 스터디"), eq("/plans/daily"));
     }
 }

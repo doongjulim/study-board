@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 댓글 섹션 공통 프래그먼트: 게시글 상세·공유 플랜 상세에서 재사용 -->
+<section th:fragment="commentSection(comments, submitUrl)" class="comment-section">
+    <h3 class="comment-title" th:text="|댓글 ${comments.size()}|">댓글</h3>
+
+    <div th:if="${commentError}" class="flash" th:text="${commentError}"></div>
+
+    <ul class="comment-list">
+        <li th:if="${comments.isEmpty()}" class="empty comment-empty">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</li>
+        <li th:each="comment : ${comments}" class="comment-item">
+            <div class="comment-head">
+                <span class="comment-author" th:text="${comment.author.nickname}">닉네임</span>
+                <span class="comment-time"
+                      th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">시각</span>
+                <form th:if="${currentMember != null and currentMember.id == comment.author.id}"
+                      th:action="@{/comments/{id}/delete(id=${comment.id})}" method="post"
+                      class="inline-form" onsubmit="return confirm('댓글을 삭제할까요?');">
+                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+                </form>
+            </div>
+            <p class="comment-content" th:text="${comment.content}">내용</p>
+        </li>
+    </ul>
+
+    <form th:if="${currentMember != null}" th:action="@{${submitUrl}}" method="post"
+          th:object="${commentForm}" class="comment-form">
+        <textarea th:field="*{content}" rows="2" maxlength="500"
+                  placeholder="댓글을 입력하세요 (500자 이내)"></textarea>
+        <button type="submit" class="btn btn-primary">등록</button>
+    </form>
+    <p th:if="${currentMember == null}" class="hint">
+        댓글을 남기려면 <a th:href="@{/login}">로그인</a>이 필요합니다.
+    </p>
+</section>
+</body>
+</html>

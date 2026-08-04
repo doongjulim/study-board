@@ -42,8 +42,8 @@ public class PlanReminderScheduler {
 
         for (Plan plan : upcoming) {
             plan.markReminderSent();
-            eventPublisher.publishEvent(
-                    new PlanReminderEvent(plan.getId(), plan.getTitle(), plan.getStartTime()));
+            eventPublisher.publishEvent(new PlanReminderEvent(
+                    plan.getId(), plan.getAuthor().getId(), plan.getTitle(), plan.getStartTime()));
         }
     }
 }

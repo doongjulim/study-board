@@ -23,7 +23,7 @@
         if (panel.hidden) {
             await renderPanel();
             panel.hidden = false;
-            await fetch('/notifications/read-all', { method: 'POST' });
+            await fetch('/notifications/read-all', { method: 'POST', headers: csrfHeaders() });
             refreshBadge();
         } else {
             panel.hidden = true;
@@ -36,6 +36,13 @@
             panel.hidden = true;
         }
     });
+
+    // 헤더 프래그먼트의 data-csrf-* 속성에서 CSRF 토큰을 읽는다
+    function csrfHeaders() {
+        const site = document.querySelector('header.site');
+        if (!site || !site.dataset.csrfToken) return {};
+        return { [site.dataset.csrfHeader]: site.dataset.csrfToken };
+    }
 
     async function fetchNotifications() {
         const res = await fetch('/notifications');

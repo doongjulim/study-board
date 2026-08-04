@@ -1,5 +1,13 @@
 package com.example.board.post.controller;
 
+import com.example.board.auth.MemberPrincipal;
+import com.example.board.comment.service.CommentService;
+import com.example.board.auth.AuthCookies;
+import com.example.board.auth.service.TokenService;
+import com.example.board.auth.jwt.JwtAuthenticationFilter;
+import com.example.board.auth.jwt.JwtTokenProvider;
+import com.example.board.config.SecurityConfig;
+import com.example.board.member.domain.Member;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.SearchType;
@@ -8,26 +16,47 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @WebMvcTest(PostController.class)
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
 class PostControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean PostService postService;
+    @MockBean TokenService tokenService;
+    @MockBean CommentService commentService;
+
+    private Post postFixture() {
+        return new Post("제목", "내용", new Member("tester1", "encoded-password", "작성자"));
+    }
+
+    /** 로그인한 회원(id=1)으로 요청을 보낸다 */
+    private static RequestPostProcessor memberAuth() {
+        return authentication(new UsernamePasswordAuthenticationToken(
+                new MemberPrincipal(1L, "tester1", "테스터"), null,
+                List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
+    }
 
     // ── GET /posts ────────────────────────────────────────────
 
@@ -94,7 +123,7 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /posts/{id} - 상세 페이지가 200 을 반환한다")
     void viewDetail() throws Exception {
-        given(postService.findById(1L)).willReturn(new Post("제목", "작성자", "내용"));
+        given(postService.findById(1L)).willReturn(postFixture());
 
         mockMvc.perform(get("/posts/1"))
                 .andExpect(status().isOk())
@@ -105,12 +134,20 @@ class PostControllerTest {
     // ── GET /posts/new ────────────────────────────────────────
 
     @Test
-    @DisplayName("GET /posts/new - 작성 폼이 200 을 반환한다")
+    @DisplayName("GET /posts/new - 로그인 상태면 작성 폼이 200 을 반환한다")
     void createForm() throws Exception {
-        mockMvc.perform(get("/posts/new"))
+        mockMvc.perform(get("/posts/new").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/form"))
                 .andExpect(model().attributeExists("postForm"));
+    }
+
+    @Test
+    @DisplayName("비로그인으로 글쓰기 폼에 접근하면 로그인 페이지로 리다이렉트한다")
+    void createForm_requiresLogin() throws Exception {
+        mockMvc.perform(get("/posts/new"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/login*"));
     }
 
     // ── POST /posts ───────────────────────────────────────────
@@ -118,11 +155,10 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts - 유효한 폼이면 상세 페이지로 리다이렉트한다")
     void create_success() throws Exception {
-        given(postService.create(any(PostForm.class))).willReturn(1L);
+        given(postService.create(any(PostForm.class), eq(1L))).willReturn(1L);
 
-        mockMvc.perform(multipart("/posts")
+        mockMvc.perform(multipart("/posts").with(csrf()).with(memberAuth())
                         .param("title", "제목")
-                        .param("writer", "작성자")
                         .param("content", "내용"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts/1"));
@@ -131,9 +167,8 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts - 제목이 없으면 폼으로 돌아온다")
     void create_validationFail() throws Exception {
-        mockMvc.perform(multipart("/posts")
+        mockMvc.perform(multipart("/posts").with(csrf()).with(memberAuth())
                         .param("title", "")
-                        .param("writer", "작성자")
                         .param("content", "내용"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/form"))
@@ -145,9 +180,9 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /posts/{id}/edit - 수정 폼이 200 을 반환한다")
     void editForm() throws Exception {
-        given(postService.findById(1L)).willReturn(new Post("제목", "작성자", "내용"));
+        given(postService.findOwned(1L, 1L)).willReturn(postFixture());
 
-        mockMvc.perform(get("/posts/1/edit"))
+        mockMvc.perform(get("/posts/1/edit").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/edit"))
                 .andExpect(model().attributeExists("postForm", "post"));
@@ -158,24 +193,22 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{id}/edit - 유효한 폼이면 상세 페이지로 리다이렉트한다")
     void edit_success() throws Exception {
-        mockMvc.perform(multipart("/posts/1/edit")
+        mockMvc.perform(multipart("/posts/1/edit").with(csrf()).with(memberAuth())
                         .param("title", "새제목")
-                        .param("writer", "작성자")
                         .param("content", "새내용"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts/1"));
 
-        then(postService).should().update(eq(1L), any(PostForm.class));
+        then(postService).should().update(eq(1L), any(PostForm.class), eq(1L));
     }
 
     @Test
     @DisplayName("POST /posts/{id}/edit - 내용이 없으면 수정 폼으로 돌아온다")
     void edit_validationFail() throws Exception {
-        given(postService.findById(1L)).willReturn(new Post("제목", "작성자", "내용"));
+        given(postService.findById(1L)).willReturn(postFixture());
 
-        mockMvc.perform(multipart("/posts/1/edit")
+        mockMvc.perform(multipart("/posts/1/edit").with(csrf()).with(memberAuth())
                         .param("title", "새제목")
-                        .param("writer", "작성자")
                         .param("content", ""))
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/edit"))
@@ -187,11 +220,11 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{id}/delete - 삭제 후 목록으로 리다이렉트한다")
     void delete() throws Exception {
-        mockMvc.perform(post("/posts/1/delete"))
+        mockMvc.perform(post("/posts/1/delete").with(csrf()).with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts"));
 
-        then(postService).should().delete(1L);
+        then(postService).should().delete(1L, 1L);
     }
 
     // ── POST /posts/{postId}/files/{fileId}/delete ────────────
@@ -199,10 +232,10 @@ class PostControllerTest {
     @Test
     @DisplayName("POST /posts/{postId}/files/{fileId}/delete - 파일 삭제 후 수정 폼으로 리다이렉트한다")
     void deleteFile() throws Exception {
-        mockMvc.perform(post("/posts/1/files/5/delete"))
+        mockMvc.perform(post("/posts/1/files/5/delete").with(csrf()).with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/posts/1/edit"));
 
-        then(postService).should().deleteFile(1L, 5L);
+        then(postService).should().deleteFile(1L, 5L, 1L);
     }
 }

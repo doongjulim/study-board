@@ -25,14 +25,22 @@ public class FileController {
     private final PostService postService;
     private final FileStore fileStore;
 
-    /** 이미지 인라인 표시용 (본문 <img> 태그에서 사용) */
+    /**
+     * 이미지 인라인 표시용 (본문 <img> 태그에서 사용).
+     * 이미지가 아닌 파일을 인라인으로 서빙하면 HTML/SVG 를 통한 XSS 가 가능하므로
+     * 다운로드로 돌려보낸다. (Security 기본 헤더 X-Content-Type-Options: nosniff 와 이중 방어)
+     */
     @GetMapping("/files/{fileId}/view")
     public ResponseEntity<Resource> viewImage(@PathVariable Long fileId) throws MalformedURLException {
         AttachedFile file = postService.findFile(fileId);
+        if (!file.isImage()) {
+            return ResponseEntity.status(302)
+                    .header(HttpHeaders.LOCATION, "/files/" + fileId + "/download")
+                    .build();
+        }
         Resource resource = new UrlResource(Paths.get(fileStore.getFullPath(file.getStoredName())).toUri());
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(
-                        file.getContentType() != null ? file.getContentType() : "application/octet-stream"))
+                .contentType(MediaType.parseMediaType(file.getContentType()))
                 .body(resource);
     }
 

@@ -1,10 +1,14 @@
 package com.example.board.plan.controller;
 
+import com.example.board.auth.MemberPrincipal;
+import com.example.board.comment.dto.CommentForm;
+import com.example.board.comment.service.CommentService;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.service.PlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -31,6 +35,7 @@ import java.util.stream.Collectors;
 public class PlanController {
 
     private final PlanService planService;
+    private final CommentService commentService;
 
     @GetMapping
     public String home() {
@@ -40,10 +45,11 @@ public class PlanController {
     /** 일간 뷰 */
     @GetMapping("/daily")
     public String daily(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                        @AuthenticationPrincipal MemberPrincipal principal,
                         Model model) {
         LocalDate target = (date != null) ? date : LocalDate.now();
         model.addAttribute("date", target);
-        model.addAttribute("plans", planService.findDaily(target));
+        model.addAttribute("plans", planService.findDaily(target, principal.id()));
         model.addAttribute("prevDate", target.minusDays(1));
         model.addAttribute("nextDate", target.plusDays(1));
         model.addAttribute("today", LocalDate.now());
@@ -53,6 +59,7 @@ public class PlanController {
     /** 주간 뷰 */
     @GetMapping("/weekly")
     public String weekly(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                         @AuthenticationPrincipal MemberPrincipal principal,
                          Model model) {
         LocalDate target = (date != null) ? date : LocalDate.now();
         LocalDate weekStart = target.with(DayOfWeek.MONDAY);
@@ -64,7 +71,7 @@ public class PlanController {
             weekDays.add(day);
             plansByDate.put(day, new ArrayList<>());
         }
-        planService.findWeek(target).forEach(plan -> plansByDate.get(plan.getPlanDate()).add(plan));
+        planService.findWeek(target, principal.id()).forEach(plan -> plansByDate.get(plan.getPlanDate()).add(plan));
 
         model.addAttribute("date", target);
         model.addAttribute("weekStart", weekStart);
@@ -78,10 +85,12 @@ public class PlanController {
 
     /** 월간 캘린더 뷰 */
     @GetMapping("/monthly")
-    public String monthly(@RequestParam(required = false) String month, Model model) {
+    public String monthly(@RequestParam(required = false) String month,
+                          @AuthenticationPrincipal MemberPrincipal principal,
+                          Model model) {
         YearMonth target = (month != null && !month.isBlank()) ? YearMonth.parse(month) : YearMonth.now();
 
-        Map<LocalDate, List<Plan>> plansByDate = planService.findMonth(target).stream()
+        Map<LocalDate, List<Plan>> plansByDate = planService.findMonth(target, principal.id()).stream()
                 .collect(Collectors.groupingBy(Plan::getPlanDate));
 
         model.addAttribute("month", target);
@@ -102,6 +111,22 @@ public class PlanController {
         return "plans/shared";
     }
 
+    /** 공유 플랜 상세 + 응원 댓글 */
+    @GetMapping("/shared/{id}")
+    public String sharedDetail(@PathVariable Long id,
+                               @AuthenticationPrincipal MemberPrincipal principal,
+                               Model model) {
+        Plan plan = planService.findById(id);
+        if (!plan.isShared() && !plan.isAuthoredBy(principal.id())) {
+            // 공유가 해제된 플랜은 작성자 본인 외에는 존재를 노출하지 않는다
+            throw new IllegalArgumentException("공유된 플랜이 아닙니다. id=" + id);
+        }
+        model.addAttribute("plan", plan);
+        model.addAttribute("comments", commentService.findForPlan(id));
+        model.addAttribute("commentForm", new CommentForm());
+        return "plans/shared-detail";
+    }
+
     /** 작성 폼 */
     @GetMapping("/new")
     public String createForm(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
@@ -117,6 +142,7 @@ public class PlanController {
     @PostMapping
     public String create(@Valid @ModelAttribute PlanForm planForm,
                          BindingResult bindingResult,
+                         @AuthenticationPrincipal MemberPrincipal principal,
                          Model model,
                          RedirectAttributes redirectAttributes) {
         validateTimeRange(planForm, bindingResult);
@@ -124,19 +150,20 @@ public class PlanController {
             model.addAttribute("mode", "create");
             return "plans/form";
         }
-        planService.create(planForm);
+        planService.create(planForm, principal.id());
         redirectAttributes.addFlashAttribute("message", "일정이 등록되었습니다.");
         return "redirect:/plans/daily?date=" + planForm.getPlanDate();
     }
 
     /** 수정 폼 */
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
-        Plan plan = planService.findById(id);
+    public String editForm(@PathVariable Long id,
+                           @AuthenticationPrincipal MemberPrincipal principal,
+                           Model model) {
+        Plan plan = planService.findOwned(id, principal.id());
         PlanForm form = new PlanForm();
         form.setTitle(plan.getTitle());
         form.setContent(plan.getContent());
-        form.setWriter(plan.getWriter());
         form.setPlanDate(plan.getPlanDate());
         form.setStartTime(plan.getStartTime());
         form.setEndTime(plan.getEndTime());
@@ -151,6 +178,7 @@ public class PlanController {
     public String edit(@PathVariable Long id,
                        @Valid @ModelAttribute PlanForm planForm,
                        BindingResult bindingResult,
+                       @AuthenticationPrincipal MemberPrincipal principal,
                        Model model,
                        RedirectAttributes redirectAttributes) {
         validateTimeRange(planForm, bindingResult);
@@ -159,31 +187,36 @@ public class PlanController {
             model.addAttribute("planId", id);
             return "plans/form";
         }
-        planService.update(id, planForm);
+        planService.update(id, planForm, principal.id());
         redirectAttributes.addFlashAttribute("message", "일정이 수정되었습니다.");
         return "redirect:/plans/daily?date=" + planForm.getPlanDate();
     }
 
     /** 삭제 */
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        LocalDate date = planService.findById(id).getPlanDate();
-        planService.delete(id);
+    public String delete(@PathVariable Long id,
+                         @AuthenticationPrincipal MemberPrincipal principal,
+                         RedirectAttributes redirectAttributes) {
+        LocalDate date = planService.findOwned(id, principal.id()).getPlanDate();
+        planService.delete(id, principal.id());
         redirectAttributes.addFlashAttribute("message", "일정이 삭제되었습니다.");
         return "redirect:/plans/daily?date=" + date;
     }
 
     /** 완료 상태 전환 */
     @PostMapping("/{id}/toggle")
-    public String toggleCompleted(@PathVariable Long id) {
-        Plan plan = planService.toggleCompleted(id);
+    public String toggleCompleted(@PathVariable Long id,
+                                  @AuthenticationPrincipal MemberPrincipal principal) {
+        Plan plan = planService.toggleCompleted(id, principal.id());
         return "redirect:/plans/daily?date=" + plan.getPlanDate();
     }
 
     /** 공유 상태 전환 */
     @PostMapping("/{id}/share")
-    public String toggleShared(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        Plan plan = planService.toggleShared(id);
+    public String toggleShared(@PathVariable Long id,
+                               @AuthenticationPrincipal MemberPrincipal principal,
+                               RedirectAttributes redirectAttributes) {
+        Plan plan = planService.toggleShared(id, principal.id());
         redirectAttributes.addFlashAttribute("message",
                 plan.isShared() ? "플랜을 공유했습니다." : "플랜 공유를 해제했습니다.");
         return "redirect:/plans/daily?date=" + plan.getPlanDate();

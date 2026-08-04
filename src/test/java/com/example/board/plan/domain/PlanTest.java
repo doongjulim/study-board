@@ -1,5 +1,6 @@
 package com.example.board.plan.domain;
 
+import com.example.board.member.domain.Member;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,8 +11,12 @@ import static org.assertj.core.api.Assertions.*;
 
 class PlanTest {
 
+    private Member author() {
+        return new Member("tester1", "encoded-password", "동주");
+    }
+
     private Plan plan() {
-        return new Plan("자료구조 공부", "스택, 큐 복습", "동주",
+        return new Plan("자료구조 공부", "스택, 큐 복습", author(),
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(12, 0));
     }
 
@@ -28,7 +33,7 @@ class PlanTest {
     @Test
     @DisplayName("시작/종료 시간이 없는 종일 일정도 생성할 수 있다")
     void create_allDay() {
-        Plan plan = new Plan("휴식", null, "동주", LocalDate.of(2026, 7, 9), null, null);
+        Plan plan = new Plan("휴식", null, author(), LocalDate.of(2026, 7, 9), null, null);
 
         assertThat(plan.getStartTime()).isNull();
         assertThat(plan.getEndTime()).isNull();
@@ -37,7 +42,7 @@ class PlanTest {
     @Test
     @DisplayName("종료 시간이 시작 시간보다 빠르면 생성할 수 없다")
     void create_invalidTimeRange() {
-        assertThatThrownBy(() -> new Plan("t", null, "w",
+        assertThatThrownBy(() -> new Plan("t", null, author(),
                 LocalDate.of(2026, 7, 9), LocalTime.of(12, 0), LocalTime.of(10, 0)))
                 .isInstanceOf(IllegalArgumentException.class);
     }

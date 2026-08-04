@@ -1,5 +1,6 @@
 package com.example.board.file.store;
 
+import com.example.board.file.exception.UnsupportedFileTypeException;
 import com.example.board.post.domain.AttachedFile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,14 +48,36 @@ class FileStoreTest {
     }
 
     @Test
-    @DisplayName("확장자가 없는 파일도 정상 저장된다")
-    void storeFile_noExtension() throws IOException {
+    @DisplayName("확장자가 없는 파일은 형식을 판단할 수 없어 거부한다")
+    void storeFile_noExtension_rejected() {
         MockMultipartFile multipart = new MockMultipartFile(
                 "file", "README", "text/plain", "content".getBytes());
 
+        assertThatThrownBy(() -> fileStore.storeFile(multipart))
+                .isInstanceOf(UnsupportedFileTypeException.class);
+    }
+
+    @Test
+    @DisplayName("html/svg/실행파일 등 허용 목록 밖의 확장자는 거부한다")
+    void storeFile_disallowedExtension_rejected() {
+        for (String name : List.of("evil.html", "evil.svg", "evil.exe", "evil.jsp", "evil.sh")) {
+            MockMultipartFile multipart = new MockMultipartFile(
+                    "file", name, "application/octet-stream", "x".getBytes());
+
+            assertThatThrownBy(() -> fileStore.storeFile(multipart))
+                    .as(name)
+                    .isInstanceOf(UnsupportedFileTypeException.class);
+        }
+    }
+
+    @Test
+    @DisplayName("대문자 확장자(PNG)도 허용 목록으로 인식해 저장한다")
+    void storeFile_uppercaseExtension() throws IOException {
+        MockMultipartFile multipart = new MockMultipartFile(
+                "file", "photo.PNG", "image/png", "img".getBytes());
+
         AttachedFile stored = fileStore.storeFile(multipart);
 
-        assertThat(stored.getStoredName()).doesNotContain(".");
         assertThat(Path.of(fileStore.getFullPath(stored.getStoredName()))).exists();
     }
 

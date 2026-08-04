@@ -1,13 +1,13 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:boarddb
+    url: jdbc:h2:file:./data/boarddb
     driver-class-name: org.h2.Driver
     username: sa
     password:
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
@@ -23,3 +23,10 @@ spring:
 
 file:
   upload-dir: ${user.home}/board-uploads/
+
+jwt:
+  # 로컬 개발용 시크릿 - 운영 환경에서는 반드시 환경변수(JWT_SECRET)로 교체할 것 (HS256, 32바이트 이상)
+  secret: ${JWT_SECRET:study-board-local-dev-secret-key-please-override}
+  # 액세스 토큰은 무상태라 폐기할 수 없으므로 짧게, 재로그인은 리프레시 토큰으로 대신한다
+  access-token-minutes: 15
+  refresh-token-days: 14

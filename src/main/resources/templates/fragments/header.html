@@ -2,7 +2,9 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
 <!-- 모든 페이지 공통 헤더: 내비게이션 + 다크모드 + 실시간 알림 벨 -->
-<header class="site" th:fragment="siteHeader(active)">
+<!-- data-csrf-*: JS fetch 가 POST 시 사용할 CSRF 토큰 (notification.js 참고) -->
+<header class="site" th:fragment="siteHeader(active)"
+        th:attr="data-csrf-token=${_csrf != null ? _csrf.token : ''},data-csrf-header=${_csrf != null ? _csrf.headerName : ''}">
     <div class="container">
         <a th:href="@{/}" class="brand">🎯 스터디플랜</a>
         <nav class="gnb">
@@ -11,8 +13,18 @@
             <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">게시판</a>
         </nav>
         <div class="header-controls">
+            <div class="auth-menu" th:if="${currentMember != null}">
+                <span class="nickname" th:text="${currentMember.nickname} + '님'">닉네임</span>
+                <form th:action="@{/logout}" method="post" class="inline-form">
+                    <button type="submit" class="btn btn-sm">로그아웃</button>
+                </form>
+            </div>
+            <div class="auth-menu" th:if="${currentMember == null}">
+                <a class="btn btn-sm" th:href="@{/login}">로그인</a>
+                <a class="btn btn-sm" th:href="@{/signup}">회원가입</a>
+            </div>
             <button id="theme-toggle" type="button" class="theme-btn" aria-label="다크 모드로 전환">🌙</button>
-            <div class="notif">
+            <div class="notif" th:if="${currentMember != null}">
                 <button id="notif-bell" type="button" class="bell" aria-label="알림">
                     🔔<span id="notif-badge" class="badge" hidden></span>
                 </button>

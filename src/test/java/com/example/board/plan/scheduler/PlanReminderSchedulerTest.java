@@ -31,7 +31,10 @@ class PlanReminderSchedulerTest {
     @Test
     @DisplayName("10분 내에 시작하는 플랜에 리마인더 이벤트를 발행하고 재발송을 막는다")
     void sendReminder() {
-        Plan plan = new Plan("영어 스터디", null, "동주",
+        com.example.board.member.domain.Member author =
+                new com.example.board.member.domain.Member("tester1", "encoded-password", "동주");
+        org.springframework.test.util.ReflectionTestUtils.setField(author, "id", 7L);
+        Plan plan = new Plan("영어 스터디", null, author,
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 5), null);
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(10, 10)))
@@ -43,6 +46,7 @@ class PlanReminderSchedulerTest {
         ArgumentCaptor<PlanReminderEvent> captor = ArgumentCaptor.forClass(PlanReminderEvent.class);
         then(eventPublisher).should().publishEvent(captor.capture());
         assertThat(captor.getValue().title()).isEqualTo("영어 스터디");
+        assertThat(captor.getValue().authorId()).isEqualTo(7L);
     }
 
     @Test

@@ -1,4 +1,6 @@
 spring:
+  flyway:
+    enabled: false   # 테스트는 인메모리 + create-drop 으로 스키마 생성
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
@@ -15,3 +17,8 @@ spring:
 
 file:
   upload-dir: ${java.io.tmpdir}/board-test-uploads/
+
+jwt:
+  secret: test-only-secret-key-must-be-32-bytes-min!
+  access-token-minutes: 15
+  refresh-token-days: 14

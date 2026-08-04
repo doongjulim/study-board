@@ -1,5 +1,6 @@
 package com.example.board.post.domain;
 
+import com.example.board.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -25,8 +26,9 @@ public class Post {
     @Column(nullable = false, length = 200)
     private String title;
 
-    @Column(nullable = false, length = 50)
-    private String writer;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", nullable = false)
+    private Member author;
 
     @Column(nullable = false, columnDefinition = "text")
     private String content;
@@ -40,10 +42,15 @@ public class Post {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    public Post(String title, String writer, String content) {
+    public Post(String title, String content, Member author) {
         this.title = title;
-        this.writer = writer;
         this.content = content;
+        this.author = author;
+    }
+
+    /** 현재 사용자가 이 글의 작성자인지 확인한다 */
+    public boolean isAuthoredBy(Long memberId) {
+        return author.getId().equals(memberId);
     }
 
     public void update(String title, String content) {

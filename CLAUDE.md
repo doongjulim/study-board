@@ -16,8 +16,8 @@
 ./gradlew bootRun
 ```
 
-- H2 콘솔: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:boarddb`, 사용자: `sa`)
-- H2 인메모리 DB — 재시작 시 데이터 초기화됨
+- H2 콘솔: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:file:./data/boarddb`, 사용자: `sa`)
+- H2 파일 DB(`./data/`) — 재시작해도 데이터 유지, 스키마는 Flyway로 관리
 
 ## 빌드 & 테스트
 
@@ -28,13 +28,25 @@
 
 ## 주요 기능
 
-- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(post/file/home/plan/notification)** 로 구성
+- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/file/home/plan/notification)** 로 구성
+- **인증(auth/member)**: JWT(HS256, jjwt) + HttpOnly·SameSite=Lax 쿠키, 세션 없음(STATELESS).
+  `JwtAuthenticationFilter` 가 쿠키를 검증해 `MemberPrincipal` 을 SecurityContext 에 채운다.
+  CSRF 는 `CookieCsrfTokenRepository` (JS fetch 는 헤더 프래그먼트의 data-csrf-* 사용)
+- **리프레시 토큰**: 액세스 15분 / 리프레시 14일. `RefreshToken` 은 DB 에 SHA-256 해시만 저장.
+  액세스 만료 시 필터가 자동 재발급하며 **회전**(쓴 토큰 즉시 폐기)한다. 로그아웃 = DB 행 삭제 → 즉시 무효화.
+  쿠키 읽기/쓰기는 `AuthCookies` 한 곳에서만 처리한다
+- **접근 정책**: 게시판 읽기 공개, 플래너·알림·모든 쓰기는 인증 필요. 미인증은 `/login?redirect=...`
+- **소유권**: 서비스 계층 `findOwned()` 로 본인 글/플랜만 수정·삭제 (위반 시 AccessDeniedException → 403)
+- **목록 조회**: 게시글 목록은 `PostSummary` DTO 프로젝션 (open-in-view=false + lazy 컬렉션 문제 회피, DB 페이징 유지)
 - **트랜잭션**: `@Transactional(readOnly = true)` 기본 적용, 쓰기 메서드만 `@Transactional` 추가
 - **파일 저장**: `FileStore`만 교체하면 S3 등 다른 저장소로 전환 가능
 - **AttachedFile.setPost()**: package-private — `Post.addFile()`을 통해서만 연관관계 설정
 - **orphanRemoval = true**: `post.getFiles().remove(target)` 만으로 DB 삭제 처리
 - **플래너(plan)**: 단일 `Plan` 엔티티를 일간/주간/월간 3가지 뷰로 표시 (`/plans/daily|weekly|monthly`), 완료 토글·공유 지원
-- **실시간 알림(notification)**: SSE(`SseEmitter`) 기반, 추가 의존성 없음. `/notifications/subscribe` 구독 → `static/js/notification.js`가 토스트/벨 배지 표시
+- **실시간 알림(notification)**: SSE(`SseEmitter`) 기반, 추가 의존성 없음. `/notifications/subscribe` 구독 → `static/js/notification.js`가 토스트/벨 배지 표시.
+  **사용자별 알림**: `Notification.recipient` FK + 회원별 `SseEmitterRegistry`(멀티 탭 지원). 리마인더 → 작성자 본인, 플랜 공유 → 본인 제외 전체(fanout), 댓글 → 대상 작성자(셀프 제외)
+- **댓글(comment)**: 단일 `Comment` 엔티티가 게시글/공유 플랜 중 하나에 달림(DB check 제약, on delete cascade). 댓글 UI 는 `fragments/comments.html` 재사용, 알림은 `CommentAddedEvent` 로 결합 차단
+- **업로드 보안(file)**: `FileStore` 확장자 화이트리스트(무확장자 거부), `/files/{id}/view` 는 이미지만 인라인·그 외 다운로드 리다이렉트
 - **모듈 간 결합 차단**: plan 모듈은 `PlanSharedEvent`/`PlanReminderEvent`만 발행하고, notification 모듈의 `NotificationEventListener`가 구독 (Spring 이벤트로 DIP 준수)
 - **리마인더**: `PlanReminderScheduler`가 1분마다 시작 10분 전 일정을 찾아 알림 발행 (`reminderSent` 플래그로 중복 방지)
 - **공통 헤더**: `templates/fragments/header.html` 프래그먼트를 모든 페이지에서 `th:replace`로 재사용
@@ -51,7 +63,7 @@ file:
 spring:
   jpa:
     hibernate:
-      ddl-auto: create-drop   # 운영 전환 시 validate 또는 Flyway로 교체
+      ddl-auto: validate   # 스키마는 Flyway(db/migration)로 관리
 ```
 
 ## 기술 스택

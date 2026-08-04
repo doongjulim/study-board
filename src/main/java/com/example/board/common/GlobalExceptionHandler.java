@@ -3,6 +3,7 @@ package com.example.board.common;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.ui.Model;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -22,6 +23,15 @@ public class GlobalExceptionHandler {
         return "error/404";
     }
 
+    /** 남의 글/플랜 수정·삭제 시도 → 403 페이지 */
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public String handleAccessDenied(AccessDeniedException e, Model model) {
+        log.warn("접근 거부: {}", e.getMessage());
+        model.addAttribute("message", e.getMessage());
+        return "error/403";
+    }
+
     /** 업로드 용량 초과 → 목록으로 리다이렉트 + 안내 메시지 */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public String handleMaxUploadSize(MaxUploadSizeExceededException e,
@@ -29,6 +39,15 @@ public class GlobalExceptionHandler {
         log.warn("업로드 용량 초과", e);
         redirectAttributes.addFlashAttribute("message",
                 "업로드 용량을 초과했습니다. (파일당 10MB, 요청당 50MB 이하)");
+        return "redirect:/posts";
+    }
+
+    /** 허용되지 않는 파일 형식 업로드 → 목록으로 리다이렉트 + 안내 메시지 */
+    @ExceptionHandler(com.example.board.file.exception.UnsupportedFileTypeException.class)
+    public String handleUnsupportedFileType(com.example.board.file.exception.UnsupportedFileTypeException e,
+                                            RedirectAttributes redirectAttributes) {
+        log.warn("허용되지 않는 파일 업로드 차단: {}", e.getMessage());
+        redirectAttributes.addFlashAttribute("message", e.getMessage());
         return "redirect:/posts";
     }
 
