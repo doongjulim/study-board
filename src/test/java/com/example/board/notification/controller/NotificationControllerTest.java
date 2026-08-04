@@ -1,6 +1,8 @@
 package com.example.board.notification.controller;
 
 import com.example.board.auth.MemberPrincipal;
+import com.example.board.auth.AuthCookies;
+import com.example.board.auth.service.TokenService;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
@@ -26,11 +28,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(NotificationController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
 class NotificationControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean NotificationService notificationService;
+    @MockBean TokenService tokenService;
 
     /** 알림은 로그인한 회원만 사용할 수 있다 */
     private static RequestPostProcessor memberAuth() {

@@ -54,10 +54,6 @@ public class JwtTokenProvider {
         }
     }
 
-    public long getValiditySeconds() {
-        return validity.toSeconds();
-    }
-
     public record TokenClaims(Long memberId, String loginId, String nickname) {
     }
 }

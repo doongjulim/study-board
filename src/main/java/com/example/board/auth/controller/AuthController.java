@@ -1,16 +1,15 @@
 package com.example.board.auth.controller;
 
+import com.example.board.auth.AuthCookies;
 import com.example.board.auth.dto.LoginForm;
 import com.example.board.auth.exception.LoginFailedException;
-import com.example.board.auth.jwt.JwtAuthenticationFilter;
-import com.example.board.auth.jwt.JwtTokenProvider;
+import com.example.board.auth.service.TokenService;
 import com.example.board.member.domain.Member;
 import com.example.board.member.service.MemberService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -25,7 +24,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AuthController {
 
     private final MemberService memberService;
-    private final JwtTokenProvider tokenProvider;
+    private final TokenService tokenService;
+    private final AuthCookies authCookies;
 
     @GetMapping("/login")
     public String loginForm(@RequestParam(required = false) String redirect, Model model) {
@@ -53,26 +53,19 @@ public class AuthController {
             return "auth/login";
         }
 
-        String token = tokenProvider.createToken(member.getId(), member.getLoginId(), member.getNickname());
-        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie(token, tokenProvider.getValiditySeconds()));
+        authCookies.write(response, tokenService.issueFor(member));
         return "redirect:" + safeRedirect(redirect);
     }
 
+    /** 로그아웃 - 리프레시 토큰을 DB 에서 폐기해 즉시 무효화하고 쿠키를 지운다 */
     @PostMapping("/logout")
-    public String logout(HttpServletResponse response, RedirectAttributes redirectAttributes) {
-        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie("", 0)); // 즉시 만료
+    public String logout(HttpServletRequest request,
+                         HttpServletResponse response,
+                         RedirectAttributes redirectAttributes) {
+        authCookies.readRefreshToken(request).ifPresent(tokenService::revoke);
+        authCookies.clear(response);
         redirectAttributes.addFlashAttribute("message", "로그아웃되었습니다.");
         return "redirect:/login";
-    }
-
-    private String accessTokenCookie(String value, long maxAgeSeconds) {
-        return ResponseCookie.from(JwtAuthenticationFilter.ACCESS_TOKEN_COOKIE, value)
-                .httpOnly(true)
-                .sameSite("Lax")
-                .path("/")
-                .maxAge(maxAgeSeconds)
-                .build()
-                .toString();
     }
 
     /** 오픈 리다이렉트 방지 - 내부 경로만 허용 */

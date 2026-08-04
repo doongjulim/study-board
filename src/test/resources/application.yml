@@ -20,4 +20,5 @@ file:
 
 jwt:
   secret: test-only-secret-key-must-be-32-bytes-min!
-  access-token-minutes: 60
+  access-token-minutes: 15
+  refresh-token-days: 14

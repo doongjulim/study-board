@@ -1,5 +1,7 @@
 package com.example.board.file.controller;
 
+import com.example.board.auth.AuthCookies;
+import com.example.board.auth.service.TokenService;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
@@ -23,7 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(FileController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
 class FileControllerTest {
 
     @TempDir
@@ -31,6 +33,7 @@ class FileControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean PostService postService;
+    @MockBean TokenService tokenService;
     @MockBean FileStore fileStore;
 
     @Test

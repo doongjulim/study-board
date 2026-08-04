@@ -1,6 +1,8 @@
 package com.example.board.comment.controller;
 
 import com.example.board.auth.MemberPrincipal;
+import com.example.board.auth.AuthCookies;
+import com.example.board.auth.service.TokenService;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.comment.domain.Comment;
@@ -32,13 +34,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CommentController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
 class CommentControllerTest {
 
     private static final long MEMBER_ID = 1L;
 
     @Autowired MockMvc mockMvc;
     @MockBean CommentService commentService;
+    @MockBean TokenService tokenService;
 
     private static RequestPostProcessor memberAuth() {
         return authentication(new UsernamePasswordAuthenticationToken(

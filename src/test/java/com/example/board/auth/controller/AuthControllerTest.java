@@ -1,11 +1,15 @@
 package com.example.board.auth.controller;
 
+import com.example.board.auth.AuthCookies;
+import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.exception.LoginFailedException;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
+import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
 import com.example.board.member.domain.Member;
 import com.example.board.member.service.MemberService;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,24 +19,34 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
 class AuthControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean MemberService memberService;
+    @MockBean TokenService tokenService;
 
     private Member member() {
         return new Member("tester1", "encoded-password", "테스터");
+    }
+
+    private TokenService.TokenPair tokenPair() {
+        return new TokenService.TokenPair("access-token-value", "refresh-token-value",
+                new MemberPrincipal(1L, "tester1", "테스터"));
     }
 
     @Test
@@ -45,25 +59,30 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /login - 성공 시 HttpOnly 액세스 토큰 쿠키를 심고 홈으로 이동한다")
+    @DisplayName("POST /login - 성공 시 액세스·리프레시 쿠키를 모두 HttpOnly 로 심는다")
     void login_success() throws Exception {
         given(memberService.authenticate("tester1", "password123")).willReturn(member());
+        given(tokenService.issueFor(any(Member.class))).willReturn(tokenPair());
 
-        mockMvc.perform(post("/login").with(csrf())
+        var result = mockMvc.perform(post("/login").with(csrf())
                         .param("loginId", "tester1")
                         .param("password", "password123"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/"))
-                .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        allOf(containsString("ACCESS_TOKEN="),
-                                containsString("HttpOnly"),
-                                containsString("SameSite=Lax"))));
+                .andReturn();
+
+        var setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
+        assertThat(setCookies).anyMatch(cookie -> cookie.startsWith("ACCESS_TOKEN=access-token-value")
+                && cookie.contains("HttpOnly") && cookie.contains("SameSite=Lax"));
+        assertThat(setCookies).anyMatch(cookie -> cookie.startsWith("REFRESH_TOKEN=refresh-token-value")
+                && cookie.contains("HttpOnly") && cookie.contains("SameSite=Lax"));
     }
 
     @Test
     @DisplayName("POST /login?redirect=/plans/daily - 성공 시 원래 가려던 내부 경로로 이동한다")
     void login_withRedirect() throws Exception {
         given(memberService.authenticate("tester1", "password123")).willReturn(member());
+        given(tokenService.issueFor(any(Member.class))).willReturn(tokenPair());
 
         mockMvc.perform(post("/login").with(csrf())
                         .param("loginId", "tester1")
@@ -76,6 +95,7 @@ class AuthControllerTest {
     @DisplayName("POST /login - 외부 URL 리다이렉트는 홈으로 대체한다 (오픈 리다이렉트 방지)")
     void login_openRedirectBlocked() throws Exception {
         given(memberService.authenticate("tester1", "password123")).willReturn(member());
+        given(tokenService.issueFor(any(Member.class))).willReturn(tokenPair());
 
         mockMvc.perform(post("/login").with(csrf())
                         .param("loginId", "tester1")
@@ -85,7 +105,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("POST /login - 인증 실패 시 폼으로 돌아가고 쿠키를 심지 않는다")
+    @DisplayName("POST /login - 인증 실패 시 폼으로 돌아가고 토큰을 발급하지 않는다")
     void login_fail() throws Exception {
         given(memberService.authenticate(anyString(), anyString()))
                 .willThrow(new LoginFailedException());
@@ -97,15 +117,50 @@ class AuthControllerTest {
                 .andExpect(view().name("auth/login"))
                 .andExpect(model().hasErrors())
                 .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+
+        then(tokenService).should(never()).issueFor(any());
     }
 
     @Test
-    @DisplayName("POST /logout - 쿠키를 즉시 만료시키고 로그인 페이지로 이동한다")
+    @DisplayName("POST /logout - 리프레시 토큰을 폐기하고 두 쿠키를 즉시 만료시킨다")
     void logout() throws Exception {
-        mockMvc.perform(post("/logout").with(csrf()))
+        var result = mockMvc.perform(post("/logout").with(csrf())
+                        .cookie(new Cookie("REFRESH_TOKEN", "refresh-token-value")))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/login"))
-                .andExpect(header().string(HttpHeaders.SET_COOKIE,
-                        allOf(containsString("ACCESS_TOKEN="), containsString("Max-Age=0"))));
+                .andReturn();
+
+        then(tokenService).should().revoke("refresh-token-value");
+
+        var setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
+        assertThat(setCookies).anyMatch(cookie -> cookie.startsWith("ACCESS_TOKEN=") && cookie.contains("Max-Age=0"));
+        assertThat(setCookies).anyMatch(cookie -> cookie.startsWith("REFRESH_TOKEN=") && cookie.contains("Max-Age=0"));
+    }
+
+    @Test
+    @DisplayName("POST /logout - 리프레시 쿠키가 없어도 정상 처리한다")
+    void logout_withoutCookie() throws Exception {
+        var result = mockMvc.perform(post("/logout").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login"))
+                .andReturn();
+
+        assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                .anyMatch(cookie -> cookie.startsWith("ACCESS_TOKEN=") && cookie.contains("Max-Age=0"));
+        then(tokenService).should(never()).revoke(anyString());
+    }
+
+    @Test
+    @DisplayName("만료된 액세스 토큰이라도 리프레시 쿠키가 살아 있으면 필터가 자동 재발급한다")
+    void filterReissuesWithRefreshToken() throws Exception {
+        given(tokenService.refresh("refresh-token-value")).willReturn(Optional.of(tokenPair()));
+
+        var result = mockMvc.perform(get("/login")
+                        .cookie(new Cookie("REFRESH_TOKEN", "refresh-token-value")))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        var setCookies = result.getResponse().getHeaders(HttpHeaders.SET_COOKIE);
+        assertThat(setCookies).anyMatch(cookie -> cookie.contains("ACCESS_TOKEN=access-token-value"));
     }
 }
