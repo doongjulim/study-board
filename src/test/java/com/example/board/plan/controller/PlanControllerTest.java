@@ -9,6 +9,7 @@ import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
 import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.Plan;
+import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.service.PlanService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,7 +54,7 @@ class PlanControllerTest {
     private Plan planOwnedBy(long authorId) {
         Member author = new Member("tester" + authorId, "encoded-password", "동주");
         ReflectionTestUtils.setField(author, "id", authorId);
-        return new Plan("자료구조 공부", "스택, 큐 복습", author,
+        return new Plan("자료구조 공부", "스택, 큐 복습", author, PlanCategory.CODING_TEST,
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(12, 0));
     }
 

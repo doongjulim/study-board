@@ -3,6 +3,7 @@ package com.example.board.plan.service;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
+import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.event.PlanSharedEvent;
 import com.example.board.plan.repository.PlanRepository;
@@ -54,7 +55,7 @@ class PlanServiceTest {
     }
 
     private Plan plan() {
-        return new Plan("자료구조 공부", "스택, 큐 복습", author(),
+        return new Plan("자료구조 공부", "스택, 큐 복습", author(), PlanCategory.CODING_TEST,
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(12, 0));
     }
 

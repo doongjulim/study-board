@@ -4,6 +4,7 @@ import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.service.CommentService;
 import com.example.board.plan.domain.Plan;
+import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.service.PlanService;
 import jakarta.validation.Valid;
@@ -138,6 +139,12 @@ public class PlanController {
         return "plans/form";
     }
 
+    /** 폼의 분류 선택지 - 작성/수정 화면에서 공통으로 사용 */
+    @ModelAttribute("categories")
+    public PlanCategory[] categories() {
+        return PlanCategory.values();
+    }
+
     /** 작성 처리 */
     @PostMapping
     public String create(@Valid @ModelAttribute PlanForm planForm,
@@ -164,6 +171,7 @@ public class PlanController {
         PlanForm form = new PlanForm();
         form.setTitle(plan.getTitle());
         form.setContent(plan.getContent());
+        form.setCategory(plan.getCategory());
         form.setPlanDate(plan.getPlanDate());
         form.setStartTime(plan.getStartTime());
         form.setEndTime(plan.getEndTime());

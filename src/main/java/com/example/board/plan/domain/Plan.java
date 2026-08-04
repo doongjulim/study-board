@@ -33,6 +33,10 @@ public class Plan {
     @JoinColumn(name = "author_id", nullable = false)
     private Member author;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PlanCategory category;
+
     @Column(nullable = false)
     private LocalDate planDate;
 
@@ -55,12 +59,13 @@ public class Plan {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    public Plan(String title, String content, Member author,
+    public Plan(String title, String content, Member author, PlanCategory category,
                 LocalDate planDate, LocalTime startTime, LocalTime endTime) {
         validateTimeRange(startTime, endTime);
         this.title = title;
         this.content = content;
         this.author = author;
+        this.category = (category != null) ? category : PlanCategory.ETC;
         this.planDate = planDate;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -71,11 +76,12 @@ public class Plan {
         return author.getId().equals(memberId);
     }
 
-    public void update(String title, String content,
+    public void update(String title, String content, PlanCategory category,
                        LocalDate planDate, LocalTime startTime, LocalTime endTime) {
         validateTimeRange(startTime, endTime);
         this.title = title;
         this.content = content;
+        this.category = (category != null) ? category : PlanCategory.ETC;
         this.planDate = planDate;
         this.startTime = startTime;
         this.endTime = endTime;

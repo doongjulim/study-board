@@ -6,6 +6,7 @@ import com.example.board.comment.repository.CommentRepository;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
+import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.repository.PlanRepository;
 import com.example.board.post.domain.Post;
 import com.example.board.post.repository.PostRepository;
@@ -52,7 +53,7 @@ class CommentServiceTest {
     }
 
     private Plan sharedPlan() {
-        Plan plan = new Plan("모의면접", null, member(POST_AUTHOR_ID, "글쓴이"),
+        Plan plan = new Plan("모의면접", null, member(POST_AUTHOR_ID, "글쓴이"), PlanCategory.INTERVIEW,
                 LocalDate.of(2026, 7, 30), null, null);
         plan.toggleShared();
         return plan;
@@ -105,7 +106,7 @@ class CommentServiceTest {
     @Test
     @DisplayName("공유되지 않은 플랜에는 타인이 댓글을 달 수 없다")
     void addToPlan_notShared_denied() {
-        Plan privatePlan = new Plan("비공개 플랜", null, member(POST_AUTHOR_ID, "글쓴이"),
+        Plan privatePlan = new Plan("비공개 플랜", null, member(POST_AUTHOR_ID, "글쓴이"), PlanCategory.ETC,
                 LocalDate.of(2026, 7, 30), null, null);
         given(planRepository.findById(2L)).willReturn(Optional.of(privatePlan));
 

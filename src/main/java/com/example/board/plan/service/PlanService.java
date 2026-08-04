@@ -66,14 +66,14 @@ public class PlanService {
     @Transactional
     public Long create(PlanForm form, Long authorId) {
         Member author = memberRepository.getReferenceById(authorId);
-        Plan plan = new Plan(form.getTitle(), form.getContent(), author,
+        Plan plan = new Plan(form.getTitle(), form.getContent(), author, form.getCategory(),
                 form.getPlanDate(), form.getStartTime(), form.getEndTime());
         return planRepository.save(plan).getId();
     }
 
     @Transactional
     public void update(Long id, PlanForm form, Long memberId) {
-        findOwned(id, memberId).update(form.getTitle(), form.getContent(),
+        findOwned(id, memberId).update(form.getTitle(), form.getContent(), form.getCategory(),
                 form.getPlanDate(), form.getStartTime(), form.getEndTime());
     }
 

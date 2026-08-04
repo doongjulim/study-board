@@ -16,7 +16,7 @@ class PlanTest {
     }
 
     private Plan plan() {
-        return new Plan("자료구조 공부", "스택, 큐 복습", author(),
+        return new Plan("자료구조 공부", "스택, 큐 복습", author(), PlanCategory.CODING_TEST,
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(12, 0));
     }
 
@@ -31,9 +31,29 @@ class PlanTest {
     }
 
     @Test
+    @DisplayName("분류를 지정하지 않으면 기타(ETC)로 저장된다")
+    void create_defaultCategory() {
+        Plan plan = new Plan("제목", null, author(), null,
+                LocalDate.of(2026, 7, 9), null, null);
+
+        assertThat(plan.getCategory()).isEqualTo(PlanCategory.ETC);
+    }
+
+    @Test
+    @DisplayName("update 로 분류를 바꿀 수 있다")
+    void update_category() {
+        Plan plan = plan();
+
+        plan.update("면접 준비", null, PlanCategory.INTERVIEW,
+                LocalDate.of(2026, 7, 9), null, null);
+
+        assertThat(plan.getCategory()).isEqualTo(PlanCategory.INTERVIEW);
+    }
+
+    @Test
     @DisplayName("시작/종료 시간이 없는 종일 일정도 생성할 수 있다")
     void create_allDay() {
-        Plan plan = new Plan("휴식", null, author(), LocalDate.of(2026, 7, 9), null, null);
+        Plan plan = new Plan("휴식", null, author(), PlanCategory.ETC, LocalDate.of(2026, 7, 9), null, null);
 
         assertThat(plan.getStartTime()).isNull();
         assertThat(plan.getEndTime()).isNull();
@@ -42,7 +62,7 @@ class PlanTest {
     @Test
     @DisplayName("종료 시간이 시작 시간보다 빠르면 생성할 수 없다")
     void create_invalidTimeRange() {
-        assertThatThrownBy(() -> new Plan("t", null, author(),
+        assertThatThrownBy(() -> new Plan("t", null, author(), PlanCategory.ETC,
                 LocalDate.of(2026, 7, 9), LocalTime.of(12, 0), LocalTime.of(10, 0)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -52,7 +72,7 @@ class PlanTest {
     void update() {
         Plan plan = plan();
 
-        plan.update("알고리즘 공부", "DFS/BFS", LocalDate.of(2026, 7, 10),
+        plan.update("알고리즘 공부", "DFS/BFS", PlanCategory.MAJOR, LocalDate.of(2026, 7, 10),
                 LocalTime.of(14, 0), LocalTime.of(16, 0));
 
         assertThat(plan.getTitle()).isEqualTo("알고리즘 공부");
@@ -66,7 +86,7 @@ class PlanTest {
     void update_invalidTimeRange() {
         Plan plan = plan();
 
-        assertThatThrownBy(() -> plan.update("t", null, LocalDate.of(2026, 7, 9),
+        assertThatThrownBy(() -> plan.update("t", null, PlanCategory.ETC, LocalDate.of(2026, 7, 9),
                 LocalTime.of(12, 0), LocalTime.of(10, 0)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -77,7 +97,7 @@ class PlanTest {
         Plan plan = plan();
         plan.markReminderSent();
 
-        plan.update("t", null, LocalDate.of(2026, 7, 10), LocalTime.of(9, 0), null);
+        plan.update("t", null, PlanCategory.ETC, LocalDate.of(2026, 7, 10), LocalTime.of(9, 0), null);
 
         assertThat(plan.isReminderSent()).isFalse();
     }

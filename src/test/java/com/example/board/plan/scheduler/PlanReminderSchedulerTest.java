@@ -34,7 +34,7 @@ class PlanReminderSchedulerTest {
         com.example.board.member.domain.Member author =
                 new com.example.board.member.domain.Member("tester1", "encoded-password", "동주");
         org.springframework.test.util.ReflectionTestUtils.setField(author, "id", 7L);
-        Plan plan = new Plan("영어 스터디", null, author,
+        Plan plan = new Plan("영어 스터디", null, author, com.example.board.plan.domain.PlanCategory.LANGUAGE,
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 5), null);
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(10, 10)))

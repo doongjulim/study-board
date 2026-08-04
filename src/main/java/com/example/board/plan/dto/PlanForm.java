@@ -1,5 +1,6 @@
 package com.example.board.plan.dto;
 
+import com.example.board.plan.domain.PlanCategory;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -20,6 +21,9 @@ public class PlanForm {
 
     @Size(max = 1000, message = "메모는 1000자 이하로 입력하세요.")
     private String content;
+
+    @NotNull(message = "분류를 선택하세요.")
+    private PlanCategory category = PlanCategory.ETC;
 
     @NotNull(message = "날짜를 선택하세요.")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
