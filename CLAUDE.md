@@ -43,6 +43,11 @@
 - **AttachedFile.setPost()**: package-private — `Post.addFile()`을 통해서만 연관관계 설정
 - **orphanRemoval = true**: `post.getFiles().remove(target)` 만으로 DB 삭제 처리
 - **플래너(plan)**: 단일 `Plan` 엔티티를 일간/주간/월간 3가지 뷰로 표시 (`/plans/daily|weekly|monthly`), 완료 토글·공유 지원
+- **분류·반복(plan)**: `PlanCategory` enum 으로 학습 분류, `RepeatType` enum 이 반복 날짜 생성을 책임진다(규칙 변경이 enum 안에만 머묾).
+  반복 생성분은 `seriesId` 로 묶여 한꺼번에 삭제할 수 있고, 한 번에 최대 180건 상한을 둔다
+- **학습 통계(stats)**: `StudyStatistics`/`StudyStreak` 는 플랜 목록만으로 계산되는 순수 값 객체라 DB 없이 검증한다.
+  공부 시간은 완료한 플랜만 합산하고, 연속 달성일은 오늘이 미완이면 어제부터 센다. 차트는 외부 라이브러리 없이 CSS 로 그린다
+- **D-Day(dday)**: 회원별 목표일 카운트다운. 플래너 일간 뷰가 `DdayService` 를 읽기 전용으로만 참조한다
 - **실시간 알림(notification)**: SSE(`SseEmitter`) 기반, 추가 의존성 없음. `/notifications/subscribe` 구독 → `static/js/notification.js`가 토스트/벨 배지 표시.
   **사용자별 알림**: `Notification.recipient` FK + 회원별 `SseEmitterRegistry`(멀티 탭 지원). 리마인더 → 작성자 본인, 플랜 공유 → 본인 제외 전체(fanout), 댓글 → 대상 작성자(셀프 제외)
 - **댓글(comment)**: 단일 `Comment` 엔티티가 게시글/공유 플랜 중 하나에 달림(DB check 제약, on delete cascade). 댓글 UI 는 `fragments/comments.html` 재사용, 알림은 `CommentAddedEvent` 로 결합 차단

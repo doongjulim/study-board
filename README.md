@@ -7,7 +7,10 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 
 - **회원/인증**: 회원가입(BCrypt), JWT 로그인(HttpOnly + SameSite=Lax 쿠키),
   리프레시 토큰 기반 자동 갱신 + 로그아웃 즉시 무효화
-- **플래너**: 일간/주간/월간 뷰 (로그인 회원 본인 것만), 완료 토글, 공유(전체 공개 목록 + 상세)
+- **플래너**: 일간/주간/월간 뷰 (로그인 회원 본인 것만), 완료 토글, 공유(전체 공개 목록 + 상세),
+  분류(코딩테스트·자소서·면접 등), 반복 일정(매일/평일/매주)
+- **학습 통계**: 주간/월간 완료율·공부 시간·연속 달성일, 분류별 학습량, 일별 달성률 추이
+- **D-Day**: 시험·면접 등 목표일 카운트다운, 플래너 상단에 임박한 일정 요약
 - **게시판**: CRUD + 검색(제목/제목+내용/작성자 닉네임) + 페이징, 읽기는 공개·쓰기는 로그인 필요
 - **댓글**: 게시글·공유 플랜 상세에 댓글/응원 (본인 댓글만 삭제, 대상 삭제 시 함께 삭제)
 - **소유권**: 본인 글/플랜/댓글만 수정·삭제 가능 (타인 접근 시 403)
@@ -45,12 +48,14 @@ src/main/java/com/example/board
 ├── post/              # 게시글 CRUD (목록은 PostSummary DTO 프로젝션)
 ├── plan/              # 플래너 (일간/주간/월간·공유·리마인더 스케줄러)
 ├── comment/           # 댓글 (게시글·공유 플랜 공용, CommentAddedEvent 발행)
+├── stats/             # 학습 통계 (StudyStatistics·StudyStreak 순수 계산 + 대시보드)
+├── dday/              # D-Day 카운트다운
 ├── notification/      # 사용자별 SSE 실시간 알림 (recipient 기반)
 └── file/              # FileStore(로컬 디스크, 확장자 화이트리스트), 파일 표시/다운로드
 
 src/main/resources
 ├── application.yml
-├── db/migration/      # Flyway (V1 init ~ V6 refresh_token)
+├── db/migration/      # Flyway (V1 init ~ V9 dday)
 ├── static/{css,js}
 └── templates/{auth,posts,plans,fragments,error}
 ```
