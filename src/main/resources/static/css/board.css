@@ -364,3 +364,32 @@ table.board { min-width: 480px; }
   padding: 1px 8px; font-size: .72rem; }
 .select-input { width: 100%; padding: 10px 12px; border: 1px solid var(--line);
   border-radius: 8px; background: var(--card); color: var(--ink); }
+
+/* ── 학습 통계 대시보드 ─────────────────────────── */
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px; margin: 20px 0 28px; }
+.stat-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+.stat-label { font-size: .78rem; color: var(--muted, #888); }
+.stat-value { font-size: 1.6rem; line-height: 1.2; }
+.stat-sub { font-size: .72rem; color: var(--muted, #888); }
+
+.stat-section { margin-bottom: 32px; }
+.stat-title { margin-bottom: 12px; font-size: 1rem; }
+
+.trend-chart { display: flex; align-items: flex-end; gap: 6px; overflow-x: auto;
+  padding: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+.trend-col { flex: 1 0 28px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.trend-bar-wrap { width: 100%; height: 120px; display: flex; align-items: flex-end;
+  background: var(--line); border-radius: 6px; overflow: hidden; }
+.trend-bar { width: 100%; background: var(--accent); border-radius: 6px 6px 0 0; transition: height .2s; }
+.trend-bar.pending { background: var(--muted, #bbb); opacity: .55; }
+.trend-label { font-size: .68rem; color: var(--muted, #888); white-space: nowrap; }
+
+.category-list { list-style: none; padding: 0; margin: 0; }
+.category-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.category-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.category-time { font-weight: 600; font-size: .9rem; }
+.category-count { margin-left: auto; font-size: .78rem; color: var(--muted, #888); }
+.category-bar-wrap { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.category-bar { height: 100%; background: var(--accent); border-radius: 4px; }

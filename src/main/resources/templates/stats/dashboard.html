@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>학습 통계</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('stats')}"></header>
+
+<main class="container">
+    <h2 class="page-title">학습 통계</h2>
+
+    <nav class="view-tabs">
+        <a th:classappend="${period == 'week'} ? 'on'" th:href="@{/stats(period='week', date=${date})}">주간</a>
+        <a th:classappend="${period == 'month'} ? 'on'" th:href="@{/stats(period='month', date=${date})}">월간</a>
+    </nav>
+
+    <div class="plan-nav">
+        <a class="btn" th:href="@{/stats(period=${period}, date=${prevDate})}">← 이전</a>
+        <h3 th:text="${#temporals.format(statistics.from, 'yyyy.MM.dd')} + ' ~ ' + ${#temporals.format(statistics.to, 'MM.dd')}">기간</h3>
+        <div class="btn-group">
+            <a class="btn" th:href="@{/stats(period=${period})}">오늘</a>
+            <a class="btn" th:href="@{/stats(period=${period}, date=${nextDate})}">다음 →</a>
+        </div>
+    </div>
+
+    <!-- 요약 카드 -->
+    <section class="stat-cards">
+        <div class="stat-card">
+            <span class="stat-label">완료율</span>
+            <strong class="stat-value" th:text="${statistics.completionRate()} + '%'">0%</strong>
+            <span class="stat-sub" th:text="${statistics.completedCount} + ' / ' + ${statistics.totalCount} + '개 완료'">0 / 0</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">공부 시간</span>
+            <strong class="stat-value"
+                    th:text="${statistics.completedHours()} + '시간 ' + ${statistics.remainderMinutes()} + '분'">0시간</strong>
+            <span class="stat-sub">완료한 일정 기준</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">연속 달성</span>
+            <strong class="stat-value" th:text="${streak} + '일'">0일</strong>
+            <span class="stat-sub" th:text="${streak > 0} ? '계속 이어가세요!' : '오늘 계획을 모두 완료해 보세요'">-</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">남은 계획</span>
+            <strong class="stat-value" th:text="${statistics.totalCount - statistics.completedCount} + '개'">0개</strong>
+            <span class="stat-sub" th:text="${periodLabel} + ' 기준'">기준</span>
+        </div>
+    </section>
+
+    <!-- 일별 추이 -->
+    <section class="stat-section">
+        <h3 class="stat-title">일별 달성률</h3>
+        <p class="empty" th:if="${statistics.totalCount == 0}">이 기간에 등록된 계획이 없습니다.</p>
+        <div class="trend-chart" th:if="${statistics.totalCount > 0}">
+            <div class="trend-col" th:each="day : ${statistics.dailyTrend}">
+                <div class="trend-bar-wrap"
+                     th:title="${day.isEmpty()} ? '계획 없음' : ${day.completedCount} + '/' + ${day.totalCount} + ' 완료'">
+                    <div class="trend-bar" th:unless="${day.isEmpty()}"
+                         th:classappend="${day.completionRate() == 0} ? 'pending'"
+                         th:style="'height:' + ${day.barHeight()} + '%'"></div>
+                </div>
+                <span class="trend-label" th:text="${#temporals.format(day.date, 'M/d')}">날짜</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 분류별 집계 -->
+    <section class="stat-section" th:if="${statistics.totalCount > 0}">
+        <h3 class="stat-title">분류별 학습량</h3>
+        <ul class="category-list">
+            <li th:each="stat : ${statistics.categories}" class="category-row">
+                <div class="category-head">
+                    <span class="tag-category" th:text="${stat.category.label}">분류</span>
+                    <span class="category-time"
+                          th:text="${stat.hours()} + '시간 ' + ${stat.remainderMinutes()} + '분'">시간</span>
+                    <span class="category-count"
+                          th:text="${stat.completedCount} + '/' + ${stat.totalCount} + '개 · ' + ${stat.completionRate()} + '%'">개수</span>
+                </div>
+                <div class="category-bar-wrap">
+                    <div class="category-bar" th:style="'width:' + ${stat.share} + '%'"></div>
+                </div>
+            </li>
+        </ul>
+    </section>
+</main>
+</body>
+</html>

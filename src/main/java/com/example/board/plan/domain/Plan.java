@@ -76,6 +76,14 @@ public class Plan {
         return author.getId().equals(memberId);
     }
 
+    /** 계획된 공부 시간(분). 종일 일정처럼 시간이 없으면 0분으로 본다 */
+    public long getStudyMinutes() {
+        if (startTime == null || endTime == null) {
+            return 0;
+        }
+        return java.time.Duration.between(startTime, endTime).toMinutes();
+    }
+
     public void update(String title, String content, PlanCategory category,
                        LocalDate planDate, LocalTime startTime, LocalTime endTime) {
         validateTimeRange(startTime, endTime);

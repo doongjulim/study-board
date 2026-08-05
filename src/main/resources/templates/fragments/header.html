@@ -9,6 +9,7 @@
         <a th:href="@{/}" class="brand">🎯 스터디플랜</a>
         <nav class="gnb">
             <a th:href="@{/plans/daily}" th:classappend="${active == 'plans'} ? 'on'">플래너</a>
+            <a th:href="@{/stats}" th:classappend="${active == 'stats'} ? 'on'">통계</a>
             <a th:href="@{/plans/shared}" th:classappend="${active == 'shared'} ? 'on'">공유 플랜</a>
             <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">게시판</a>
         </nav>
