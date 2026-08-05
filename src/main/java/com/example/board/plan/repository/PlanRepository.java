@@ -34,6 +34,10 @@ public interface PlanRepository extends JpaRepository<Plan, Long> {
     @EntityGraph(attributePaths = "author")
     Page<Plan> findBySharedTrue(Pageable pageable);
 
+    /** 같은 반복 묶음의 일정 전체 - 반복 일정 일괄 삭제에 사용 */
+    @EntityGraph(attributePaths = "author")
+    List<Plan> findBySeriesId(String seriesId);
+
     /** 리마인더 대상: 오늘 일정 중 아직 완료/발송되지 않았고 곧 시작하는 것 */
     List<Plan> findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
             LocalDate planDate, LocalTime from, LocalTime to);

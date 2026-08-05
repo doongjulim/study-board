@@ -53,6 +53,10 @@ public class Plan {
     @Column(nullable = false)
     private boolean reminderSent;
 
+    /** 반복 생성된 일정들을 묶는 식별자 - 단건 일정은 null */
+    @Column(length = 36)
+    private String seriesId;
+
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -74,6 +78,15 @@ public class Plan {
     /** 현재 사용자가 이 플랜의 작성자인지 확인한다 */
     public boolean isAuthoredBy(Long memberId) {
         return author.getId().equals(memberId);
+    }
+
+    /** 같은 반복 묶음에 속하게 한다 */
+    public void assignSeries(String seriesId) {
+        this.seriesId = seriesId;
+    }
+
+    public boolean isPartOfSeries() {
+        return seriesId != null;
     }
 
     /** 계획된 공부 시간(분). 종일 일정처럼 시간이 없으면 0분으로 본다 */

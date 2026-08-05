@@ -5,6 +5,7 @@ import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.service.CommentService;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
+import com.example.board.plan.domain.RepeatType;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.service.PlanService;
 import jakarta.validation.Valid;
@@ -145,6 +146,12 @@ public class PlanController {
         return PlanCategory.values();
     }
 
+    /** 폼의 반복 선택지 */
+    @ModelAttribute("repeatTypes")
+    public RepeatType[] repeatTypes() {
+        return RepeatType.values();
+    }
+
     /** 작성 처리 */
     @PostMapping
     public String create(@Valid @ModelAttribute PlanForm planForm,
@@ -153,12 +160,14 @@ public class PlanController {
                          Model model,
                          RedirectAttributes redirectAttributes) {
         validateTimeRange(planForm, bindingResult);
+        validateRepeat(planForm, bindingResult);
         if (bindingResult.hasErrors()) {
             model.addAttribute("mode", "create");
             return "plans/form";
         }
         planService.create(planForm, principal.id());
-        redirectAttributes.addFlashAttribute("message", "일정이 등록되었습니다.");
+        redirectAttributes.addFlashAttribute("message",
+                planForm.getRepeatType().isRepeating() ? "반복 일정이 등록되었습니다." : "일정이 등록되었습니다.");
         return "redirect:/plans/daily?date=" + planForm.getPlanDate();
     }
 
@@ -211,6 +220,17 @@ public class PlanController {
         return "redirect:/plans/daily?date=" + date;
     }
 
+    /** 반복 일정 전체 삭제 */
+    @PostMapping("/{id}/delete-series")
+    public String deleteSeries(@PathVariable Long id,
+                               @AuthenticationPrincipal MemberPrincipal principal,
+                               RedirectAttributes redirectAttributes) {
+        LocalDate date = planService.findOwned(id, principal.id()).getPlanDate();
+        int deleted = planService.deleteSeries(id, principal.id());
+        redirectAttributes.addFlashAttribute("message", "반복 일정 " + deleted + "건을 삭제했습니다.");
+        return "redirect:/plans/daily?date=" + date;
+    }
+
     /** 완료 상태 전환 */
     @PostMapping("/{id}/toggle")
     public String toggleCompleted(@PathVariable Long id,
@@ -228,6 +248,25 @@ public class PlanController {
         redirectAttributes.addFlashAttribute("message",
                 plan.isShared() ? "플랜을 공유했습니다." : "플랜 공유를 해제했습니다.");
         return "redirect:/plans/daily?date=" + plan.getPlanDate();
+    }
+
+    /** 반복 설정 교차 검증 - 종료일 필요 여부와 생성 개수 상한을 확인한다 */
+    private void validateRepeat(PlanForm form, BindingResult bindingResult) {
+        if (!form.getRepeatType().isRepeating() || form.getPlanDate() == null) {
+            return;
+        }
+        if (form.getRepeatUntil() == null) {
+            bindingResult.rejectValue("repeatUntil", "required", "반복 종료일을 선택하세요.");
+            return;
+        }
+        if (form.getRepeatUntil().isBefore(form.getPlanDate())) {
+            bindingResult.rejectValue("repeatUntil", "invalidRange", "반복 종료일은 시작 날짜 이후여야 합니다.");
+            return;
+        }
+        if (form.getRepeatType().exceedsLimit(form.getPlanDate(), form.getRepeatUntil())) {
+            bindingResult.rejectValue("repeatUntil", "tooMany",
+                    "한 번에 최대 " + RepeatType.MAX_OCCURRENCES + "개까지 만들 수 있습니다. 기간을 줄여 주세요.");
+        }
     }
 
     /** 시작/종료 시간 교차 검증 - 필드 단일 검증으로는 잡을 수 없어 별도 처리 */

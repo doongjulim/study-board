@@ -51,6 +51,7 @@
                      th:text="${plan.content}"></div>
                 <div class="plan-meta">
                     <span class="tag-category" th:text="${plan.category.label}">분류</span>
+                    <span class="tag-repeat" th:if="${plan.partOfSeries}">🔁 반복</span>
                     <span th:text="${plan.author.nickname}">작성자</span>
                     <span class="tag-shared" th:if="${plan.shared}">공유됨</span>
                 </div>
@@ -64,6 +65,10 @@
                 <form th:action="@{/plans/{id}/delete(id=${plan.id})}" method="post"
                       onsubmit="return confirm('일정을 삭제할까요?');">
                     <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+                </form>
+                <form th:if="${plan.partOfSeries}" th:action="@{/plans/{id}/delete-series(id=${plan.id})}"
+                      method="post" onsubmit="return confirm('이 반복 일정 전체를 삭제할까요?');">
+                    <button type="submit" class="btn btn-sm btn-danger">반복 전체 삭제</button>
                 </form>
             </div>
         </li>

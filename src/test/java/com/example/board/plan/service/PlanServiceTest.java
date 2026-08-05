@@ -4,6 +4,7 @@ import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
+import com.example.board.plan.domain.RepeatType;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.event.PlanSharedEvent;
 import com.example.board.plan.repository.PlanRepository;
@@ -44,6 +45,12 @@ class PlanServiceTest {
         return member;
     }
 
+    private Member otherAuthor() {
+        Member member = new Member("other", "encoded-password", "다른사람");
+        ReflectionTestUtils.setField(member, "id", 999L);
+        return member;
+    }
+
     private PlanForm form() {
         PlanForm form = new PlanForm();
         form.setTitle("자료구조 공부");
@@ -61,25 +68,92 @@ class PlanServiceTest {
 
     // ── create / update / delete ─────────────────────────────
 
+    @SuppressWarnings("unchecked")
+    private void givenSaveAllAssignsIds() {
+        given(planRepository.saveAll(any(Iterable.class))).willAnswer(inv -> {
+            List<Plan> saved = new java.util.ArrayList<>();
+            long nextId = 1L;
+            for (Plan plan : (Iterable<Plan>) inv.getArgument(0)) {
+                ReflectionTestUtils.setField(plan, "id", nextId++);
+                saved.add(plan);
+            }
+            return saved;
+        });
+    }
+
     @Test
     @DisplayName("create - 현재 회원을 작성자로 플랜을 저장하고 id 를 반환한다")
     void create() {
         Member author = author();
         given(memberRepository.getReferenceById(1L)).willReturn(author);
-        given(planRepository.save(any(Plan.class))).willAnswer(inv -> {
-            Plan saved = inv.getArgument(0);
-            ReflectionTestUtils.setField(saved, "id", 1L);
-            return saved;
-        });
+        givenSaveAllAssignsIds();
 
         Long id = planService.create(form(), 1L);
 
         assertThat(id).isEqualTo(1L);
-        ArgumentCaptor<Plan> captor = ArgumentCaptor.forClass(Plan.class);
-        then(planRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getTitle()).isEqualTo("자료구조 공부");
-        assertThat(captor.getValue().getAuthor()).isSameAs(author);
-        assertThat(captor.getValue().getPlanDate()).isEqualTo(LocalDate.of(2026, 7, 9));
+        ArgumentCaptor<Iterable<Plan>> captor = ArgumentCaptor.forClass(Iterable.class);
+        then(planRepository).should().saveAll(captor.capture());
+        List<Plan> saved = new java.util.ArrayList<>();
+        captor.getValue().forEach(saved::add);
+        assertThat(saved).singleElement().satisfies(plan -> {
+            assertThat(plan.getTitle()).isEqualTo("자료구조 공부");
+            assertThat(plan.getAuthor()).isSameAs(author);
+            assertThat(plan.getPlanDate()).isEqualTo(LocalDate.of(2026, 7, 9));
+            assertThat(plan.isPartOfSeries()).isFalse();
+        });
+    }
+
+    @Test
+    @DisplayName("create - 반복 설정이 있으면 종료일까지 만들고 같은 시리즈로 묶는다")
+    void create_repeating() {
+        given(memberRepository.getReferenceById(1L)).willReturn(author());
+        givenSaveAllAssignsIds();
+
+        PlanForm form = form();
+        form.setRepeatType(RepeatType.DAILY);
+        form.setRepeatUntil(LocalDate.of(2026, 7, 11)); // 7/9 ~ 7/11 → 3건
+
+        planService.create(form, 1L);
+
+        ArgumentCaptor<Iterable<Plan>> captor = ArgumentCaptor.forClass(Iterable.class);
+        then(planRepository).should().saveAll(captor.capture());
+        List<Plan> saved = new java.util.ArrayList<>();
+        captor.getValue().forEach(saved::add);
+        assertThat(saved).hasSize(3);
+        assertThat(saved).extracting(Plan::getPlanDate).containsExactly(
+                LocalDate.of(2026, 7, 9), LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 11));
+        assertThat(saved).extracting(Plan::getSeriesId).doesNotContainNull().hasSameElementsAs(
+                List.of(saved.get(0).getSeriesId()));
+    }
+
+    @Test
+    @DisplayName("deleteSeries - 본인 소유의 같은 반복 묶음만 삭제한다")
+    void deleteSeries() {
+        Plan mine = plan();
+        mine.assignSeries("series-1");
+        Plan sameSeriesOther = new Plan("남의 플랜", null, otherAuthor(), PlanCategory.ETC,
+                LocalDate.of(2026, 7, 10), null, null);
+        sameSeriesOther.assignSeries("series-1");
+        given(planRepository.findById(1L)).willReturn(Optional.of(mine));
+        given(planRepository.findBySeriesId("series-1")).willReturn(List.of(mine, sameSeriesOther));
+
+        int deleted = planService.deleteSeries(1L, 1L);
+
+        assertThat(deleted).isEqualTo(1);
+        then(planRepository).should().deleteAll(List.of(mine));
+    }
+
+    @Test
+    @DisplayName("deleteSeries - 반복이 아닌 단건 일정이면 그 일정만 삭제한다")
+    void deleteSeries_singlePlan() {
+        Plan single = plan();
+        given(planRepository.findById(1L)).willReturn(Optional.of(single));
+
+        int deleted = planService.deleteSeries(1L, 1L);
+
+        assertThat(deleted).isEqualTo(1);
+        then(planRepository).should().delete(single);
+        then(planRepository).should(never()).findBySeriesId(any());
     }
 
     @Test
