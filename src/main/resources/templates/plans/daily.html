@@ -13,6 +13,13 @@
 <main class="container">
     <div th:if="${message}" class="flash" th:text="${message}"></div>
 
+    <div class="dday-strip" th:if="${!upcomingDdays.isEmpty()}">
+        <a class="dday-chip" th:each="dday : ${upcomingDdays}" th:href="@{/ddays}">
+            <span class="dday-badge" th:text="${dday.label(today)}">D-0</span>
+            <span th:text="${dday.title}">제목</span>
+        </a>
+    </div>
+
     <nav class="view-tabs">
         <a class="on" th:href="@{/plans/daily(date=${date})}">일간</a>
         <a th:href="@{/plans/weekly(date=${date})}">주간</a>

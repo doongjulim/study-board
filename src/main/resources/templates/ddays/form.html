@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>D-Day 수정</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('ddays')}"></header>
+
+<main class="container">
+    <h2 class="page-title">D-Day 수정</h2>
+
+    <form class="form-card" method="post" th:object="${ddayForm}"
+          th:action="@{/ddays/{id}/edit(id=${ddayId})}">
+        <div class="form-group">
+            <label for="title">제목</label>
+            <input type="text" id="title" th:field="*{title}">
+            <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+        </div>
+        <div class="form-group">
+            <label for="targetDate">목표 날짜</label>
+            <input type="date" id="targetDate" th:field="*{targetDate}">
+            <p class="error" th:if="${#fields.hasErrors('targetDate')}" th:errors="*{targetDate}"></p>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">수정</button>
+            <a class="btn" th:href="@{/ddays}">취소</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

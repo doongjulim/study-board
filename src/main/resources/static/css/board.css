@@ -395,3 +395,20 @@ table.board { min-width: 480px; }
 .category-bar { height: 100%; background: var(--accent); border-radius: 4px; }
 .tag-repeat { background: var(--accent-soft); color: var(--accent); border-radius: 6px;
   padding: 1px 8px; font-size: .72rem; }
+
+/* ── D-Day ─────────────────────────────────────── */
+.dday-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.dday-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+  font-size: .82rem; text-decoration: none; color: var(--ink); }
+.dday-badge { font-weight: 700; color: var(--accent); font-size: .82rem; white-space: nowrap; }
+.dday-form { margin-bottom: 20px; }
+.dday-list { list-style: none; padding: 0; margin: 0; }
+.dday-item { display: flex; align-items: center; gap: 14px; padding: 14px 0;
+  border-bottom: 1px solid var(--line); }
+.dday-item.past { opacity: .55; }
+.dday-item.past .dday-badge { color: var(--muted, #888); }
+.dday-main { display: flex; flex-direction: column; gap: 2px; }
+.dday-title { font-weight: 600; }
+.dday-date { font-size: .76rem; color: var(--muted, #888); }
+.dday-item .actions { margin-left: auto; }

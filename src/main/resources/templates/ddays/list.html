@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>D-Day</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader('ddays')}"></header>
+
+<main class="container">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <h2 class="page-title">D-Day</h2>
+    <p class="hint">시험·면접·마감일을 등록해 두면 플래너에서도 남은 날짜를 확인할 수 있어요.</p>
+
+    <form class="form-card dday-form" method="post" th:object="${ddayForm}" th:action="@{/ddays}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="title">제목</label>
+                <input type="text" id="title" th:field="*{title}" placeholder="예) 정보처리기사 실기">
+                <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+            </div>
+            <div class="form-group">
+                <label for="targetDate">목표 날짜</label>
+                <input type="date" id="targetDate" th:field="*{targetDate}">
+                <p class="error" th:if="${#fields.hasErrors('targetDate')}" th:errors="*{targetDate}"></p>
+            </div>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">등록</button>
+        </div>
+    </form>
+
+    <ul class="dday-list">
+        <li th:if="${ddays.isEmpty()}" class="empty">등록된 D-Day 가 없습니다.</li>
+        <li th:each="dday : ${ddays}" class="dday-item" th:classappend="${dday.isPast(today)} ? 'past'">
+            <span class="dday-badge" th:text="${dday.label(today)}">D-0</span>
+            <div class="dday-main">
+                <span class="dday-title" th:text="${dday.title}">제목</span>
+                <span class="dday-date"
+                      th:text="${#temporals.format(dday.targetDate, 'yyyy-MM-dd (E)')}">날짜</span>
+            </div>
+            <div class="actions">
+                <a class="btn btn-sm" th:href="@{/ddays/{id}/edit(id=${dday.id})}">수정</a>
+                <form th:action="@{/ddays/{id}/delete(id=${dday.id})}" method="post"
+                      onsubmit="return confirm('삭제할까요?');">
+                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+                </form>
+            </div>
+        </li>
+    </ul>
+</main>
+</body>
+</html>

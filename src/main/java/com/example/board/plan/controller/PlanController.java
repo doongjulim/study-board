@@ -3,6 +3,7 @@ package com.example.board.plan.controller;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.service.CommentService;
+import com.example.board.dday.service.DdayService;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.domain.RepeatType;
@@ -38,6 +39,8 @@ public class PlanController {
 
     private final PlanService planService;
     private final CommentService commentService;
+    /** 일간 뷰 상단에 남은 날짜를 보여주기 위한 읽기 전용 의존 */
+    private final DdayService ddayService;
 
     @GetMapping
     public String home() {
@@ -55,6 +58,7 @@ public class PlanController {
         model.addAttribute("prevDate", target.minusDays(1));
         model.addAttribute("nextDate", target.plusDays(1));
         model.addAttribute("today", LocalDate.now());
+        model.addAttribute("upcomingDdays", ddayService.findUpcoming(principal.id(), LocalDate.now()));
         return "plans/daily";
     }
 
