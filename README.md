@@ -20,6 +20,18 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 - **파일 업로드**: 다중 업로드(파일당 10MB), 확장자 화이트리스트 검증,
   이미지만 인라인 미리보기·그 외는 강제 다운로드 (XSS 방지)
 
+## 화면
+
+| 플래너 (일간) | 학습 통계 |
+|---|---|
+| ![플래너](docs/images/planner.png) | ![학습 통계](docs/images/stats.png) |
+| D-Day 요약, 분류 배지, 완료 토글 | 완료율·공부 시간·연속 달성, 일별/분류별 집계 |
+
+| 주간 인증글 + 댓글 | D-Day |
+|---|---|
+| ![인증글](docs/images/post.png) | ![D-Day](docs/images/dday.png) |
+| 한 주 학습 기록을 초안으로 자동 생성 | 목표일 카운트다운 (D-n / D-DAY / D+n) |
+
 ## 실행 방법
 
 ```bash
