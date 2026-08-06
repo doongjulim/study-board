@@ -27,7 +27,7 @@ class SseEmitterRegistryTest {
         SseEmitter emitter = registry.add(1L);
         emitter.complete(); // 이후 send() 는 IllegalStateException 을 던진다
 
-        registry.send(1L, "notification", "data");
+        registry.send(1L, "notification", "1", "data");
 
         assertThat(registry.activeCount()).isZero();
     }
@@ -37,7 +37,7 @@ class SseEmitterRegistryTest {
     void sendWithoutEmitters() {
         SseEmitterRegistry registry = new SseEmitterRegistry();
 
-        assertThatCode(() -> registry.send(99L, "notification", "data"))
+        assertThatCode(() -> registry.send(99L, "notification", "1", "data"))
                 .doesNotThrowAnyException();
     }
 }
