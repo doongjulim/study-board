@@ -38,7 +38,8 @@ public interface PlanRepository extends JpaRepository<Plan, Long> {
     @EntityGraph(attributePaths = "author")
     List<Plan> findBySeriesId(String seriesId);
 
-    /** 리마인더 대상: 오늘 일정 중 아직 완료/발송되지 않았고 곧 시작하는 것 */
+    /** 리마인더 대상: 해당 날짜 일정 중 아직 완료/발송되지 않았고 곧 시작하는 것 (알림 발송에 author 필요) */
+    @EntityGraph(attributePaths = "author")
     List<Plan> findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
             LocalDate planDate, LocalTime from, LocalTime to);
 }
