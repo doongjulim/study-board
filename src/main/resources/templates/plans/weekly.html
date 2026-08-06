@@ -28,6 +28,11 @@
         </div>
     </div>
 
+    <div class="toolbar">
+        <span class="hint">이번 주 학습 기록을 게시판에 인증글로 남겨보세요.</span>
+        <a class="btn btn-primary" th:href="@{/posts/new(week=${weekStart})}">📝 주간 인증글 쓰기</a>
+    </div>
+
     <div class="scroll-x">
     <div class="week-grid">
         <div class="week-day" th:each="day : ${weekDays}" th:classappend="${day == today} ? 'today'">

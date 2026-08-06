@@ -12,6 +12,8 @@ import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.SearchType;
 import com.example.board.post.service.PostService;
+import com.example.board.stats.domain.WeeklyReport;
+import com.example.board.stats.service.WeeklyReportService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +48,7 @@ class PostControllerTest {
     @MockBean PostService postService;
     @MockBean TokenService tokenService;
     @MockBean CommentService commentService;
+    @MockBean WeeklyReportService weeklyReportService;
 
     private Post postFixture() {
         return new Post("제목", "내용", new Member("tester1", "encoded-password", "작성자"));
@@ -140,6 +143,34 @@ class PostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/form"))
                 .andExpect(model().attributeExists("postForm"));
+    }
+
+    @Test
+    @DisplayName("GET /posts/new?week=... - 주간 학습 기록으로 제목·본문 초안을 채운다")
+    void createForm_weeklyDraft() throws Exception {
+        given(weeklyReportService.draft(1L, java.time.LocalDate.of(2026, 8, 3)))
+                .willReturn(new WeeklyReport("[8/3~8/9] 이번 주 학습 인증", "이번 주 완료율 67% (4/6)"));
+
+        mockMvc.perform(get("/posts/new").param("week", "2026-08-03").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("posts/form"))
+                .andExpect(model().attribute("postForm",
+                        org.hamcrest.Matchers.hasProperty("title",
+                                org.hamcrest.Matchers.is("[8/3~8/9] 이번 주 학습 인증"))))
+                .andExpect(model().attribute("postForm",
+                        org.hamcrest.Matchers.hasProperty("content",
+                                org.hamcrest.Matchers.containsString("완료율 67%"))));
+    }
+
+    @Test
+    @DisplayName("GET /posts/new - week 파라미터가 없으면 빈 폼을 준다")
+    void createForm_withoutWeek() throws Exception {
+        mockMvc.perform(get("/posts/new").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("postForm",
+                        org.hamcrest.Matchers.hasProperty("title", org.hamcrest.Matchers.nullValue())));
+
+        then(weeklyReportService).shouldHaveNoInteractions();
     }
 
     @Test

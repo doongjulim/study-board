@@ -8,8 +8,11 @@ import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.PostSummary;
 import com.example.board.post.dto.SearchType;
 import com.example.board.post.service.PostService;
+import com.example.board.stats.domain.WeeklyReport;
+import com.example.board.stats.service.WeeklyReportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
+import java.time.LocalDate;
 
 @Controller
 @RequiredArgsConstructor
@@ -31,6 +35,8 @@ public class PostController {
 
     private final PostService postService;
     private final CommentService commentService;
+    /** 주간 인증글 초안 생성을 위한 읽기 전용 의존 */
+    private final WeeklyReportService weeklyReportService;
 
     private static final int PAGE_BLOCK_SIZE = 5;
 
@@ -73,10 +79,22 @@ public class PostController {
         return "posts/view";
     }
 
-    /** 작성 폼 */
+    /**
+     * 작성 폼.
+     * week 파라미터가 있으면 그 주의 학습 기록으로 제목·본문 초안을 채워 준다 (플래너 → 인증글 연동).
+     */
     @GetMapping("/new")
-    public String createForm(Model model) {
-        model.addAttribute("postForm", new PostForm());
+    public String createForm(@RequestParam(required = false)
+                             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
+                             @AuthenticationPrincipal MemberPrincipal principal,
+                             Model model) {
+        PostForm form = new PostForm();
+        if (week != null) {
+            WeeklyReport report = weeklyReportService.draft(principal.id(), week);
+            form.setTitle(report.title());
+            form.setContent(report.content());
+        }
+        model.addAttribute("postForm", form);
         return "posts/form";
     }
 
