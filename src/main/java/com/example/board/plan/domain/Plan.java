@@ -33,6 +33,10 @@ public class Plan {
     @JoinColumn(name = "author_id", nullable = false)
     private Member author;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private PlanCategory category;
+
     @Column(nullable = false)
     private LocalDate planDate;
 
@@ -49,18 +53,23 @@ public class Plan {
     @Column(nullable = false)
     private boolean reminderSent;
 
+    /** 반복 생성된 일정들을 묶는 식별자 - 단건 일정은 null */
+    @Column(length = 36)
+    private String seriesId;
+
     @CreatedDate
     private LocalDateTime createdAt;
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    public Plan(String title, String content, Member author,
+    public Plan(String title, String content, Member author, PlanCategory category,
                 LocalDate planDate, LocalTime startTime, LocalTime endTime) {
         validateTimeRange(startTime, endTime);
         this.title = title;
         this.content = content;
         this.author = author;
+        this.category = (category != null) ? category : PlanCategory.ETC;
         this.planDate = planDate;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -71,11 +80,29 @@ public class Plan {
         return author.getId().equals(memberId);
     }
 
-    public void update(String title, String content,
+    /** 같은 반복 묶음에 속하게 한다 */
+    public void assignSeries(String seriesId) {
+        this.seriesId = seriesId;
+    }
+
+    public boolean isPartOfSeries() {
+        return seriesId != null;
+    }
+
+    /** 계획된 공부 시간(분). 종일 일정처럼 시간이 없으면 0분으로 본다 */
+    public long getStudyMinutes() {
+        if (startTime == null || endTime == null) {
+            return 0;
+        }
+        return java.time.Duration.between(startTime, endTime).toMinutes();
+    }
+
+    public void update(String title, String content, PlanCategory category,
                        LocalDate planDate, LocalTime startTime, LocalTime endTime) {
         validateTimeRange(startTime, endTime);
         this.title = title;
         this.content = content;
+        this.category = (category != null) ? category : PlanCategory.ETC;
         this.planDate = planDate;
         this.startTime = startTime;
         this.endTime = endTime;

@@ -105,7 +105,8 @@ class CommentControllerTest {
     @Test
     @DisplayName("POST /comments/{id}/delete - 플랜 댓글 삭제 후 공유 플랜 상세로 돌아간다")
     void delete_planComment() throws Exception {
-        Plan targetPlan = new Plan("플랜", null, member(), LocalDate.of(2026, 7, 30), null, null);
+        Plan targetPlan = new Plan("플랜", null, member(), com.example.board.plan.domain.PlanCategory.ETC,
+                LocalDate.of(2026, 7, 30), null, null);
         ReflectionTestUtils.setField(targetPlan, "id", 4L);
         given(commentService.delete(6L, MEMBER_ID))
                 .willReturn(Comment.forPlan(targetPlan, member(), "댓글"));

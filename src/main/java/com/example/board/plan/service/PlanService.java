@@ -18,6 +18,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -63,23 +64,54 @@ public class PlanService {
         return plan;
     }
 
+    /**
+     * 일정을 등록한다. 반복 설정이 있으면 종료일까지의 일정을 한 번에 만들고
+     * 같은 seriesId 로 묶어, 이후 한꺼번에 삭제할 수 있게 한다.
+     * 반환값은 첫 일정의 id.
+     */
     @Transactional
     public Long create(PlanForm form, Long authorId) {
         Member author = memberRepository.getReferenceById(authorId);
-        Plan plan = new Plan(form.getTitle(), form.getContent(), author,
-                form.getPlanDate(), form.getStartTime(), form.getEndTime());
-        return planRepository.save(plan).getId();
+        List<LocalDate> dates = form.getRepeatType().datesBetween(form.getPlanDate(), form.getRepeatUntil());
+        String seriesId = (dates.size() > 1) ? UUID.randomUUID().toString() : null;
+
+        List<Plan> plans = dates.stream()
+                .map(date -> {
+                    Plan plan = new Plan(form.getTitle(), form.getContent(), author, form.getCategory(),
+                            date, form.getStartTime(), form.getEndTime());
+                    if (seriesId != null) {
+                        plan.assignSeries(seriesId);
+                    }
+                    return plan;
+                })
+                .toList();
+        return planRepository.saveAll(plans).get(0).getId();
     }
 
     @Transactional
     public void update(Long id, PlanForm form, Long memberId) {
-        findOwned(id, memberId).update(form.getTitle(), form.getContent(),
+        findOwned(id, memberId).update(form.getTitle(), form.getContent(), form.getCategory(),
                 form.getPlanDate(), form.getStartTime(), form.getEndTime());
     }
 
     @Transactional
     public void delete(Long id, Long memberId) {
         planRepository.delete(findOwned(id, memberId));
+    }
+
+    /** 반복 일정 전체 삭제 - 본인 소유의 같은 묶음만 지운다. 삭제한 건수를 반환한다 */
+    @Transactional
+    public int deleteSeries(Long id, Long memberId) {
+        Plan plan = findOwned(id, memberId);
+        if (!plan.isPartOfSeries()) {
+            planRepository.delete(plan);
+            return 1;
+        }
+        List<Plan> series = planRepository.findBySeriesId(plan.getSeriesId()).stream()
+                .filter(target -> target.isAuthoredBy(memberId))
+                .toList();
+        planRepository.deleteAll(series);
+        return series.size();
     }
 
     @Transactional

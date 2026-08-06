@@ -23,6 +23,14 @@
         </div>
 
         <div class="form-group">
+            <label for="category">분류</label>
+            <select id="category" th:field="*{category}" class="select-input">
+                <option th:each="c : ${categories}" th:value="${c}" th:text="${c.label}"></option>
+            </select>
+            <p class="error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></p>
+        </div>
+
+        <div class="form-group">
             <label for="planDate">날짜</label>
             <input type="date" id="planDate" th:field="*{planDate}">
             <p class="error" th:if="${#fields.hasErrors('planDate')}" th:errors="*{planDate}"></p>
@@ -38,6 +46,23 @@
                 <label for="endTime">종료 시간</label>
                 <input type="time" id="endTime" th:field="*{endTime}">
                 <p class="error" th:if="${#fields.hasErrors('endTime')}" th:errors="*{endTime}"></p>
+            </div>
+        </div>
+
+        <!-- 반복 설정은 새 일정 등록에서만 사용한다 -->
+        <div class="form-row" th:if="${mode != 'edit'}">
+            <div class="form-group">
+                <label for="repeatType">반복</label>
+                <select id="repeatType" th:field="*{repeatType}" class="select-input">
+                    <option th:each="r : ${repeatTypes}" th:value="${r}" th:text="${r.label}"></option>
+                </select>
+                <p class="error" th:if="${#fields.hasErrors('repeatType')}" th:errors="*{repeatType}"></p>
+            </div>
+            <div class="form-group">
+                <label for="repeatUntil">반복 종료일</label>
+                <input type="date" id="repeatUntil" th:field="*{repeatUntil}">
+                <p class="hint">반복을 선택한 경우에만 사용됩니다.</p>
+                <p class="error" th:if="${#fields.hasErrors('repeatUntil')}" th:errors="*{repeatUntil}"></p>
             </div>
         </div>
 

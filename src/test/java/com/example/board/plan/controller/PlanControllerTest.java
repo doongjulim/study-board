@@ -2,6 +2,7 @@ package com.example.board.plan.controller;
 
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.service.CommentService;
+import com.example.board.dday.service.DdayService;
 import com.example.board.auth.AuthCookies;
 import com.example.board.auth.service.TokenService;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
@@ -9,6 +10,7 @@ import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
 import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.Plan;
+import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.service.PlanService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,6 +47,7 @@ class PlanControllerTest {
     @MockBean PlanService planService;
     @MockBean TokenService tokenService;
     @MockBean CommentService commentService;
+    @MockBean DdayService ddayService;
 
     private Plan plan() {
         return planOwnedBy(MEMBER_ID);
@@ -53,7 +56,7 @@ class PlanControllerTest {
     private Plan planOwnedBy(long authorId) {
         Member author = new Member("tester" + authorId, "encoded-password", "동주");
         ReflectionTestUtils.setField(author, "id", authorId);
-        return new Plan("자료구조 공부", "스택, 큐 복습", author,
+        return new Plan("자료구조 공부", "스택, 큐 복습", author, PlanCategory.CODING_TEST,
                 LocalDate.of(2026, 7, 9), LocalTime.of(10, 0), LocalTime.of(12, 0));
     }
 
@@ -238,6 +241,78 @@ class PlanControllerTest {
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
 
         then(planService).should().delete(1L, MEMBER_ID);
+    }
+
+    // ── 반복 일정 ─────────────────────────────────────────────
+
+    @Test
+    @DisplayName("POST /plans - 반복 종료일 없이 반복을 선택하면 폼으로 돌아가고 저장하지 않는다")
+    void create_repeatWithoutUntil() throws Exception {
+        mockMvc.perform(post("/plans").with(csrf()).with(memberAuth())
+                        .param("title", "매일 알고리즘")
+                        .param("planDate", "2026-07-09")
+                        .param("repeatType", "DAILY"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("plans/form"))
+                .andExpect(model().attributeHasFieldErrors("planForm", "repeatUntil"));
+
+        then(planService).should(never()).create(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /plans - 반복 종료일이 시작일보다 빠르면 폼으로 돌아간다")
+    void create_repeatUntilBeforeStart() throws Exception {
+        mockMvc.perform(post("/plans").with(csrf()).with(memberAuth())
+                        .param("title", "매일 알고리즘")
+                        .param("planDate", "2026-07-09")
+                        .param("repeatType", "DAILY")
+                        .param("repeatUntil", "2026-07-08"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeHasFieldErrors("planForm", "repeatUntil"));
+
+        then(planService).should(never()).create(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /plans - 상한을 넘는 기간이면 폼으로 돌아간다")
+    void create_repeatTooMany() throws Exception {
+        mockMvc.perform(post("/plans").with(csrf()).with(memberAuth())
+                        .param("title", "매일 알고리즘")
+                        .param("planDate", "2026-07-09")
+                        .param("repeatType", "DAILY")
+                        .param("repeatUntil", "2030-07-09"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeHasFieldErrors("planForm", "repeatUntil"));
+
+        then(planService).should(never()).create(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /plans - 올바른 반복 설정이면 저장한다")
+    void create_repeatValid() throws Exception {
+        given(planService.create(any(), eq(MEMBER_ID))).willReturn(1L);
+
+        mockMvc.perform(post("/plans").with(csrf()).with(memberAuth())
+                        .param("title", "매일 알고리즘")
+                        .param("planDate", "2026-07-09")
+                        .param("repeatType", "DAILY")
+                        .param("repeatUntil", "2026-07-20"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
+
+        then(planService).should().create(any(), eq(MEMBER_ID));
+    }
+
+    @Test
+    @DisplayName("POST /plans/{id}/delete-series - 반복 전체 삭제 후 해당 날짜로 이동한다")
+    void deleteSeries() throws Exception {
+        given(planService.findOwned(1L, MEMBER_ID)).willReturn(plan());
+        given(planService.deleteSeries(1L, MEMBER_ID)).willReturn(5);
+
+        mockMvc.perform(post("/plans/1/delete-series").with(csrf()).with(memberAuth()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"))
+                .andExpect(flash().attribute("message", "반복 일정 5건을 삭제했습니다."));
     }
 
     // ── 상태 변경 ─────────────────────────────────────────────

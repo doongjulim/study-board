@@ -1,5 +1,7 @@
 package com.example.board.plan.dto;
 
+import com.example.board.plan.domain.PlanCategory;
+import com.example.board.plan.domain.RepeatType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -21,6 +23,9 @@ public class PlanForm {
     @Size(max = 1000, message = "메모는 1000자 이하로 입력하세요.")
     private String content;
 
+    @NotNull(message = "분류를 선택하세요.")
+    private PlanCategory category = PlanCategory.ETC;
+
     @NotNull(message = "날짜를 선택하세요.")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate planDate;
@@ -30,4 +35,11 @@ public class PlanForm {
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime endTime;
+
+    /** 반복 설정 - 새 일정 등록에서만 사용하고 수정 시에는 무시한다 */
+    @NotNull(message = "반복 여부를 선택하세요.")
+    private RepeatType repeatType = RepeatType.NONE;
+
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+    private LocalDate repeatUntil;
 }
