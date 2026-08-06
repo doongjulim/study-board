@@ -45,7 +45,7 @@ class NotificationControllerTest {
     @Test
     @DisplayName("GET /notifications/subscribe - SSE 스트림으로 응답한다")
     void subscribe() throws Exception {
-        given(notificationService.subscribe(1L)).willReturn(new SseEmitter());
+        given(notificationService.subscribe(1L, null)).willReturn(new SseEmitter());
 
         mockMvc.perform(get("/notifications/subscribe").with(memberAuth()))
                 .andExpect(status().isOk());

@@ -9,6 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -22,10 +23,14 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    /** SSE 구독 - 브라우저의 EventSource 가 연결한다 (본인 알림만 수신) */
+    /**
+     * SSE 구독 - 브라우저의 EventSource 가 연결한다 (본인 알림만 수신).
+     * 재연결이면 EventSource 가 Last-Event-ID 를 보내며, 그동안 놓친 알림을 이어서 받는다.
+     */
     @GetMapping(value = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter subscribe(@AuthenticationPrincipal MemberPrincipal principal) {
-        return notificationService.subscribe(principal.id());
+    public SseEmitter subscribe(@AuthenticationPrincipal MemberPrincipal principal,
+                                @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+        return notificationService.subscribe(principal.id(), lastEventId);
     }
 
     /** 내 알림 목록 + 읽지 않은 개수 */

@@ -37,15 +37,27 @@ public class SseEmitterRegistry {
         return emitter;
     }
 
+    /**
+     * 방금 연결된 이미터에만 이벤트를 보낸다 (재연결 시 놓친 알림 재전송용).
+     * 브라우저가 마지막으로 받은 id 를 기억하도록 eventId 를 함께 실어 보낸다.
+     */
+    public void sendTo(SseEmitter emitter, String eventName, String eventId, Object data) {
+        try {
+            emitter.send(SseEmitter.event().id(eventId).name(eventName).data(data));
+        } catch (IOException | IllegalStateException e) {
+            emitter.completeWithError(e);
+        }
+    }
+
     /** 해당 회원의 모든 접속(탭)으로 이벤트를 보낸다. 접속 중이 아니면 조용히 무시한다 */
-    public void send(Long memberId, String eventName, Object data) {
+    public void send(Long memberId, String eventName, String eventId, Object data) {
         Map<Long, SseEmitter> emitters = emittersByMember.get(memberId);
         if (emitters == null) {
             return;
         }
         emitters.forEach((emitterId, emitter) -> {
             try {
-                emitter.send(SseEmitter.event().name(eventName).data(data));
+                emitter.send(SseEmitter.event().id(eventId).name(eventName).data(data));
             } catch (IOException | IllegalStateException e) {
                 emitters.remove(emitterId); // 끊어진 클라이언트 정리
             }

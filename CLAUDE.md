@@ -28,7 +28,7 @@
 
 ## 주요 기능
 
-- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/file/home/plan/notification)** 로 구성
+- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/comment/file/home/plan/stats/dday/notification)** 로 구성
 - **인증(auth/member)**: JWT(HS256, jjwt) + HttpOnly·SameSite=Lax 쿠키, 세션 없음(STATELESS).
   `JwtAuthenticationFilter` 가 쿠키를 검증해 `MemberPrincipal` 을 SecurityContext 에 채운다.
   CSRF 는 `CookieCsrfTokenRepository` (JS fetch 는 헤더 프래그먼트의 data-csrf-* 사용)
@@ -53,7 +53,10 @@
 - **댓글(comment)**: 단일 `Comment` 엔티티가 게시글/공유 플랜 중 하나에 달림(DB check 제약, on delete cascade). 댓글 UI 는 `fragments/comments.html` 재사용, 알림은 `CommentAddedEvent` 로 결합 차단
 - **업로드 보안(file)**: `FileStore` 확장자 화이트리스트(무확장자 거부), `/files/{id}/view` 는 이미지만 인라인·그 외 다운로드 리다이렉트
 - **모듈 간 결합 차단**: plan 모듈은 `PlanSharedEvent`/`PlanReminderEvent`만 발행하고, notification 모듈의 `NotificationEventListener`가 구독 (Spring 이벤트로 DIP 준수)
-- **리마인더**: `PlanReminderScheduler`가 1분마다 시작 10분 전 일정을 찾아 알림 발행 (`reminderSent` 플래그로 중복 방지)
+- **리마인더**: `PlanReminderScheduler`가 1분마다 시작 10분 전 일정을 찾아 알림 발행 (`reminderSent` 플래그로 중복 방지).
+  확인 구간이 자정을 넘기면 오늘 남은 시간과 다음 날 새벽을 나눠 조회해 새벽 일정이 누락되지 않게 한다
+- **SSE 재연결**: 알림 이벤트에 알림 id 를 실어 보내고, 재연결 시 `Last-Event-ID` 이후의 알림을 재전송한다
+- **인증글 연동**: `WeeklyReport`(stats)가 한 주 플랜으로 게시글 초안을 만들고, `PostController`가 이를 읽기 전용으로 사용한다
 - **공통 헤더**: `templates/fragments/header.html` 프래그먼트를 모든 페이지에서 `th:replace`로 재사용
 - **다크모드**: `board.css`의 `prefers-color-scheme: dark` 미디어쿼리로 자동 전환
 
@@ -78,7 +81,7 @@ spring:
 | Java | 17 |
 | Spring Boot | 3.3.5 |
 | ORM | Spring Data JPA + Hibernate |
-| DB | H2 인메모리 (운영 전환 시 교체) |
+| DB | H2 파일 DB + Flyway (운영 전환 시 교체) |
 | 템플릿 | Thymeleaf |
 | 빌드 | Gradle (Wrapper 포함) |
 | 유틸 | Lombok |
