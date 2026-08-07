@@ -237,7 +237,12 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
   .plan-card { flex-wrap: wrap; }
   .plan-card .actions { width: 100%; justify-content: flex-end; }
   .form-row { flex-direction: column; gap: 0; }
-  header.site .gnb a { padding: 6px 8px; font-size: .85rem; }
+  /* 메뉴가 늘어나 한 줄에 안 들어가므로 아래로 내리고 가로 스크롤시킨다 (좁은 화면에서 글자가 세로로 쪼개지는 것 방지) */
+  header.site .container { flex-wrap: wrap; row-gap: 8px; }
+  header.site .gnb { order: 3; width: 100%; flex: none; overflow-x: auto; }
+  header.site .gnb a { padding: 6px 8px; font-size: .85rem; white-space: nowrap; }
+  .header-controls { margin-left: auto; }
+  .auth-menu .nickname { display: none; }
 }
 
 /* ── 다크모드 (시스템 설정) ──────────────────────────────── */
@@ -337,6 +342,12 @@ table.board { min-width: 480px; }
   .notif-panel { width: calc(100vw - 24px); right: -40px; }
   .toast-box { bottom: 16px; right: 12px; }
   .toast { max-width: calc(100vw - 32px); }
+  .stat-cards { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-value { font-size: 1.3rem; }
+  .dday-item { flex-wrap: wrap; gap: 8px; }
+  .dday-item .actions { width: 100%; justify-content: flex-end; }
+  .comment-form { flex-direction: column; }
+  .comment-form button { align-self: flex-end; }
 }
 
 /* ── 헤더 로그인 메뉴 ───────────────────────────── */
