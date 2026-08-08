@@ -5,6 +5,7 @@ import com.example.board.member.repository.MemberRepository;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.PostSummary;
+import com.example.board.post.dto.SearchType;
 import com.example.board.post.repository.AttachedFileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -108,7 +109,7 @@ class PostServiceIntegrationTest {
         }
 
         PageRequest pageable = PageRequest.of(0, 10, Sort.by("id").descending());
-        Page<PostSummary> page = postService.findAll(null, pageable);
+        Page<PostSummary> page = postService.findAll(null, SearchType.TITLE, pageable);
 
         assertThat(page.getContent()).hasSize(10);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(15);
@@ -121,7 +122,7 @@ class PostServiceIntegrationTest {
         postService.create(form("JPA 활용", "내용"), author.getId());
 
         Page<PostSummary> result = postService.findAll("spring",
-                PageRequest.of(0, 10));
+                SearchType.TITLE, PageRequest.of(0, 10));
 
         assertThat(result.getContent())
                 .isNotEmpty()

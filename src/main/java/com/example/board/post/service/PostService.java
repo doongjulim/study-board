@@ -30,10 +30,6 @@ public class PostService {
     private final MemberRepository memberRepository;
     private final FileStore fileStore;
 
-    public Page<PostSummary> findAll(String keyword, Pageable pageable) {
-        return findAll(keyword, SearchType.TITLE, pageable);
-    }
-
     public Page<PostSummary> findAll(String keyword, SearchType searchType, Pageable pageable) {
         if (keyword == null || keyword.isBlank()) {
             return postRepository.findSummaries(pageable);

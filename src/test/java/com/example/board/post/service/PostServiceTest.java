@@ -59,7 +59,7 @@ class PostServiceTest {
         Page<PostSummary> page = new PageImpl<>(List.of());
         given(postRepository.findSummaries(pageable)).willReturn(page);
 
-        Page<PostSummary> result = postService.findAll(null, pageable);
+        Page<PostSummary> result = postService.findAll(null, com.example.board.post.dto.SearchType.TITLE, pageable);
 
         assertThat(result).isSameAs(page);
         then(postRepository).should(never()).findSummariesByTitle(any(), any());
@@ -71,7 +71,7 @@ class PostServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         given(postRepository.findSummaries(pageable)).willReturn(Page.empty());
 
-        postService.findAll("   ", pageable);
+        postService.findAll("   ", com.example.board.post.dto.SearchType.TITLE, pageable);
 
         then(postRepository).should().findSummaries(pageable);
         then(postRepository).should(never()).findSummariesByTitle(any(), any());
@@ -84,7 +84,7 @@ class PostServiceTest {
         given(postRepository.findSummariesByTitle("spring", pageable))
                 .willReturn(Page.empty());
 
-        postService.findAll("spring", pageable);
+        postService.findAll("spring", com.example.board.post.dto.SearchType.TITLE, pageable);
 
         then(postRepository).should().findSummariesByTitle("spring", pageable);
     }

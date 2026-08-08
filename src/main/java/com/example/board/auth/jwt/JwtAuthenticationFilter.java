@@ -36,8 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         Optional<MemberPrincipal> principal = authCookies.readAccessToken(request)
-                .flatMap(tokenProvider::parse)
-                .map(claims -> new MemberPrincipal(claims.memberId(), claims.loginId(), claims.nickname()));
+                .flatMap(tokenProvider::parse);
 
         if (principal.isEmpty()) {
             principal = refresh(request, response);

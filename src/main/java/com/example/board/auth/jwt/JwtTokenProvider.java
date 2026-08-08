@@ -1,5 +1,6 @@
 package com.example.board.auth.jwt;
 
+import com.example.board.auth.MemberPrincipal;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -40,20 +41,17 @@ public class JwtTokenProvider {
     }
 
     /** 유효하지 않은 토큰(만료·변조·형식 오류)은 빈 Optional 로 처리해 익명 요청으로 흘려보낸다 */
-    public Optional<TokenClaims> parse(String token) {
+    public Optional<MemberPrincipal> parse(String token) {
         try {
             Claims claims = Jwts.parser().verifyWith(key).build()
                     .parseSignedClaims(token)
                     .getPayload();
-            return Optional.of(new TokenClaims(
+            return Optional.of(new MemberPrincipal(
                     Long.valueOf(claims.getSubject()),
                     claims.get("loginId", String.class),
                     claims.get("nickname", String.class)));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }
-    }
-
-    public record TokenClaims(Long memberId, String loginId, String nickname) {
     }
 }

@@ -1,5 +1,6 @@
 package com.example.board.auth.jwt;
 
+import com.example.board.auth.MemberPrincipal;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,10 +19,10 @@ class JwtTokenProviderTest {
     void createAndParse() {
         String token = provider.createToken(1L, "tester", "테스터");
 
-        Optional<JwtTokenProvider.TokenClaims> claims = provider.parse(token);
+        Optional<MemberPrincipal> claims = provider.parse(token);
 
         assertThat(claims).isPresent();
-        assertThat(claims.get().memberId()).isEqualTo(1L);
+        assertThat(claims.get().id()).isEqualTo(1L);
         assertThat(claims.get().loginId()).isEqualTo("tester");
         assertThat(claims.get().nickname()).isEqualTo("테스터");
     }
