@@ -22,7 +22,7 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 
 ## 화면
 
-| 플래너 (일간) | 학습 통계 |
+| 플래너 (일간) | 학습 통계 
 |---|---|
 | ![플래너](docs/images/planner.png) | ![학습 통계](docs/images/stats.png) |
 | D-Day 요약, 분류 배지, 완료 토글 | 완료율·공부 시간·연속 달성, 일별/분류별 집계 |
