@@ -7,3 +7,4 @@ out/
 board-uploads/
 data/
 .DS_Store
+.claude/

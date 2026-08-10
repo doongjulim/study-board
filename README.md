@@ -7,9 +7,13 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 
 - **회원/인증**: 회원가입(BCrypt), JWT 로그인(HttpOnly + SameSite=Lax 쿠키),
   리프레시 토큰 기반 자동 갱신 + 로그아웃 즉시 무효화
+- **홈 대시보드**: 오늘 목표 진행률 링, 연속 달성일, 다음 할 일(바로 타이머 시작), 남은 일정, 이번 주 추이
 - **플래너**: 일간/주간/월간 뷰 (로그인 회원 본인 것만), 완료 토글, 공유(전체 공개 목록 + 상세),
   분류(코딩테스트·자소서·면접 등), 반복 일정(매일/평일/매주)
-- **학습 통계**: 주간/월간 완료율·공부 시간·연속 달성일, 분류별 학습량, 일별 달성률 추이
+- **학습 타이머**: 계획을 실행할 때 시작/종료를 눌러 **실제 공부한 시간**을 기록.
+  헤더 배지가 페이지를 옮겨도 계속 돌고, 켜둔 채 잊은 세션은 자동으로 정리된다 (나중에 직접 보정 가능)
+- **학습 통계**: 주간/월간 완료율, **실제 공부 시간과 계획 대비 실행률**, 연속 달성일,
+  분류별 학습량, 일별 달성률 추이. 연속 달성일은 하루 목표 시간(기본 30분)을 실제로 채운 날만 센다
 - **D-Day**: 시험·면접 등 목표일 카운트다운, 플래너 상단에 임박한 일정 요약
 - **게시판**: CRUD + 검색(제목/제목+내용/작성자 닉네임) + 페이징, 읽기는 공개·쓰기는 로그인 필요
 - **댓글**: 게시글·공유 플랜 상세에 댓글/응원 (본인 댓글만 삭제, 대상 삭제 시 함께 삭제)
@@ -41,6 +45,24 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 > IDE(IntelliJ 등)에서 `BoardApplication` 을 직접 실행해도 됩니다.
 > Gradle Wrapper가 없다면 프로젝트 루트에서 `gradle wrapper` 를 한 번 실행해 생성하세요.
 
+### JDK 요구 사항
+
+**JDK 17 이상이 필요합니다.** (Spring Boot 3 의 최소 요구 사항이자, Gradle 9 데몬의 요구 사항)
+
+셸의 기본 JDK 가 17 미만이어도 `gradle/gradle-daemon-jvm.properties` 의
+`toolchainVersion=17` 덕분에 Gradle 이 설치된 JDK 중 17 을 찾아 데몬을 띄웁니다.
+그래도 실패한다면 이번 실행에만 JDK 를 지정해 보세요.
+
+```bash
+# macOS - 설치된 JDK 목록 확인
+/usr/libexec/java_home -V
+
+# 이번 실행에만 JDK 17 사용
+JAVA_HOME=$(/usr/libexec/java_home -v 17) ./gradlew test
+```
+
+IntelliJ 를 쓴다면 `Settings → Build Tools → Gradle → Gradle JVM` 도 17 로 맞춰 주세요.
+
 - 게시판: http://localhost:8080/posts
 - H2 콘솔: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:file:./data/boarddb`, 사용자: `sa`)
 
@@ -55,11 +77,13 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 src/main/java/com/example/board
 ├── BoardApplication.java
 ├── config/            # SecurityConfig(JWT·CSRF·경로 정책), JpaConfig, SchedulingConfig
-├── common/            # GlobalExceptionHandler (404/403/500)
+├── common/            # GlobalExceptionHandler (404/403/500), web/PageBlock (페이지 번호 블록)
 ├── auth/              # JWT·리프레시 토큰(발급/회전/폐기), 인증 필터, 쿠키(AuthCookies), 로그인/로그아웃
 ├── member/            # Member 엔티티, 회원가입
 ├── post/              # 게시글 CRUD (목록은 PostSummary DTO 프로젝션)
 ├── plan/              # 플래너 (일간/주간/월간·공유·리마인더 스케줄러)
+├── home/              # 홈 대시보드 (DashboardAssembler 가 여러 모듈을 읽기 전용으로 조합)
+├── session/           # 학습 타이머 (실제 공부 시간 기록·방치 세션 자동 종료)
 ├── comment/           # 댓글 (게시글·공유 플랜 공용, CommentAddedEvent 발행)
 ├── stats/             # 학습 통계 (StudyStatistics·StudyStreak 순수 계산 + 대시보드)
 ├── dday/              # D-Day 카운트다운
@@ -68,7 +92,7 @@ src/main/java/com/example/board
 
 src/main/resources
 ├── application.yml
-├── db/migration/      # Flyway (V1 init ~ V9 dday)
+├── db/migration/      # Flyway (V1 init ~ V12 member_daily_goal)
 ├── static/{css,js}
 └── templates/{auth,posts,plans,fragments,error}
 ```
