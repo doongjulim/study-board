@@ -3,10 +3,12 @@ package com.example.board.stats.domain;
 import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
+import com.example.board.session.domain.StudySession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -28,6 +30,13 @@ class WeeklyReportTest {
         return plan;
     }
 
+    private StudySession session(PlanCategory category, LocalDate date, int minutes) {
+        LocalDateTime start = date.atTime(LocalTime.of(9, 0));
+        StudySession session = StudySession.start(author, null, category, start);
+        session.stop(start.plusMinutes(minutes));
+        return session;
+    }
+
     @Test
     @DisplayName("제목에 주간 범위가 들어간다")
     void title() {
@@ -37,15 +46,26 @@ class WeeklyReportTest {
     }
 
     @Test
-    @DisplayName("완료율과 총 공부 시간을 요약한다")
+    @DisplayName("완료율과 실제 공부 시간, 계획 대비 실행률을 요약한다")
     void summary() {
         WeeklyReport report = WeeklyReport.of(List.of(
                 plan("DP 복습", PlanCategory.CODING_TEST, MONDAY, LocalTime.of(9, 0), LocalTime.of(12, 0), true),
                 plan("자소서", PlanCategory.RESUME, MONDAY, LocalTime.of(14, 0), LocalTime.of(15, 30), false)
-        ), MONDAY, SUNDAY);
+        ), List.of(session(PlanCategory.CODING_TEST, MONDAY, 180)), MONDAY, SUNDAY);
 
         assertThat(report.content()).contains("이번 주 완료율 50% (1/2)");
         assertThat(report.content()).contains("총 공부 시간 3시간 0분");
+        assertThat(report.content()).contains("계획 4시간 30분 대비 67%"); // 180 / 270
+    }
+
+    @Test
+    @DisplayName("계획을 세우지 않은 주에는 실행률을 적지 않는다")
+    void noPlannedTimeSkipsExecutionRate() {
+        WeeklyReport report = WeeklyReport.of(List.of(),
+                List.of(session(PlanCategory.MAJOR, MONDAY, 45)), MONDAY, SUNDAY);
+
+        assertThat(report.content()).contains("총 공부 시간 0시간 45분");
+        assertThat(report.content()).doesNotContain("대비");
     }
 
     @Test
@@ -63,7 +83,7 @@ class WeeklyReportTest {
     }
 
     @Test
-    @DisplayName("시간이 30분 단위로 걸쳐 있으면 시간과 분을 함께 적는다")
+    @DisplayName("계획 시간이 30분 단위로 걸쳐 있으면 시간과 분을 함께 적는다")
     void durationWithMinutes() {
         WeeklyReport report = WeeklyReport.of(List.of(
                 plan("모의면접", PlanCategory.INTERVIEW, MONDAY, LocalTime.of(14, 0), LocalTime.of(15, 30), true)
@@ -73,18 +93,20 @@ class WeeklyReportTest {
     }
 
     @Test
-    @DisplayName("분류별 공부 시간을 덧붙인다")
+    @DisplayName("분류별로 실제 공부한 시간을 덧붙인다")
     void categoryBreakdown() {
-        WeeklyReport report = WeeklyReport.of(List.of(
-                plan("DP 복습", PlanCategory.CODING_TEST, MONDAY, LocalTime.of(9, 0), LocalTime.of(12, 0), true)
-        ), MONDAY, SUNDAY);
+        WeeklyReport report = WeeklyReport.of(
+                List.of(plan("DP 복습", PlanCategory.CODING_TEST, MONDAY,
+                        LocalTime.of(9, 0), LocalTime.of(12, 0), true)),
+                List.of(session(PlanCategory.CODING_TEST, MONDAY, 150)),
+                MONDAY, SUNDAY);
 
         assertThat(report.content()).contains("📊 분류별 공부 시간");
-        assertThat(report.content()).contains("- 코딩테스트 3시간 0분");
+        assertThat(report.content()).contains("- 코딩테스트 2시간 30분");
     }
 
     @Test
-    @DisplayName("계획이 없으면 목록 없이 요약만 남는다")
+    @DisplayName("기록이 없으면 목록 없이 요약만 남는다")
     void emptyWeek() {
         WeeklyReport report = WeeklyReport.of(List.of(), MONDAY, SUNDAY);
 

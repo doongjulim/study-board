@@ -2,6 +2,8 @@ package com.example.board.stats.service;
 
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.repository.PlanRepository;
+import com.example.board.session.domain.StudySession;
+import com.example.board.session.repository.StudySessionRepository;
 import com.example.board.stats.domain.WeeklyReport;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,13 +20,18 @@ import java.util.List;
 public class WeeklyReportService {
 
     private final PlanRepository planRepository;
+    private final StudySessionRepository sessionRepository;
 
     public WeeklyReport draft(Long memberId, LocalDate anyDayOfWeek) {
         LocalDate weekStart = anyDayOfWeek.with(DayOfWeek.MONDAY);
         LocalDate weekEnd = weekStart.plusDays(6);
+
         List<Plan> plans = planRepository
                 .findByAuthor_IdAndPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
                         memberId, weekStart, weekEnd);
-        return WeeklyReport.of(plans, weekStart, weekEnd);
+        List<StudySession> sessions = sessionRepository
+                .findByOwner_IdAndStudyDateBetweenOrderByStartedAtAsc(memberId, weekStart, weekEnd);
+
+        return WeeklyReport.of(plans, sessions, weekStart, weekEnd);
     }
 }
