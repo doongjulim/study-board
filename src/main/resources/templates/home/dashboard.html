@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('오늘', 'home', ~{::main})}">
+<body>
+<main class="container" th:object="${dashboard}">
+
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <!-- 인사 + 임박한 목표일 -->
+    <h2 class="dash-greeting" th:text="|*{nickname}님, 오늘도 시작해 볼까요|">환영합니다</h2>
+
+    <div class="dday-strip" th:if="${!dashboard.upcomingDdays.isEmpty()}">
+        <a class="dday-chip" th:each="dday : *{upcomingDdays}" th:href="@{/ddays}">
+            <span class="dday-badge" th:text="${dday.label(dashboard.today)}">D-0</span>
+            <span th:text="${dday.title}">제목</span>
+        </a>
+    </div>
+
+    <!-- 오늘 진행률 -->
+    <section class="dash-progress">
+        <!-- conic-gradient 각도를 --p 로 넘긴다 (외부 차트 라이브러리 없이 그린다) -->
+        <div class="goal-ring" th:classappend="*{goal.reached()} ? 'done'"
+             th:style="'--p:' + *{goal.percent()}">
+            <div class="ring-inner">
+                <strong class="ring-value" th:if="*{goal.actualHours() > 0}"
+                        th:text="*{goal.actualHours()} + '시간 ' + *{goal.actualRemainderMinutes()} + '분'">0분</strong>
+                <strong class="ring-value" th:unless="*{goal.actualHours() > 0}"
+                        th:text="*{goal.actualRemainderMinutes()} + '분'">0분</strong>
+                <span class="ring-unit">오늘 공부</span>
+            </div>
+        </div>
+
+        <div class="dash-facts">
+            <p class="dash-fact">
+                <span class="fact-icon">🔥</span>
+                <span th:if="*{streak > 0}" th:text="|연속 *{streak}일 달성 중|">연속</span>
+                <span th:if="*{streak == 0}">오늘부터 다시 시작해요</span>
+            </p>
+            <p class="dash-fact" th:if="*{goal.hasGoal()}">
+                <span class="fact-icon">🎯</span>
+                <span th:if="*{goal.reached()}"
+                      th:text="|오늘 목표 *{goal.goalMinutes()}분을 채웠어요|">달성</span>
+                <span th:unless="*{goal.reached()}"
+                      th:text="|목표까지 *{goal.remainingMinutes()}분 남았어요|">남음</span>
+            </p>
+            <p class="dash-fact">
+                <span class="fact-icon">📋</span>
+                <span th:if="*{hasNoPlan()}">오늘 세운 계획이 아직 없어요</span>
+                <span th:unless="*{hasNoPlan()}"
+                      th:text="|오늘 계획 *{planCompleted}/*{planTotal} 완료 (*{planCompletionRate()}%)|">계획</span>
+            </p>
+        </div>
+    </section>
+
+    <!-- 다음 할 일: 바로 타이머를 켤 수 있게 한다 -->
+    <section class="dash-next" th:if="*{hasNextPlan()}" th:with="next=*{nextPlan()}">
+        <div class="next-main">
+            <span class="next-label">다음 할 일</span>
+            <strong class="next-title" th:text="${next.title}">제목</strong>
+            <span class="next-meta">
+                <span class="tag-category" th:text="${next.category.label}">분류</span>
+                <span th:if="${next.startTime != null}"
+                      th:text="${#temporals.format(next.startTime, 'HH:mm')} + ' 시작'">시간</span>
+                <span th:if="${next.startTime == null}">종일</span>
+            </span>
+        </div>
+        <button type="button" class="btn btn-primary btn-timer"
+                th:attr="data-timer-start=${next.id}">▶ 시작</button>
+    </section>
+
+    <!-- 오늘 남은 일정 -->
+    <section class="stat-section">
+        <div class="toolbar">
+            <h3 class="stat-title">오늘 남은 일정</h3>
+            <a class="btn btn-sm" th:href="@{/plans/daily}">플래너 열기</a>
+        </div>
+
+        <p class="empty" th:if="*{hasNoPlan()}">
+            계획을 세우면 여기에 나타납니다.
+            <a th:href="@{/plans/new}">첫 일정 추가하기</a>
+        </p>
+        <p class="empty" th:if="*{allPlansDone()}">오늘 계획을 모두 끝냈어요. 고생하셨습니다 🎉</p>
+
+        <ul class="dash-plan-list" th:if="${!dashboard.openPlans.isEmpty()}">
+            <li class="dash-plan" th:each="plan : *{openPlans}">
+                <span class="dash-plan-time"
+                      th:text="${plan.startTime != null} ? ${#temporals.format(plan.startTime, 'HH:mm')} : '종일'">시간</span>
+                <span class="dash-plan-title" th:text="${plan.title}">제목</span>
+                <span class="tag-category" th:text="${plan.category.label}">분류</span>
+                <button type="button" class="btn btn-sm btn-timer"
+                        th:attr="data-timer-start=${plan.id}">▶ 시작</button>
+            </li>
+        </ul>
+        <p class="hint" th:if="*{hiddenOpenPlanCount > 0}"
+           th:text="|그 밖에 *{hiddenOpenPlanCount}개가 더 있어요|">더 있음</p>
+    </section>
+
+    <!-- 이번 주 추이 -->
+    <section class="stat-section">
+        <div class="toolbar">
+            <h3 class="stat-title">이번 주 학습</h3>
+            <a class="btn btn-sm" th:href="@{/stats}">통계 자세히</a>
+        </div>
+
+        <p class="hint">
+            <span th:text="|실제 공부 *{week.actualHours()}시간 *{week.actualRemainderMinutes()}분|">시간</span>
+            <span th:if="*{week.plannedMinutes > 0}"
+                  th:text="|· 계획 대비 *{week.executionRate()}%|">실행률</span>
+        </p>
+
+        <div class="trend-chart">
+            <div class="trend-col" th:each="day : *{week.dailyTrend()}">
+                <div class="trend-bar-wrap"
+                     th:title="${day.isEmpty()} ? '기록 없음'
+                               : ${day.actualHours()} + '시간 ' + ${day.actualRemainderMinutes()} + '분'">
+                    <div class="trend-bar" th:unless="${day.isEmpty()}"
+                         th:classappend="${day.completionRate() == 0} ? 'pending'"
+                         th:style="'height:' + ${day.barHeight()} + '%'"></div>
+                </div>
+                <span class="trend-label" th:text="${#temporals.format(day.date, 'M/d')}">날짜</span>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>
