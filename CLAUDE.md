@@ -28,7 +28,18 @@
 
 ## 주요 기능
 
-- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/comment/file/home/plan/stats/dday/notification)** 로 구성
+- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/comment/file/home/plan/session/stats/dday/notification)** 로 구성
+- **홈 대시보드(home)**: `/` 가 리다이렉트가 아니라 실제 화면이다. 오늘 진행률 링·연속 달성·다음 할 일·주간 추이를 한자리에 모은다.
+  화면 하나 때문에 모듈 결합이 퍼지지 않도록 `DashboardAssembler` 하나가 조합 책임을 지고(plan/dday/stats/member 를 **읽기 전용**으로만 호출),
+  컨트롤러는 조합기만 안다. "몇 개까지 보여줄지·다음 할 일이 무엇인지" 같은 판단은 템플릿이 아니라 순수 값 객체 `DashboardView`/`GoalProgress` 에 두어 테스트한다.
+  진행률 링은 외부 차트 라이브러리 없이 CSS `conic-gradient` 로 그린다
+- **공통 화면 뼈대**: `templates/fragments/layout.html` 의 `page(title, active, content)` 를 모든 페이지가 `th:replace` 로 호출하고 본문은 `<main>` 하나만 쓴다(`~{::main}`).
+  페이지네이션은 `fragments/pagination.html`, 번호 블록 계산은 순수 값 객체 `common/web/PageBlock` 이 맡는다
+- **학습 세션(session)**: `StudySession` 이 **실제로 공부한 구간**을 기록한다. `Plan`(하기로 한 시간)과 분리되어 있고,
+  계획 없이도 시작할 수 있도록 `plan` 은 nullable(계획이 지워져도 기록은 남게 `on delete set null`).
+  회원당 진행 중 세션은 1개 — 서비스에서 검사하고 DB 계산 컬럼 + 유니크 인덱스(V11)로 한 번 더 막는다.
+  사용자가 직접 누른 종료는 길이를 제한하지 않고, 켜둔 채 방치된 세션만 `AbandonedSessionScheduler` 가 6시간까지만 인정하고 `abandoned` 로 표시한다.
+  현재 시각은 `Clock` 빈으로 주입해 테스트에서 고정한다. 화면은 헤더 배지(`static/js/timer.js`)가 페이지 이동과 무관하게 유지한다
 - **인증(auth/member)**: JWT(HS256, jjwt) + HttpOnly·SameSite=Lax 쿠키, 세션 없음(STATELESS).
   `JwtAuthenticationFilter` 가 쿠키를 검증해 `MemberPrincipal` 을 SecurityContext 에 채운다.
   CSRF 는 `CookieCsrfTokenRepository` (JS fetch 는 헤더 프래그먼트의 data-csrf-* 사용)
@@ -45,8 +56,12 @@
 - **플래너(plan)**: 단일 `Plan` 엔티티를 일간/주간/월간 3가지 뷰로 표시 (`/plans/daily|weekly|monthly`), 완료 토글·공유 지원
 - **분류·반복(plan)**: `PlanCategory` enum 으로 학습 분류, `RepeatType` enum 이 반복 날짜 생성을 책임진다(규칙 변경이 enum 안에만 머묾).
   반복 생성분은 `seriesId` 로 묶여 한꺼번에 삭제할 수 있고, 한 번에 최대 180건 상한을 둔다
-- **학습 통계(stats)**: `StudyStatistics`/`StudyStreak` 는 플랜 목록만으로 계산되는 순수 값 객체라 DB 없이 검증한다.
-  공부 시간은 완료한 플랜만 합산하고, 연속 달성일은 오늘이 미완이면 어제부터 센다. 차트는 외부 라이브러리 없이 CSS 로 그린다
+- **학습 통계(stats)**: `StudyStatistics`/`StudyStreak` 는 플랜·세션 목록만으로 계산되는 순수 값 객체라 DB 없이 검증한다.
+  **계획 시간(`plannedMinutes`)과 실제 시간(`actualMinutes`)을 나란히 들고** 실행률을 함께 보여 준다.
+  분류·일별 집계는 계획과 세션 두 출처를 합쳐 만들므로 계획에 없던 공부도 빠지지 않는다.
+  연속 달성일은 "목표 시간(`Member.dailyGoalMinutes`, 기본 30분)을 채웠고 + 그날 계획을 남기지 않은" 날만 센다
+  (목표를 0 으로 두면 계획 완료만으로 판정). 오늘이 미달이면 어제부터 센다.
+  차트는 외부 라이브러리 없이 CSS 로 그린다
 - **D-Day(dday)**: 회원별 목표일 카운트다운. 플래너 일간 뷰가 `DdayService` 를 읽기 전용으로만 참조한다
 - **실시간 알림(notification)**: SSE(`SseEmitter`) 기반, 추가 의존성 없음. `/notifications/subscribe` 구독 → `static/js/notification.js`가 토스트/벨 배지 표시.
   **사용자별 알림**: `Notification.recipient` FK + 회원별 `SseEmitterRegistry`(멀티 탭 지원). 리마인더 → 작성자 본인, 플랜 공유 → 본인 제외 전체(fanout), 댓글 → 대상 작성자(셀프 제외)
