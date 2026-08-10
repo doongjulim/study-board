@@ -8,6 +8,7 @@
     <div class="container">
         <a th:href="@{/}" class="brand">🎯 스터디플랜</a>
         <nav class="gnb">
+            <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">홈</a>
             <a th:href="@{/plans/daily}" th:classappend="${active == 'plans'} ? 'on'">플래너</a>
             <a th:href="@{/ddays}" th:classappend="${active == 'ddays'} ? 'on'">D-Day</a>
             <a th:href="@{/stats}" th:classappend="${active == 'stats'} ? 'on'">통계</a>
@@ -15,6 +16,12 @@
             <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">게시판</a>
         </nav>
         <div class="header-controls">
+            <!-- 진행 중인 학습 타이머: 페이지를 옮겨도 유지되도록 헤더에 둔다 (timer.js 가 채운다) -->
+            <div id="timer-box" class="timer-box" th:if="${currentMember != null}" hidden>
+                <span id="timer-label" class="timer-label">학습 중</span>
+                <span id="timer-clock" class="timer-clock">00:00:00</span>
+                <button id="timer-stop" type="button" class="timer-stop" aria-label="학습 종료">⏹</button>
+            </div>
             <div class="auth-menu" th:if="${currentMember != null}">
                 <span class="nickname" th:text="${currentMember.nickname} + '님'">닉네임</span>
                 <form th:action="@{/logout}" method="post" class="inline-form">
@@ -40,6 +47,7 @@
     <div id="toast-box" class="toast-box"></div>
     <script th:src="@{/js/theme.js}" defer></script>
     <script th:src="@{/js/notification.js}" defer></script>
+    <script th:src="@{/js/timer.js}" defer></script>
 </header>
 </body>
 </html>
