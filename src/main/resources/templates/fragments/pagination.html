@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  페이지 번호 내비게이션 공통 프래그먼트.
+
+  사용법 - 링크에 유지할 검색/정렬 파라미터는 th:with 로 먼저 baseUrl 을 만들어 넘긴다.
+  (th:replace 가 th:with 보다 먼저 처리되므로 바깥 th:block 에 두어야 한다)
+
+    <th:block th:with="pageUrl=@{/posts(keyword=${keyword})}">
+        <nav th:replace="~{fragments/pagination :: pagination(${posts}, ${pageBlock}, ${pageUrl})}"></nav>
+    </th:block>
+
+  - page    : Spring Data Page
+  - block   : PageBlock (번호 블록 계산 결과)
+  - baseUrl : page 파라미터를 제외한 링크 기준 URL
+-->
+<nav th:fragment="pagination(page, block, baseUrl)" class="pagination" th:if="${page.totalPages > 1}">
+    <a th:if="${block.hasPreviousBlock()}" th:href="@{${baseUrl}(page=0)}"
+       aria-label="첫 페이지">&laquo;</a>
+    <a th:if="${page.hasPrevious()}" th:href="@{${baseUrl}(page=${page.number - 1})}">이전</a>
+
+    <th:block th:each="i : ${#numbers.sequence(block.start, block.end)}">
+        <span th:if="${i == page.number}" class="current" th:text="${i + 1}" aria-current="page"></span>
+        <a th:unless="${i == page.number}" th:href="@{${baseUrl}(page=${i})}" th:text="${i + 1}"></a>
+    </th:block>
+
+    <a th:if="${page.hasNext()}" th:href="@{${baseUrl}(page=${page.number + 1})}">다음</a>
+    <a th:if="${block.hasNextBlock()}" th:href="@{${baseUrl}(page=${block.lastPage()})}"
+       aria-label="마지막 페이지">&raquo;</a>
+</nav>
+</body>
+</html>

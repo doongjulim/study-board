@@ -1,30 +1,19 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>게시판</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
-    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
-</head>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('게시판', 'posts', ~{::main})}">
 <body>
-<header th:replace="~{fragments/header :: siteHeader('posts')}"></header>
-
 <main class="container">
     <div th:if="${message}" class="flash" th:text="${message}"></div>
 
     <div class="toolbar">
-        <form th:action="@{/posts}" method="get" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <select name="searchType"
-                    style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);">
+        <form th:action="@{/posts}" method="get" class="search-form">
+            <select name="searchType" class="select-input">
                 <option th:each="type : ${searchTypes}"
                         th:value="${type}" th:text="${type.label}"
                         th:selected="${type == searchType}"></option>
             </select>
-            <input type="text" name="keyword" th:value="${keyword}" placeholder="검색어"
-                   style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);">
-            <select name="sort" onchange="this.form.submit()"
-                    style="padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);">
+            <input type="text" name="keyword" th:value="${keyword}" placeholder="검색어" class="search-input">
+            <select name="sort" onchange="this.form.submit()" class="select-input">
                 <option value="latest" th:selected="${sort == 'latest'}">최신순</option>
                 <option value="oldest" th:selected="${sort == 'oldest'}">오래된순</option>
                 <option value="title" th:selected="${sort == 'title'}">제목순</option>
@@ -62,22 +51,10 @@
     </table>
     </div>
 
-    <nav class="pagination" th:if="${posts.totalPages > 1}">
-        <a th:if="${blockStart > 0}"
-           th:href="@{/posts(page=0, keyword=${keyword}, searchType=${searchType}, sort=${sort})}">≪</a>
-        <a th:if="${posts.hasPrevious()}"
-           th:href="@{/posts(page=${posts.number - 1}, keyword=${keyword}, searchType=${searchType}, sort=${sort})}">이전</a>
-        <th:block th:each="i : ${#numbers.sequence(blockStart, blockEnd)}">
-            <span th:if="${i == posts.number}" class="current" th:text="${i + 1}"></span>
-            <a th:unless="${i == posts.number}"
-               th:href="@{/posts(page=${i}, keyword=${keyword}, searchType=${searchType}, sort=${sort})}"
-               th:text="${i + 1}"></a>
-        </th:block>
-        <a th:if="${posts.hasNext()}"
-           th:href="@{/posts(page=${posts.number + 1}, keyword=${keyword}, searchType=${searchType}, sort=${sort})}">다음</a>
-        <a th:if="${blockEnd < posts.totalPages - 1}"
-           th:href="@{/posts(page=${posts.totalPages - 1}, keyword=${keyword}, searchType=${searchType}, sort=${sort})}">≫</a>
-    </nav>
+    <!-- 검색·정렬 조건은 페이지를 넘겨도 유지되어야 하므로 기준 URL 에 함께 싣는다 -->
+    <th:block th:with="pageUrl=@{/posts(keyword=${keyword}, searchType=${searchType}, sort=${sort})}">
+        <nav th:replace="~{fragments/pagination :: pagination(${posts}, ${pageBlock}, ${pageUrl})}"></nav>
+    </th:block>
 </main>
 </body>
 </html>

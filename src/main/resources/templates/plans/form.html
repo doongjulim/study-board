@@ -1,15 +1,7 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${mode == 'edit'} ? '일정 수정' : '일정 추가'">일정</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
-    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
-</head>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page(${mode == 'edit'} ? '일정 수정' : '일정 추가', 'plans', ~{::main})}">
 <body>
-<header th:replace="~{fragments/header :: siteHeader('plans')}"></header>
-
 <main class="container">
     <h2 class="page-title" th:text="${mode == 'edit'} ? '일정 수정' : '일정 추가'">일정</h2>
 

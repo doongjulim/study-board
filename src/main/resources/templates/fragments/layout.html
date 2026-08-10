@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+  모든 페이지의 공통 뼈대.
+
+  사용법 - 페이지 템플릿의 <html> 에 th:replace 로 이 프래그먼트를 호출하고,
+  본문은 <main> 하나로 감싼다. ~{::main} 이 그 <main> 을 그대로 끼워 넣는다.
+
+    <html th:replace="~{fragments/layout :: page('로그인', 'login', ~{::main})}">
+    <body>
+    <main class="container"> ... </main>
+    </body>
+    </html>
+
+  - title  : 브라우저 탭 제목 (문자열 리터럴/표현식 모두 가능)
+  - active : 헤더에서 강조할 메뉴 키 (plans/ddays/stats/shared/posts, 해당 없으면 '')
+  - content: 본문 <main> 프래그먼트
+-->
+<html th:fragment="page(title, active, content)" lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title}">스터디플랜</title>
+    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <!-- FOUC 방지: 스타일이 그려지기 전에 저장된 테마를 먼저 반영한다 (theme.js 와 한 쌍) -->
+    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
+</head>
+<body>
+<header th:replace="~{fragments/header :: siteHeader(${active})}"></header>
+<th:block th:replace="${content}"></th:block>
+</body>
+</html>

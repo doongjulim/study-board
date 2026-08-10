@@ -1,15 +1,7 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>D-Day 수정</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
-    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
-</head>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('D-Day 수정', 'ddays', ~{::main})}">
 <body>
-<header th:replace="~{fragments/header :: siteHeader('ddays')}"></header>
-
 <main class="container">
     <h2 class="page-title">D-Day 수정</h2>
 

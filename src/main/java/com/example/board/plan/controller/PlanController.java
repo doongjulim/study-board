@@ -3,6 +3,7 @@ package com.example.board.plan.controller;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.service.CommentService;
+import com.example.board.common.web.PageBlock;
 import com.example.board.dday.service.DdayService;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
@@ -114,6 +115,7 @@ public class PlanController {
                          Model model) {
         Page<Plan> plans = planService.findShared(pageable);
         model.addAttribute("plans", plans);
+        model.addAttribute("pageBlock", PageBlock.of(plans));
         return "plans/shared";
     }
 

@@ -1,15 +1,7 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>학습 통계</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
-    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
-</head>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('학습 통계', 'stats', ~{::main})}">
 <body>
-<header th:replace="~{fragments/header :: siteHeader('stats')}"></header>
-
 <main class="container">
     <h2 class="page-title">학습 통계</h2>
 
@@ -37,13 +29,17 @@
         <div class="stat-card">
             <span class="stat-label">공부 시간</span>
             <strong class="stat-value"
-                    th:text="${statistics.completedHours()} + '시간 ' + ${statistics.remainderMinutes()} + '분'">0시간</strong>
-            <span class="stat-sub">완료한 일정 기준</span>
+                    th:text="${statistics.actualHours()} + '시간 ' + ${statistics.actualRemainderMinutes()} + '분'">0시간</strong>
+            <!-- 계획 시간과 나란히 놓아야 "계획을 과하게 잡는지" 가 보인다 -->
+            <span class="stat-sub" th:if="${statistics.plannedMinutes > 0}"
+                  th:text="'계획 ' + ${statistics.plannedHours()} + '시간 ' + ${statistics.plannedRemainderMinutes()}
+                           + '분 대비 ' + ${statistics.executionRate()} + '%'">계획 대비</span>
+            <span class="stat-sub" th:unless="${statistics.plannedMinutes > 0}">타이머로 기록한 실제 시간</span>
         </div>
         <div class="stat-card">
             <span class="stat-label">연속 달성</span>
             <strong class="stat-value" th:text="${streak} + '일'">0일</strong>
-            <span class="stat-sub" th:text="${streak > 0} ? '계속 이어가세요!' : '오늘 계획을 모두 완료해 보세요'">-</span>
+            <span class="stat-sub" th:text="${streak > 0} ? '계속 이어가세요!' : '오늘 목표 시간을 채워 보세요'">-</span>
         </div>
         <div class="stat-card">
             <span class="stat-label">남은 계획</span>
@@ -52,14 +48,23 @@
         </div>
     </section>
 
+    <!-- 계획만 세우고 타이머를 한 번도 쓰지 않은 경우 -->
+    <p class="flash" th:if="${statistics.totalCount > 0 and statistics.hasNoStudyRecord()}">
+        아직 이 기간에 기록된 학습 시간이 없어요.
+        플래너에서 <strong>▶ 시작</strong> 을 누르면 실제 공부한 시간이 여기에 쌓입니다.
+    </p>
+
     <!-- 일별 추이 -->
     <section class="stat-section">
         <h3 class="stat-title">일별 달성률</h3>
-        <p class="empty" th:if="${statistics.totalCount == 0}">이 기간에 등록된 계획이 없습니다.</p>
-        <div class="trend-chart" th:if="${statistics.totalCount > 0}">
+        <p class="empty" th:if="${statistics.totalCount == 0 and statistics.actualMinutes == 0}">
+            이 기간에 등록된 계획도 학습 기록도 없습니다.</p>
+        <div class="trend-chart" th:if="${statistics.totalCount > 0 or statistics.actualMinutes > 0}">
             <div class="trend-col" th:each="day : ${statistics.dailyTrend}">
                 <div class="trend-bar-wrap"
-                     th:title="${day.isEmpty()} ? '계획 없음' : ${day.completedCount} + '/' + ${day.totalCount} + ' 완료'">
+                     th:title="${day.isEmpty()} ? '기록 없음'
+                               : ${day.completedCount} + '/' + ${day.totalCount} + ' 완료 · '
+                                 + ${day.actualHours()} + '시간 ' + ${day.actualRemainderMinutes()} + '분'">
                     <div class="trend-bar" th:unless="${day.isEmpty()}"
                          th:classappend="${day.completionRate() == 0} ? 'pending'"
                          th:style="'height:' + ${day.barHeight()} + '%'"></div>
@@ -77,7 +82,7 @@
                 <div class="category-head">
                     <span class="tag-category" th:text="${stat.category.label}">분류</span>
                     <span class="category-time"
-                          th:text="${stat.hours()} + '시간 ' + ${stat.remainderMinutes()} + '분'">시간</span>
+                          th:text="${stat.actualHours()} + '시간 ' + ${stat.actualRemainderMinutes()} + '분'">시간</span>
                     <span class="category-count"
                           th:text="${stat.completedCount} + '/' + ${stat.totalCount} + '개 · ' + ${stat.completionRate()} + '%'">개수</span>
                 </div>

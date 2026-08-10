@@ -3,6 +3,7 @@ package com.example.board.post.controller;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.service.CommentService;
+import com.example.board.common.web.PageBlock;
 import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.PostSummary;
@@ -38,8 +39,6 @@ public class PostController {
     /** 주간 인증글 초안 생성을 위한 읽기 전용 의존 */
     private final WeeklyReportService weeklyReportService;
 
-    private static final int PAGE_BLOCK_SIZE = 5;
-
     /** 목록 (검색 + 정렬 + 페이징) */
     @GetMapping
     public String list(@RequestParam(required = false) String keyword,
@@ -56,17 +55,12 @@ public class PostController {
 
         Page<PostSummary> posts = postService.findAll(keyword, searchType, sorted);
 
-        // 페이지 번호 블록 계산 (1~5, 6~10 …)
-        int blockStart = (posts.getNumber() / PAGE_BLOCK_SIZE) * PAGE_BLOCK_SIZE;
-        int blockEnd = Math.min(blockStart + PAGE_BLOCK_SIZE - 1, Math.max(posts.getTotalPages() - 1, 0));
-
         model.addAttribute("posts", posts);
         model.addAttribute("keyword", keyword);
         model.addAttribute("searchType", searchType);
         model.addAttribute("searchTypes", SearchType.values());
         model.addAttribute("sort", sort);
-        model.addAttribute("blockStart", blockStart);
-        model.addAttribute("blockEnd", blockEnd);
+        model.addAttribute("pageBlock", PageBlock.of(posts));
         return "posts/list";
     }
 

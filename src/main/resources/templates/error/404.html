@@ -1,20 +1,12 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>페이지를 찾을 수 없습니다</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
-    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
-</head>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('페이지를 찾을 수 없습니다', '', ~{::main})}">
 <body>
-<header th:replace="~{fragments/header :: siteHeader('')}"></header>
-
-<main class="container" style="text-align:center;padding:80px 20px;">
-    <h1 style="font-size:64px;margin:0;">404</h1>
-    <p style="font-size:18px;color:#666;">요청하신 페이지를 찾을 수 없습니다.</p>
-    <p th:if="${message}" th:text="${message}" style="color:#999;"></p>
-    <a th:href="@{/posts}" class="btn btn-primary" style="margin-top:20px;display:inline-block;">목록으로 돌아가기</a>
+<main class="container error-page">
+    <h1 class="error-code">404</h1>
+    <p class="error-desc">요청하신 페이지를 찾을 수 없습니다.</p>
+    <p class="error-detail" th:if="${message}" th:text="${message}"></p>
+    <a th:href="@{/posts}" class="btn btn-primary">목록으로 돌아가기</a>
 </main>
 </body>
 </html>

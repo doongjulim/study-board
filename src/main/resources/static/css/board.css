@@ -340,6 +340,13 @@ table.board { min-width: 480px; }
   .plan-nav { flex-direction: column; align-items: center; text-align: center; }
   .pagination { flex-wrap: wrap; }
   .notif-panel { width: calc(100vw - 24px); right: -40px; }
+  /* 좁은 화면에서는 무엇을 공부 중인지보다 남은 시간이 우선이다 */
+  .timer-label { display: none; }
+  .timer-box { padding: 3px 8px; gap: 6px; }
+  .dash-progress { gap: 16px; padding: 16px; justify-content: center; }
+  .goal-ring { width: 104px; height: 104px; }
+  .goal-ring::before { width: 80px; height: 80px; }
+  .dash-next { flex-direction: column; align-items: stretch; }
   .toast-box { bottom: 16px; right: 12px; }
   .toast { max-width: calc(100vw - 32px); }
   .stat-cards { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -423,3 +430,72 @@ table.board { min-width: 480px; }
 .dday-title { font-weight: 600; }
 .dday-date { font-size: .76rem; color: var(--muted, #888); }
 .dday-item .actions { margin-left: auto; }
+
+/* ── 게시판 검색 폼 ─────────────────────────────── */
+/* .select-input 은 폼에서 width:100% 로 쓰이므로 툴바 안에서만 내용 너비로 되돌린다 */
+.search-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.search-form .select-input { width: auto; padding: 8px 12px; }
+.search-input { padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--paper); color: var(--ink); font: inherit; }
+
+/* ── 첨부파일 편집(글 수정) ─────────────────────── */
+.attach-editable { margin-top: 20px; }
+.attach-row { display: flex; align-items: center; gap: 10px; }
+
+/* ── 대시보드 ──────────────────────────────────── */
+.dash-greeting { margin: 4px 0 16px; font-size: 1.25rem; }
+.dash-progress { display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 20px 24px; margin-bottom: 20px; }
+
+/* 진행률 링 - 외부 차트 라이브러리 없이 conic-gradient 로 그린다 (--p 는 템플릿이 넣는다) */
+.goal-ring { --p: 0; width: 128px; height: 128px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center;
+  background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0); }
+.goal-ring::before { content: ""; grid-area: 1 / 1; width: 100px; height: 100px;
+  border-radius: 50%; background: var(--card); }
+.goal-ring.done { background: conic-gradient(var(--accent) 100%, var(--accent) 0); }
+.ring-inner { grid-area: 1 / 1; text-align: center; line-height: 1.3; }
+.ring-value { display: block; font-size: 1.05rem; font-weight: 700; }
+.ring-unit { font-size: .72rem; color: var(--ink-soft); }
+
+.dash-facts { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dash-fact { margin: 0; font-size: .92rem; display: flex; align-items: center; gap: 8px; }
+.fact-icon { font-size: 1rem; }
+
+.dash-next { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px;
+  padding: 16px 20px; margin-bottom: 24px; }
+.next-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.next-label { font-size: .72rem; color: var(--accent); font-weight: 700; }
+.next-title { font-size: 1.05rem; }
+.next-meta { display: flex; gap: 8px; align-items: center; font-size: .78rem; color: var(--ink-soft); }
+
+.dash-plan-list { list-style: none; padding: 0; margin: 0; }
+.dash-plan { display: flex; align-items: center; gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid var(--line); }
+.dash-plan-time { font-variant-numeric: tabular-nums; font-size: .82rem;
+  color: var(--ink-soft); width: 3.2rem; flex-shrink: 0; }
+.dash-plan-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.dash-plan .btn { flex-shrink: 0; }
+
+/* ── 학습 타이머 ───────────────────────────────── */
+.timer-box { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px;
+  background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 999px;
+  font-size: .8rem; white-space: nowrap; }
+.timer-label { color: var(--accent); font-weight: 600; max-width: 9rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 숫자 폭을 고정해 초가 바뀔 때 배지가 흔들리지 않게 한다 */
+.timer-clock { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
+.timer-stop { border: none; background: none; cursor: pointer; font-size: .9rem;
+  line-height: 1; padding: 0; color: var(--danger); }
+.btn-timer.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── 에러 페이지 ───────────────────────────────── */
+/* 색상을 하드코딩하지 않고 토큰을 쓰므로 다크모드에서도 대비가 유지된다 */
+.error-page { text-align: center; padding: 80px 20px; }
+.error-code { font-size: 64px; margin: 0; }
+.error-desc { font-size: 1.05rem; color: var(--ink-soft); }
+.error-detail { font-size: .85rem; color: var(--muted, #888); }
+.error-page .btn { margin-top: 20px; display: inline-block; }

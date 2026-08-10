@@ -1,15 +1,7 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>공유 플랜</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
-    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
-</head>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('공유 플랜', 'shared', ~{::main})}">
 <body>
-<header th:replace="~{fragments/header :: siteHeader('shared')}"></header>
-
 <main class="container">
     <div th:if="${message}" class="flash" th:text="${message}"></div>
 
@@ -39,14 +31,9 @@
         </li>
     </ul>
 
-    <nav class="pagination" th:if="${plans.totalPages > 1}">
-        <a th:if="${plans.hasPrevious()}" th:href="@{/plans/shared(page=${plans.number - 1})}">이전</a>
-        <th:block th:each="i : ${#numbers.sequence(0, plans.totalPages - 1)}">
-            <span th:if="${i == plans.number}" class="current" th:text="${i + 1}"></span>
-            <a th:unless="${i == plans.number}" th:href="@{/plans/shared(page=${i})}" th:text="${i + 1}"></a>
-        </th:block>
-        <a th:if="${plans.hasNext()}" th:href="@{/plans/shared(page=${plans.number + 1})}">다음</a>
-    </nav>
+    <th:block th:with="pageUrl=@{/plans/shared}">
+        <nav th:replace="~{fragments/pagination :: pagination(${plans}, ${pageBlock}, ${pageUrl})}"></nav>
+    </th:block>
 </main>
 </body>
 </html>

@@ -1,15 +1,7 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>글 수정</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
-    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
-</head>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('글 수정', 'posts', ~{::main})}">
 <body>
-<header th:replace="~{fragments/header :: siteHeader('posts')}"></header>
-
 <main class="container">
     <h1 class="post-title">글 수정</h1>
 
@@ -40,10 +32,10 @@
     </form>
 
     <!-- 기존 첨부파일: 개별 삭제 -->
-    <div class="attach" th:if="${!post.files.isEmpty()}" style="margin-top:20px;">
+    <div class="attach attach-editable" th:if="${!post.files.isEmpty()}">
         <h3>기존 첨부파일</h3>
         <ul>
-            <li th:each="file : ${post.files}" style="display:flex;align-items:center;gap:10px;">
+            <li th:each="file : ${post.files}" class="attach-row">
                 <span th:text="${file.originalName}">파일명</span>
                 <form th:action="@{/posts/{postId}/files/{fileId}/delete(postId=${post.id}, fileId=${file.id})}"
                       method="post" onsubmit="return confirm('이 파일을 삭제하시겠습니까?');">

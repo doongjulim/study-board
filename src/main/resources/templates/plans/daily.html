@@ -1,15 +1,7 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>플래너 - 일간</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
-    <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
-</head>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('플래너 - 일간', 'plans', ~{::main})}">
 <body>
-<header th:replace="~{fragments/header :: siteHeader('plans')}"></header>
-
 <main class="container">
     <div th:if="${message}" class="flash" th:text="${message}"></div>
 
@@ -64,6 +56,9 @@
                 </div>
             </div>
             <div class="actions">
+                <!-- 계획한 시간이 아니라 실제 공부한 시간을 재는 버튼 (timer.js 가 처리) -->
+                <button type="button" class="btn btn-sm btn-timer"
+                        th:attr="data-timer-start=${plan.id}">▶ 시작</button>
                 <form th:action="@{/plans/{id}/share(id=${plan.id})}" method="post">
                     <button type="submit" class="btn btn-sm"
                             th:text="${plan.shared} ? '공유 해제' : '공유'"></button>
