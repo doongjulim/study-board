@@ -1,0 +1,134 @@
+package com.example.board.member.controller;
+
+import com.example.board.auth.AuthCookies;
+import com.example.board.auth.MemberPrincipal;
+import com.example.board.auth.exception.LoginFailedException;
+import com.example.board.member.domain.Member;
+import com.example.board.member.dto.PasswordChangeForm;
+import com.example.board.member.dto.ProfileForm;
+import com.example.board.member.exception.DuplicateMemberException;
+import com.example.board.member.service.MemberService;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+/** 마이페이지 - 프로필·목표 시간·비밀번호·탈퇴 */
+@Controller
+@RequiredArgsConstructor
+@RequestMapping("/me")
+public class MyPageController {
+
+    private final MemberService memberService;
+    private final AuthCookies authCookies;
+
+    @GetMapping
+    public String myPage(@AuthenticationPrincipal MemberPrincipal principal, Model model) {
+        prepare(model, memberService.findActive(principal.id()));
+        return "member/my-page";
+    }
+
+    @PostMapping("/profile")
+    public String updateProfile(@Valid @ModelAttribute ProfileForm profileForm,
+                                BindingResult bindingResult,
+                                @AuthenticationPrincipal MemberPrincipal principal,
+                                Model model,
+                                RedirectAttributes redirectAttributes) {
+        Member member = memberService.findActive(principal.id());
+        if (bindingResult.hasErrors()) {
+            return backToPage(model, member);
+        }
+        try {
+            memberService.updateProfile(principal.id(), profileForm);
+        } catch (DuplicateMemberException e) {
+            bindingResult.rejectValue(e.getField(), "duplicate", e.getMessage());
+            return backToPage(model, member);
+        }
+        redirectAttributes.addFlashAttribute("message", "프로필을 수정했습니다.");
+        return "redirect:/me";
+    }
+
+    @PostMapping("/password")
+    public String changePassword(@Valid @ModelAttribute PasswordChangeForm passwordChangeForm,
+                                 BindingResult bindingResult,
+                                 @AuthenticationPrincipal MemberPrincipal principal,
+                                 Model model,
+                                 HttpServletResponse response,
+                                 RedirectAttributes redirectAttributes) {
+        Member member = memberService.findActive(principal.id());
+
+        if (!bindingResult.hasFieldErrors("newPasswordConfirm") && !passwordChangeForm.isConfirmed()) {
+            bindingResult.rejectValue("newPasswordConfirm", "mismatch", "새 비밀번호가 일치하지 않습니다.");
+        }
+        if (bindingResult.hasErrors()) {
+            return backToPage(model, member);
+        }
+        try {
+            memberService.changePassword(principal.id(), passwordChangeForm);
+        } catch (LoginFailedException e) {
+            bindingResult.rejectValue("currentPassword", "mismatch", "현재 비밀번호가 올바르지 않습니다.");
+            return backToPage(model, member);
+        }
+
+        // 다른 기기 세션까지 끊었으므로 이 브라우저도 다시 로그인해야 한다
+        authCookies.clear(response);
+        redirectAttributes.addFlashAttribute("message",
+                "비밀번호를 변경했습니다. 모든 기기에서 로그아웃되었으니 다시 로그인해 주세요.");
+        return "redirect:/login";
+    }
+
+    @PostMapping("/withdraw")
+    public String withdraw(@RequestParam String password,
+                           @AuthenticationPrincipal MemberPrincipal principal,
+                           HttpServletResponse response,
+                           RedirectAttributes redirectAttributes) {
+        try {
+            memberService.withdraw(principal.id(), password);
+        } catch (LoginFailedException e) {
+            redirectAttributes.addFlashAttribute("message", "비밀번호가 올바르지 않아 탈퇴하지 못했습니다.");
+            return "redirect:/me";
+        }
+        authCookies.clear(response);
+        redirectAttributes.addFlashAttribute("message", "탈퇴가 완료되었습니다. 그동안 고생 많으셨어요.");
+        return "redirect:/login";
+    }
+
+    /** 검증 실패로 화면을 다시 그릴 때, 사용자가 입력한 폼은 유지하고 나머지만 채운다 */
+    private String backToPage(Model model, Member member) {
+        fillMissingForms(model, member);
+        model.addAttribute("member", member);
+        return "member/my-page";
+    }
+
+    private void prepare(Model model, Member member) {
+        model.addAttribute("member", member);
+        model.addAttribute("profileForm", toForm(member));
+        model.addAttribute("passwordChangeForm", new PasswordChangeForm());
+    }
+
+    private void fillMissingForms(Model model, Member member) {
+        if (!model.containsAttribute("profileForm")) {
+            model.addAttribute("profileForm", toForm(member));
+        }
+        if (!model.containsAttribute("passwordChangeForm")) {
+            model.addAttribute("passwordChangeForm", new PasswordChangeForm());
+        }
+    }
+
+    private ProfileForm toForm(Member member) {
+        ProfileForm form = new ProfileForm();
+        form.setNickname(member.getNickname());
+        form.setEmail(member.getEmail());
+        form.setDailyGoalMinutes(member.getDailyGoalMinutes());
+        return form;
+    }
+}

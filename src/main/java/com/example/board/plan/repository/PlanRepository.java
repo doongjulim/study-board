@@ -38,6 +38,9 @@ public interface PlanRepository extends JpaRepository<Plan, Long> {
     @EntityGraph(attributePaths = "author")
     List<Plan> findBySeriesId(String seriesId);
 
+    /** 회원 탈퇴 시 개인 데이터 정리 */
+    void deleteByAuthor_Id(Long authorId);
+
     /** 리마인더 대상: 해당 날짜 일정 중 아직 완료/발송되지 않았고 곧 시작하는 것 (알림 발송에 author 필요) */
     @EntityGraph(attributePaths = "author")
     List<Plan> findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(

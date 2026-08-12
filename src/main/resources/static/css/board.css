@@ -431,6 +431,15 @@ table.board { min-width: 480px; }
 .dday-date { font-size: .76rem; color: var(--muted, #888); }
 .dday-item .actions { margin-left: auto; }
 
+/* ── 마이페이지 ────────────────────────────────── */
+.form-card + .form-card { margin-top: 20px; }
+.form-card .stat-title { margin-top: 0; }
+/* 되돌릴 수 없는 작업은 시각적으로도 구분해 실수를 줄인다 */
+.danger-zone { border-color: var(--danger); }
+.danger-zone .stat-title { color: var(--danger); }
+header.site .nickname { color: var(--ink-soft); font-size: .85rem; text-decoration: none; }
+header.site .nickname:hover { color: var(--accent); }
+
 /* ── 게시판 검색 폼 ─────────────────────────────── */
 /* .select-input 은 폼에서 width:100% 로 쓰이므로 툴바 안에서만 내용 너비로 되돌린다 */
 .search-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

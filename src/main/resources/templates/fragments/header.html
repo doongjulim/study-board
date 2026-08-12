@@ -23,7 +23,7 @@
                 <button id="timer-stop" type="button" class="timer-stop" aria-label="학습 종료">⏹</button>
             </div>
             <div class="auth-menu" th:if="${currentMember != null}">
-                <span class="nickname" th:text="${currentMember.nickname} + '님'">닉네임</span>
+                <a class="nickname" th:href="@{/me}" th:text="${currentMember.nickname} + '님'">닉네임</a>
                 <form th:action="@{/logout}" method="post" class="inline-form">
                     <button type="submit" class="btn btn-sm">로그아웃</button>
                 </form>

@@ -30,4 +30,7 @@ public interface StudySessionRepository extends JpaRepository<StudySession, Long
 
     /** 오래 켜둔 채 방치된 세션 - 자동 종료 대상 */
     List<StudySession> findByEndedAtIsNullAndStartedAtBefore(LocalDateTime threshold);
+
+    /** 회원 탈퇴 시 개인 데이터 정리 */
+    void deleteByOwner_Id(Long ownerId);
 }
