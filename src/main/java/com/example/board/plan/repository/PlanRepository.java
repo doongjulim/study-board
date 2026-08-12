@@ -38,6 +38,11 @@ public interface PlanRepository extends JpaRepository<Plan, Long> {
     @EntityGraph(attributePaths = "author")
     List<Plan> findBySeriesId(String seriesId);
 
+    /** 그날 남은 일정 - 다음 날로 이월할 대상 */
+    @EntityGraph(attributePaths = "author")
+    List<Plan> findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(
+            Long authorId, LocalDate planDate);
+
     /** 회원 탈퇴 시 개인 데이터 정리 */
     void deleteByAuthor_Id(Long authorId);
 

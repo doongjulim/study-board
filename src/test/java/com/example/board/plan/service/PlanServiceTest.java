@@ -279,4 +279,40 @@ class PlanServiceTest {
         assertThat(plan.isShared()).isFalse();
         then(eventPublisher).shouldHaveNoInteractions();
     }
+
+    // ── 이월 ─────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("rollover 는 못 끝낸 일정만 다음 날로 옮기고 건수를 반환한다")
+    void rollover() {
+        Plan unfinished = plan();
+        LocalDate yesterday = LocalDate.of(2026, 7, 8);
+        given(planRepository.findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(1L, yesterday))
+                .willReturn(List.of(unfinished));
+
+        int moved = planService.rollover(1L, yesterday, LocalDate.of(2026, 7, 9));
+
+        assertThat(moved).isEqualTo(1);
+        assertThat(unfinished.getPlanDate()).isEqualTo(LocalDate.of(2026, 7, 9));
+    }
+
+    @Test
+    @DisplayName("rollover 는 옮길 일정이 없으면 0 을 반환한다")
+    void rollover_nothingToMove() {
+        LocalDate yesterday = LocalDate.of(2026, 7, 8);
+        given(planRepository.findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(1L, yesterday))
+                .willReturn(List.of());
+
+        assertThat(planService.rollover(1L, yesterday, LocalDate.of(2026, 7, 9))).isZero();
+    }
+
+    @Test
+    @DisplayName("findUnfinished 는 그날 남은 일정을 돌려준다 (이월 안내에 쓴다)")
+    void findUnfinished() {
+        LocalDate date = LocalDate.of(2026, 7, 8);
+        given(planRepository.findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(1L, date))
+                .willReturn(List.of(plan(), plan()));
+
+        assertThat(planService.findUnfinished(date, 1L)).hasSize(2);
+    }
 }

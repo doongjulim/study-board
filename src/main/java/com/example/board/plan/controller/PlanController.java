@@ -5,6 +5,7 @@ import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.service.CommentService;
 import com.example.board.common.web.PageBlock;
 import com.example.board.dday.service.DdayService;
+import com.example.board.plan.domain.DailyProgress;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.domain.RepeatType;
@@ -54,13 +55,19 @@ public class PlanController {
                         @AuthenticationPrincipal MemberPrincipal principal,
                         Model model) {
         LocalDate target = (date != null) ? date : LocalDate.now();
+        LocalDate previous = target.minusDays(1);
+        List<Plan> plans = planService.findDaily(target, principal.id());
+
         model.addAttribute("date", target);
-        model.addAttribute("plans", planService.findDaily(target, principal.id()));
-        model.addAttribute("prevDate", target.minusDays(1));
+        model.addAttribute("plans", plans);
+        model.addAttribute("progress", DailyProgress.of(plans));
+        model.addAttribute("prevDate", previous);
         model.addAttribute("nextDate", target.plusDays(1));
         model.addAttribute("today", LocalDate.now());
         model.addAttribute("upcomingDdays", ddayService.findUpcoming(principal.id(), LocalDate.now()));
-        return "plans/daily";
+        // 어제 남긴 일정을 그대로 흘려보내지 않도록 안내한다
+        model.addAttribute("leftoverCount", planService.findUnfinished(previous, principal.id()).size());
+        return "plans/daily"; // 분류 선택지(categories)는 @ModelAttribute 가 이미 채운다
     }
 
     /** 주간 뷰 */
@@ -235,6 +242,18 @@ public class PlanController {
         int deleted = planService.deleteSeries(id, principal.id());
         redirectAttributes.addFlashAttribute("message", "반복 일정 " + deleted + "건을 삭제했습니다.");
         return "redirect:/plans/daily?date=" + date;
+    }
+
+    /** 못 끝낸 일정 이월 - JS 를 쓸 수 없을 때의 경로 (PlanApiController 와 같은 동작) */
+    @PostMapping("/rollover")
+    public String rollover(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                           @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                           @AuthenticationPrincipal MemberPrincipal principal,
+                           RedirectAttributes redirectAttributes) {
+        int moved = planService.rollover(principal.id(), from, to);
+        redirectAttributes.addFlashAttribute("message",
+                moved > 0 ? "남은 일정 " + moved + "건을 가져왔습니다." : "가져올 일정이 없습니다.");
+        return "redirect:/plans/daily?date=" + to;
     }
 
     /** 완료 상태 전환 */

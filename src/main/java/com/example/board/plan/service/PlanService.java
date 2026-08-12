@@ -114,6 +114,23 @@ public class PlanService {
         return series.size();
     }
 
+    /** 그날 남은 일정 - 이월 안내 배너에 쓴다 */
+    public List<Plan> findUnfinished(LocalDate date, Long memberId) {
+        return planRepository.findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(
+                memberId, date);
+    }
+
+    /**
+     * 못 끝낸 일정을 다른 날로 옮긴다. 옮긴 건수를 반환한다.
+     * 계획을 다시 적게 하지 않는 것이, 미룬 일을 없던 일로 만들지 않는 가장 쉬운 방법이다.
+     */
+    @Transactional
+    public int rollover(Long memberId, LocalDate from, LocalDate to) {
+        List<Plan> unfinished = findUnfinished(from, memberId);
+        unfinished.forEach(plan -> plan.moveTo(to));
+        return unfinished.size();
+    }
+
     @Transactional
     public Plan toggleCompleted(Long id, Long memberId) {
         Plan plan = findOwned(id, memberId);

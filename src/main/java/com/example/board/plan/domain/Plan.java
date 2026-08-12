@@ -113,6 +113,22 @@ public class Plan {
         this.completed = !this.completed;
     }
 
+    /**
+     * 날짜만 옮긴다 (어제 못 한 일정을 오늘로 가져올 때).
+     *
+     * <p>이미 끝낸 일정을 옮기면 지난 기록이 바뀌어 통계가 흔들리므로 막는다.
+     * 날짜가 바뀌면 리마인더를 다시 받을 수 있어야 하고,
+     * 반복 묶음에서 떼어 낸 것이므로 시리즈에서도 빠진다.</p>
+     */
+    public void moveTo(LocalDate date) {
+        if (completed) {
+            throw new IllegalStateException("이미 완료한 일정은 옮길 수 없습니다.");
+        }
+        this.planDate = date;
+        this.reminderSent = false;
+        this.seriesId = null;
+    }
+
     /** 공유 상태를 전환하고, 새로 공유된 경우에만 true 를 반환한다 */
     public boolean toggleShared() {
         this.shared = !this.shared;

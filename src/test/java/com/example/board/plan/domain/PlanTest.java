@@ -125,4 +125,38 @@ class PlanTest {
         assertThat(plan.toggleShared()).isFalse();
         assertThat(plan.isShared()).isFalse();
     }
+
+    @Test
+    @DisplayName("moveTo 는 날짜만 옮기고 리마인더를 다시 받을 수 있게 한다")
+    void moveTo() {
+        Plan plan = plan();
+        plan.markReminderSent();
+
+        plan.moveTo(LocalDate.of(2026, 7, 10));
+
+        assertThat(plan.getPlanDate()).isEqualTo(LocalDate.of(2026, 7, 10));
+        assertThat(plan.getStartTime()).isEqualTo(LocalTime.of(10, 0));
+        assertThat(plan.isReminderSent()).isFalse();
+    }
+
+    @Test
+    @DisplayName("moveTo 하면 반복 묶음에서 빠진다 (한 건만 옮긴 것이므로)")
+    void moveTo_leavesSeries() {
+        Plan plan = plan();
+        plan.assignSeries("series-1");
+
+        plan.moveTo(LocalDate.of(2026, 7, 10));
+
+        assertThat(plan.isPartOfSeries()).isFalse();
+    }
+
+    @Test
+    @DisplayName("이미 완료한 일정은 옮길 수 없다 (지난 기록이 바뀌면 통계가 흔들린다)")
+    void moveTo_rejectsCompleted() {
+        Plan plan = plan();
+        plan.toggleCompleted();
+
+        assertThatThrownBy(() -> plan.moveTo(LocalDate.of(2026, 7, 10)))
+                .isInstanceOf(IllegalStateException.class);
+    }
 }
