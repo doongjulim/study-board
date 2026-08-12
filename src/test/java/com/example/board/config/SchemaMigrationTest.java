@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V12 member daily goal */
-    private static final int EXPECTED_MIGRATIONS = 12;
+    /** V1 init ~ V14 password reset token */
+    private static final int EXPECTED_MIGRATIONS = 14;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -66,7 +66,59 @@ class SchemaMigrationTest {
     }
 
     @Test
-    @DisplayName("V1~V12 가 H2 에서 모두 실행된다")
+    @DisplayName("V13: 이메일을 넣지 않은 회원이 여럿이어도 유니크 제약에 걸리지 않는다")
+    void allowsManyMembersWithoutEmail() {
+        createMember("no-email-1");
+        createMember("no-email-2");
+
+        Integer count = jdbc.queryForObject(
+                "select count(*) from member where email is null", Integer.class);
+
+        assertThat(count).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("V13: 같은 이메일은 두 번 쓸 수 없다")
+    void rejectsDuplicateEmail() {
+        Long first = createMember("owner-1");
+        Long second = createMember("owner-2");
+        jdbc.update("update member set email = ? where id = ?", "me@example.com", first);
+
+        assertThatThrownBy(() -> jdbc.update(
+                "update member set email = ? where id = ?", "me@example.com", second))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    @DisplayName("V13: 가입 직후에는 탈퇴 시각이 비어 있다")
+    void withdrawnAtIsNullForNewMember() {
+        Long ownerId = createMember("active");
+
+        Integer active = jdbc.queryForObject(
+                "select count(*) from member where id = ? and withdrawn_at is null",
+                Integer.class, ownerId);
+
+        assertThat(active).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("V14: 같은 재설정 토큰 해시는 두 번 저장할 수 없다")
+    void rejectsDuplicateResetTokenHash() {
+        Long ownerId = createMember("forgetful");
+        jdbc.update("""
+                insert into password_reset_token (member_id, token_hash, expires_at)
+                values (?, ?, ?)
+                """, ownerId, "same-hash", LocalDateTime.of(2026, 8, 12, 10, 30));
+
+        assertThatThrownBy(() -> jdbc.update("""
+                insert into password_reset_token (member_id, token_hash, expires_at)
+                values (?, ?, ?)
+                """, ownerId, "same-hash", LocalDateTime.of(2026, 8, 12, 11, 0)))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    @DisplayName("V1~V14 가 H2 에서 모두 실행된다")
     void allMigrationsApply() {
         // SQL 이 깨져 있으면 migrate() 단계에서 FlywayException 이 터지므로, 여기 왔다면 전부 성공한 것이다
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);

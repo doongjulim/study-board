@@ -24,6 +24,15 @@ spring:
 file:
   upload-dir: ${user.home}/board-uploads/
 
+app:
+  # 비밀번호 재설정 메일에 담을 링크의 앞부분 - 배포 주소에 맞춰 바꾼다
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+
+mail:
+  # log = 실제로 보내지 않고 콘솔에 출력 (SMTP 계정 없이 개발할 수 있다)
+  # 운영에서는 smtp 로 두고 MailSender 구현체를 등록한다
+  mode: ${MAIL_MODE:log}
+
 jwt:
   # 로컬 개발용 시크릿 - 운영 환경에서는 반드시 환경변수(JWT_SECRET)로 교체할 것 (HS256, 32바이트 이상)
   secret: ${JWT_SECRET:study-board-local-dev-secret-key-please-override}

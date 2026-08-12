@@ -39,7 +39,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // 회원 기능·정적 리소스는 공개 (로그아웃은 쿠키 삭제뿐이라 익명도 무해)
-                        .requestMatchers("/login", "/logout", "/signup",
+                        // 비밀번호 찾기는 로그인할 수 없는 상태에서 쓰는 기능이라 공개다
+                        .requestMatchers("/login", "/logout", "/signup", "/password/**",
                                 "/css/**", "/js/**", "/h2-console/**", "/error").permitAll()
                         // 게시판 읽기(목록·상세·첨부파일)는 공개, 쓰기는 인증 필요
                         .requestMatchers(HttpMethod.GET, "/", "/posts", "/posts/{id:\\d+}", "/files/**").permitAll()
