@@ -29,6 +29,12 @@
 ## 주요 기능
 
 - **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/comment/file/home/plan/session/stats/dday/notification)** 로 구성
+- **첫 화면 분기(home)**: `/` 는 누가 왔느냐로 세 갈래다 — 비로그인은 **소개 화면**(`home/landing`),
+  안내를 안 마친 회원은 `/onboarding`, 그 외에는 대시보드. 인터셉터를 두지 않고 진입점 한 곳에서만 판단해 예외 경로가 늘지 않게 한다
+- **첫 사용 안내(onboarding)**: 목표일(1) → 오늘 계획(2) → 타이머 체험(3) 3단계.
+  단계는 `OnboardingProgress` 가 **현재 상태에서 매번 계산**하므로 도중에 나갔다 와도 하던 곳에서 이어진다.
+  건너뛰기도 완료로 기록해(`Member.onboardedAt`) 다시 붙잡지 않는다.
+  조합은 `OnboardingService` 가 맡고 각 모듈의 기존 API 만 호출한다(온보딩 전용 경로를 만들지 않는다)
 - **홈 대시보드(home)**: `/` 가 리다이렉트가 아니라 실제 화면이다. 오늘 진행률 링·연속 달성·다음 할 일·주간 추이를 한자리에 모은다.
   화면 하나 때문에 모듈 결합이 퍼지지 않도록 `DashboardAssembler` 하나가 조합 책임을 지고(plan/dday/stats/member 를 **읽기 전용**으로만 호출),
   컨트롤러는 조합기만 안다. "몇 개까지 보여줄지·다음 할 일이 무엇인지" 같은 판단은 템플릿이 아니라 순수 값 객체 `DashboardView`/`GoalProgress` 에 두어 테스트한다.
@@ -65,6 +71,10 @@
 - **AttachedFile.setPost()**: package-private — `Post.addFile()`을 통해서만 연관관계 설정
 - **orphanRemoval = true**: `post.getFiles().remove(target)` 만으로 DB 삭제 처리
 - **플래너(plan)**: 단일 `Plan` 엔티티를 일간/주간/월간 3가지 뷰로 표시 (`/plans/daily|weekly|monthly`), 완료 토글·공유 지원
+- **일간 뷰의 마찰 제거**: 한 줄 입력으로 바로 등록하고, 완료 체크는 그 줄과 진행 표시만 갱신한다(`/api/plans`, `static/js/plans.js`).
+  어제 못 끝낸 일정은 배너에서 오늘로 옮긴다(`Plan.moveTo` — 완료한 일정은 지난 기록이 바뀌므로 거부).
+  **JSON API 는 기존 폼 경로를 대체하지 않고 위에 얹는다** — JS 가 없어도 플래너를 쓸 수 있어야 하기 때문이다.
+  JSON 을 기대하는 화면에 HTML 오류 페이지가 가지 않도록 `PlanApiController` 가 예외를 자체 처리한다
 - **분류·반복(plan)**: `PlanCategory` enum 으로 학습 분류, `RepeatType` enum 이 반복 날짜 생성을 책임진다(규칙 변경이 enum 안에만 머묾).
   반복 생성분은 `seriesId` 로 묶여 한꺼번에 삭제할 수 있고, 한 번에 최대 180건 상한을 둔다
 - **학습 통계(stats)**: `StudyStatistics`/`StudyStreak` 는 플랜·세션 목록만으로 계산되는 순수 값 객체라 DB 없이 검증한다.

@@ -11,7 +11,12 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
   탈퇴하면 개인 학습 데이터는 삭제되고 게시글·댓글은 `탈퇴한 회원` 으로 남는다
 - **비밀번호 찾기**: 이메일로 30분짜리 재설정 링크 발송. 기본 설정에서는 메일을 실제로 보내지 않고
   **콘솔 로그에 링크를 출력**하므로 SMTP 계정 없이 바로 써 볼 수 있다 (`mail.mode` 로 전환)
+- **소개 화면**: 비로그인으로 접속하면 무엇을 하는 서비스인지 보여 주는 랜딩 페이지
+- **첫 사용 안내**: 가입 직후 3단계(목표일 → 오늘 계획 → 타이머 체험)로 3분 안에 첫 기록까지 안내.
+  언제든 건너뛸 수 있고, 도중에 나갔다 와도 하던 단계에서 이어진다
 - **홈 대시보드**: 오늘 목표 진행률 링, 연속 달성일, 다음 할 일(바로 타이머 시작), 남은 일정, 이번 주 추이
+- **빠른 일정 입력**: 일간 뷰에서 한 줄만 적으면 바로 등록. 완료 체크도 화면 새로고침 없이 처리되고,
+  어제 못 끝낸 일정은 한 번에 오늘로 가져올 수 있다
 - **플래너**: 일간/주간/월간 뷰 (로그인 회원 본인 것만), 완료 토글, 공유(전체 공개 목록 + 상세),
   분류(코딩테스트·자소서·면접 등), 반복 일정(매일/평일/매주)
 - **학습 타이머**: 계획을 실행할 때 시작/종료를 눌러 **실제 공부한 시간**을 기록.
@@ -86,7 +91,9 @@ src/main/java/com/example/board
 ├── member/            # Member 엔티티, 회원가입
 ├── post/              # 게시글 CRUD (목록은 PostSummary DTO 프로젝션)
 ├── plan/              # 플래너 (일간/주간/월간·공유·리마인더 스케줄러)
-├── home/              # 홈 대시보드 (DashboardAssembler 가 여러 모듈을 읽기 전용으로 조합)
+├── home/              # 소개 화면 + 홈 대시보드 (DashboardAssembler 가 여러 모듈을 읽기 전용으로 조합)
+├── onboarding/        # 첫 사용 안내 3단계 (OnboardingProgress 가 단계를 계산)
+├── mail/              # MailSender (기본 구현은 콘솔 출력, 구현체만 바꾸면 실제 발송)
 ├── session/           # 학습 타이머 (실제 공부 시간 기록·방치 세션 자동 종료)
 ├── comment/           # 댓글 (게시글·공유 플랜 공용, CommentAddedEvent 발행)
 ├── stats/             # 학습 통계 (StudyStatistics·StudyStreak 순수 계산 + 대시보드)
@@ -96,7 +103,7 @@ src/main/java/com/example/board
 
 src/main/resources
 ├── application.yml
-├── db/migration/      # Flyway (V1 init ~ V14 password_reset_token)
+├── db/migration/      # Flyway (V1 init ~ V15 member_onboarding)
 ├── static/{css,js}
 └── templates/{auth,posts,plans,fragments,error}
 ```
