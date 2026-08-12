@@ -7,6 +7,10 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 
 - **회원/인증**: 회원가입(BCrypt), JWT 로그인(HttpOnly + SameSite=Lax 쿠키),
   리프레시 토큰 기반 자동 갱신 + 로그아웃 즉시 무효화
+- **마이페이지**: 닉네임·이메일·하루 목표 시간 수정, 비밀번호 변경(전 기기 로그아웃), 회원 탈퇴.
+  탈퇴하면 개인 학습 데이터는 삭제되고 게시글·댓글은 `탈퇴한 회원` 으로 남는다
+- **비밀번호 찾기**: 이메일로 30분짜리 재설정 링크 발송. 기본 설정에서는 메일을 실제로 보내지 않고
+  **콘솔 로그에 링크를 출력**하므로 SMTP 계정 없이 바로 써 볼 수 있다 (`mail.mode` 로 전환)
 - **홈 대시보드**: 오늘 목표 진행률 링, 연속 달성일, 다음 할 일(바로 타이머 시작), 남은 일정, 이번 주 추이
 - **플래너**: 일간/주간/월간 뷰 (로그인 회원 본인 것만), 완료 토글, 공유(전체 공개 목록 + 상세),
   분류(코딩테스트·자소서·면접 등), 반복 일정(매일/평일/매주)
@@ -92,7 +96,7 @@ src/main/java/com/example/board
 
 src/main/resources
 ├── application.yml
-├── db/migration/      # Flyway (V1 init ~ V12 member_daily_goal)
+├── db/migration/      # Flyway (V1 init ~ V14 password_reset_token)
 ├── static/{css,js}
 └── templates/{auth,posts,plans,fragments,error}
 ```
