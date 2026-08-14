@@ -28,7 +28,7 @@
 
 ## 주요 기능
 
-- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/comment/file/home/plan/session/stats/dday/notification)** 로 구성
+- **패키지**: 레이어별(controller/service/...) 이 아닌 **기능별(auth/member/post/comment/file/home/plan/session/stats/dday/notification/group)** 로 구성
 - **첫 화면 분기(home)**: `/` 는 누가 왔느냐로 세 갈래다 — 비로그인은 **소개 화면**(`home/landing`),
   안내를 안 마친 회원은 `/onboarding`, 그 외에는 대시보드. 인터셉터를 두지 않고 진입점 한 곳에서만 판단해 예외 경로가 늘지 않게 한다
 - **첫 사용 안내(onboarding)**: 목표일(1) → 오늘 계획(2) → 타이머 체험(3) 3단계.
@@ -63,7 +63,7 @@
   게시글·댓글은 남겨 다른 사람 스레드에 구멍이 생기지 않게 하고, 원래 아이디는 풀려 재가입할 수 있다.
   개인 학습 데이터(계획·D-Day·학습 기록·알림)는 `MemberWithdrawnEvent` 를 각 모듈 리스너가 받아 **스스로 정리**한다
   (member 모듈은 다른 모듈을 모른다. 학습 기록이 계획을 참조하므로 `@Order` 로 세션 → 계획 순서를 지킨다)
-- **접근 정책**: 게시판 읽기 공개, 플래너·알림·마이페이지·모든 쓰기는 인증 필요. 미인증은 `/login?redirect=...`
+- **접근 정책**: 게시판 읽기 공개, 플래너·그룹·알림·마이페이지·모든 쓰기는 인증 필요. 미인증은 `/login?redirect=...`
 - **소유권**: 서비스 계층 `findOwned()` 로 본인 글/플랜만 수정·삭제 (위반 시 AccessDeniedException → 403)
 - **목록 조회**: 게시글 목록은 `PostSummary` DTO 프로젝션 (open-in-view=false + lazy 컬렉션 문제 회피, DB 페이징 유지)
 - **트랜잭션**: `@Transactional(readOnly = true)` 기본 적용, 쓰기 메서드만 `@Transactional` 추가
@@ -71,6 +71,17 @@
 - **AttachedFile.setPost()**: package-private — `Post.addFile()`을 통해서만 연관관계 설정
 - **orphanRemoval = true**: `post.getFiles().remove(target)` 만으로 DB 삭제 처리
 - **플래너(plan)**: 단일 `Plan` 엔티티를 일간/주간/월간 3가지 뷰로 표시 (`/plans/daily|weekly|monthly`), 완료 토글·공유 지원
+- **스터디 그룹(group)**: 초대 코드(`InviteCode`, 헷갈리는 0/O·1/I/L 를 뺀 8자리)로 모이는 소규모 모임.
+  그룹장은 `StudyGroup.owner` 로만 관리한다 — `GroupMember` 에 role 을 함께 두면 같은 사실이 두 곳에 적혀 언젠가 어긋난다.
+  그룹장이 나가면 **가장 오래된 멤버가 승계**하고, 혼자 남았으면 그룹째 지운다(주인 없는 그룹을 남기지 않는다).
+  탈퇴도 같은 규칙을 쓰도록 `GroupCleanupListener`(`@Order(3)`)가 `leaveAll()` 을 부른다.
+  상세 화면은 초대 코드가 실리므로 **멤버만** 볼 수 있다(서비스에서 막는다).
+  JPQL 에서 `group` 은 `group by` 키워드와 부딪히므로 연관 필드명은 `studyGroup` 이다
+- **공유 범위(plan)**: `ShareScope` 3단계 — PRIVATE / GROUP(내가 속한 모든 그룹) / PUBLIC.
+  "누가 볼 수 있는가" 의 판단은 전부 `ShareScope.visibleTo(작성자?, 같은그룹?)` 한 곳에 있어 화면·쿼리·알림이 서로 다른 규칙을 갖지 않는다.
+  `changeShareScope` 는 **비공개 → 공유** 일 때만 true 를 반환해 그때만 알림이 나간다(GROUP→PUBLIC 범위 조정은 같은 사람들에게 또 알리는 소음이라 제외).
+  댓글 자격도 같은 규칙을 쓰도록 `CommentService` 가 `PlanService.canView()` 를 부른다(규칙을 두 곳에 두지 않는다).
+  공유 목록은 그룹이 없으면 `findByShareScope(PUBLIC)`, 있으면 `findSharedVisibleTo(fellowIds)` — 빈 `in ()` 을 피하는 갈래이기도 하다
 - **일간 뷰의 마찰 제거**: 한 줄 입력으로 바로 등록하고, 완료 체크는 그 줄과 진행 표시만 갱신한다(`/api/plans`, `static/js/plans.js`).
   어제 못 끝낸 일정은 배너에서 오늘로 옮긴다(`Plan.moveTo` — 완료한 일정은 지난 기록이 바뀌므로 거부).
   **JSON API 는 기존 폼 경로를 대체하지 않고 위에 얹는다** — JS 가 없어도 플래너를 쓸 수 있어야 하기 때문이다.
@@ -89,10 +100,14 @@
   차트는 외부 라이브러리 없이 CSS 로 그린다
 - **D-Day(dday)**: 회원별 목표일 카운트다운. 플래너 일간 뷰가 `DdayService` 를 읽기 전용으로만 참조한다
 - **실시간 알림(notification)**: SSE(`SseEmitter`) 기반, 추가 의존성 없음. `/notifications/subscribe` 구독 → `static/js/notification.js`가 토스트/벨 배지 표시.
-  **사용자별 알림**: `Notification.recipient` FK + 회원별 `SseEmitterRegistry`(멀티 탭 지원). 리마인더 → 작성자 본인, 플랜 공유 → 본인 제외 전체(fanout), 댓글 → 대상 작성자(셀프 제외)
+  **사용자별 알림**: `Notification.recipient` FK + 회원별 `SseEmitterRegistry`(멀티 탭 지원). 리마인더 → 작성자 본인, 댓글 → 대상 작성자(셀프 제외),
+  플랜 공유 → **범위가 대상을 정한다**: PUBLIC 은 본인 제외 전체(`notifyAllExcept`), GROUP 은 같은 그룹 사람만(`notifyMembersExcept`).
+  그룹에만 공유한 플랜을 전체에 뿌리면 그게 곧 스팸이고 범위 설정도 무의미해진다. 대상이 비면 조회조차 하지 않는다(빈 `in ()` 은 쿼리 오류)
 - **댓글(comment)**: 단일 `Comment` 엔티티가 게시글/공유 플랜 중 하나에 달림(DB check 제약, on delete cascade). 댓글 UI 는 `fragments/comments.html` 재사용, 알림은 `CommentAddedEvent` 로 결합 차단
 - **업로드 보안(file)**: `FileStore` 확장자 화이트리스트(무확장자 거부), `/files/{id}/view` 는 이미지만 인라인·그 외 다운로드 리다이렉트
-- **모듈 간 결합 차단**: plan 모듈은 `PlanSharedEvent`/`PlanReminderEvent`만 발행하고, notification 모듈의 `NotificationEventListener`가 구독 (Spring 이벤트로 DIP 준수)
+- **모듈 간 결합 차단**: plan 모듈은 `PlanSharedEvent`(공유 범위를 실어 보낸다)/`PlanReminderEvent`만 발행하고,
+  notification 모듈의 `NotificationEventListener`가 구독 (Spring 이벤트로 DIP 준수).
+  "누구에게 보낼지" 는 수신자를 아는 쪽(notification)이 정하므로, 리스너가 `StudyGroupService` 를 읽기 전용으로 참조한다
 - **알림 설정**: 회원이 리마인더 시점(0~60분 전)과 종류별 수신 여부를 정한다(`Member.notificationPreference`, `@Embeddable`).
   member 모듈이 notification 모듈을 알게 되지 않도록, 설정은 항목별 메서드로만 노출하고
   **알림 종류와 항목을 잇는 일은 `NotificationType` 이 한다**.
