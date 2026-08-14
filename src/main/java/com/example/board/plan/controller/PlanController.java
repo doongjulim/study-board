@@ -11,6 +11,7 @@ import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.domain.PlanSearchCondition;
 import com.example.board.plan.domain.PlanStatus;
 import com.example.board.plan.domain.RepeatType;
+import com.example.board.plan.domain.ShareScope;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.service.PlanService;
 import jakarta.validation.Valid;
@@ -70,6 +71,7 @@ public class PlanController {
         model.addAttribute("upcomingDdays", ddayService.findUpcoming(principal.id(), LocalDate.now()));
         // 어제 남긴 일정을 그대로 흘려보내지 않도록 안내한다
         model.addAttribute("leftoverCount", planService.findUnfinished(previous, principal.id()).size());
+        model.addAttribute("shareScopes", ShareScope.values());
         return "plans/daily"; // 분류 선택지(categories)는 @ModelAttribute 가 이미 채운다
     }
 
@@ -144,11 +146,12 @@ public class PlanController {
         return "plans/search";
     }
 
-    /** 공유된 플랜 목록 */
+    /** 공유된 플랜 목록 - 전체 공개 + 내 그룹의 그룹 공개 */
     @GetMapping("/shared")
     public String shared(@PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
+                         @AuthenticationPrincipal MemberPrincipal principal,
                          Model model) {
-        Page<Plan> plans = planService.findShared(pageable);
+        Page<Plan> plans = planService.findShared(principal.id(), pageable);
         model.addAttribute("plans", plans);
         model.addAttribute("pageBlock", PageBlock.of(plans));
         return "plans/shared";
@@ -160,8 +163,8 @@ public class PlanController {
                                @AuthenticationPrincipal MemberPrincipal principal,
                                Model model) {
         Plan plan = planService.findById(id);
-        if (!plan.isShared() && !plan.isAuthoredBy(principal.id())) {
-            // 공유가 해제된 플랜은 작성자 본인 외에는 존재를 노출하지 않는다
+        if (!planService.canView(plan, principal.id())) {
+            // 볼 수 없는 플랜은 403 이 아니라 "없다" 로 답해 존재 자체를 노출하지 않는다
             throw new IllegalArgumentException("공유된 플랜이 아닙니다. id=" + id);
         }
         model.addAttribute("plan", plan);
@@ -292,14 +295,17 @@ public class PlanController {
         return "redirect:/plans/daily?date=" + plan.getPlanDate();
     }
 
-    /** 공유 상태 전환 */
+    /** 공유 범위 변경 (비공개/그룹/전체) */
     @PostMapping("/{id}/share")
-    public String toggleShared(@PathVariable Long id,
-                               @AuthenticationPrincipal MemberPrincipal principal,
-                               RedirectAttributes redirectAttributes) {
-        Plan plan = planService.toggleShared(id, principal.id());
+    public String changeShareScope(@PathVariable Long id,
+                                   @RequestParam ShareScope scope,
+                                   @AuthenticationPrincipal MemberPrincipal principal,
+                                   RedirectAttributes redirectAttributes) {
+        Plan plan = planService.changeShareScope(id, scope, principal.id());
         redirectAttributes.addFlashAttribute("message",
-                plan.isShared() ? "플랜을 공유했습니다." : "플랜 공유를 해제했습니다.");
+                plan.isShared()
+                        ? "플랜을 %s 로 공유했습니다.".formatted(plan.getShareScope().getLabel())
+                        : "플랜을 비공개로 돌렸습니다.");
         return "redirect:/plans/daily?date=" + plan.getPlanDate();
     }
 

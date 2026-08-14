@@ -47,8 +47,10 @@ public class Plan {
     @Column(nullable = false)
     private boolean completed;
 
-    @Column(nullable = false)
-    private boolean shared;
+    /** 누구까지 볼 수 있는가 - 판단 규칙은 {@link ShareScope} 에 있다 */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private ShareScope shareScope = ShareScope.PRIVATE;
 
     @Column(nullable = false)
     private boolean reminderSent;
@@ -137,10 +139,21 @@ public class Plan {
         this.seriesId = null;
     }
 
-    /** 공유 상태를 전환하고, 새로 공유된 경우에만 true 를 반환한다 */
-    public boolean toggleShared() {
-        this.shared = !this.shared;
-        return this.shared;
+    public boolean isShared() {
+        return shareScope.isShared();
+    }
+
+    /**
+     * 공유 범위를 바꾸고, <b>새로 공유된</b> 경우에만 true 를 반환한다 (알림 발행 조건).
+     *
+     * <p>이미 공유된 플랜의 범위 조정(GROUP↔PUBLIC)은 알리지 않는다 —
+     * 그룹에 알림이 간 플랜을 전체 공개로 넓혔다고 같은 사람들에게 또 알리면 소음이다.</p>
+     */
+    public boolean changeShareScope(ShareScope newScope) {
+        ShareScope target = (newScope != null) ? newScope : ShareScope.PRIVATE;
+        boolean newlyShared = !this.shareScope.isShared() && target.isShared();
+        this.shareScope = target;
+        return newlyShared;
     }
 
     public void markReminderSent() {

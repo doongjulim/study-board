@@ -122,6 +122,31 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("notifyMembersExcept - 지정한 사람 중 발신자만 빼고 알림을 만든다 (그룹 공개)")
+    void notifyMembersExcept() {
+        given(memberRepository.findIdsAllowingPlanSharedNotificationIn(List.of(1L, 2L, 3L)))
+                .willReturn(List.of(1L, 2L, 3L));
+        given(memberRepository.getReferenceById(1L)).willReturn(memberWithId(1L));
+        given(memberRepository.getReferenceById(3L)).willReturn(memberWithId(3L));
+        given(notificationRepository.save(any(Notification.class)))
+                .willAnswer(inv -> inv.getArgument(0));
+
+        notificationService.notifyMembersExcept(List.of(1L, 2L, 3L), 2L, "공유 알림", "/plans/shared");
+
+        then(notificationRepository).should(times(2)).save(any(Notification.class));
+        then(emitterRegistry).should(never()).send(eq(2L), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("notifyMembersExcept - 대상이 없으면 조회조차 하지 않는다 (빈 in 절은 쿼리 오류)")
+    void notifyMembersExcept_emptyAudience() {
+        notificationService.notifyMembersExcept(List.of(), 2L, "공유 알림", "/plans/shared");
+
+        then(memberRepository).should(never()).findIdsAllowingPlanSharedNotificationIn(any());
+        then(notificationRepository).should(never()).save(any());
+    }
+
+    @Test
     @DisplayName("subscribe - Last-Event-ID 가 있으면 그 이후 놓친 알림을 이어서 보낸다")
     void subscribe_replaysMissed() {
         SseEmitter emitter = new SseEmitter();

@@ -88,16 +88,23 @@
                     <div class="plan-meta">
                         <span class="tag-category" th:text="${plan.category.label}">분류</span>
                         <span class="tag-repeat" th:if="${plan.partOfSeries}">🔁 반복</span>
-                        <span class="tag-shared" th:if="${plan.shared}">공유됨</span>
+                        <span class="tag-shared" th:if="${plan.shared}"
+                              th:text="${plan.shareScope.label}">공유 범위</span>
                     </div>
                 </div>
 
                 <div class="actions">
                     <button type="button" class="btn btn-sm btn-timer"
                             th:attr="data-timer-start=${plan.id}">▶ 시작</button>
-                    <form th:action="@{/plans/{id}/share(id=${plan.id})}" method="post">
-                        <button type="submit" class="btn btn-sm"
-                                th:text="${plan.shared} ? '공유 해제' : '공유'"></button>
+                    <!-- 3단계라 토글로는 표현할 수 없다. 고르면 바로 반영한다(JS 없으면 '변경' 버튼으로) -->
+                    <form class="share-form" th:action="@{/plans/{id}/share(id=${plan.id})}" method="post">
+                        <label class="sr-only" th:for="'scope-' + ${plan.id}">공유 범위</label>
+                        <select class="share-select" name="scope" th:id="'scope-' + ${plan.id}">
+                            <option th:each="scope : ${shareScopes}"
+                                    th:value="${scope}" th:text="${scope.label}"
+                                    th:selected="${scope == plan.shareScope}"></option>
+                        </select>
+                        <button type="submit" class="btn btn-sm">변경</button>
                     </form>
                     <a class="btn btn-sm" th:href="@{/plans/{id}/edit(id=${plan.id})}">수정</a>
                     <form th:action="@{/plans/{id}/delete(id=${plan.id})}" method="post"

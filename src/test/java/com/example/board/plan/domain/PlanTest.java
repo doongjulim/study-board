@@ -115,15 +115,29 @@ class PlanTest {
     }
 
     @Test
-    @DisplayName("toggleShared 는 공유 상태를 반전시키고 새 공유 여부를 반환한다")
-    void toggleShared() {
+    @DisplayName("changeShareScope 는 비공개였다가 공유될 때만 true 를 반환한다 (알림 발행 조건)")
+    void changeShareScope_reportsOnlyNewlyShared() {
         Plan plan = plan();
 
-        assertThat(plan.toggleShared()).isTrue();
+        assertThat(plan.changeShareScope(ShareScope.GROUP)).isTrue();
         assertThat(plan.isShared()).isTrue();
 
-        assertThat(plan.toggleShared()).isFalse();
+        // 이미 공유된 플랜의 범위 조정은 "새로 공유" 가 아니다 - 같은 사람들에게 또 알리면 소음이다
+        assertThat(plan.changeShareScope(ShareScope.PUBLIC)).isFalse();
+
+        assertThat(plan.changeShareScope(ShareScope.PRIVATE)).isFalse();
         assertThat(plan.isShared()).isFalse();
+    }
+
+    @Test
+    @DisplayName("공유 범위를 비워 보내면 비공개로 다룬다 - 잘못된 요청이 실수로 공개로 이어지지 않게")
+    void changeShareScope_nullMeansPrivate() {
+        Plan plan = plan();
+        plan.changeShareScope(ShareScope.PUBLIC);
+
+        plan.changeShareScope(null);
+
+        assertThat(plan.getShareScope()).isEqualTo(ShareScope.PRIVATE);
     }
 
     @Test

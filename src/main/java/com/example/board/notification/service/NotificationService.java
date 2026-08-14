@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,12 +41,31 @@ public class NotificationService {
     }
 
     /**
-     * 발신자를 제외한 모든 회원에게 플랜 공유 소식을 뿌린다.
+     * 발신자를 제외한 모든 회원에게 플랜 공유 소식을 뿌린다 (전체 공개).
      * 공유 알림을 꺼 둔 회원과 탈퇴한 회원은 조회 단계에서 걸러, 사람 수만큼 설정을 되묻지 않는다.
      */
     @Transactional
     public void notifyAllExcept(Long exceptMemberId, String message, String url) {
-        memberRepository.findIdsAllowingPlanSharedNotification().stream()
+        fanout(memberRepository.findIdsAllowingPlanSharedNotification(), exceptMemberId, message, url);
+    }
+
+    /**
+     * 지정한 사람들에게만 뿌린다 (그룹 공개).
+     * 대상이 비어 있으면 조회 자체를 건너뛴다 - 빈 in () 은 쿼리 오류이고, 보낼 곳도 없다.
+     */
+    @Transactional
+    public void notifyMembersExcept(Collection<Long> candidateIds, Long exceptMemberId,
+                                    String message, String url) {
+        if (candidateIds == null || candidateIds.isEmpty()) {
+            return;
+        }
+        fanout(memberRepository.findIdsAllowingPlanSharedNotificationIn(candidateIds),
+                exceptMemberId, message, url);
+    }
+
+    /** 공유 알림 발송 대상은 이미 설정으로 걸러진 id 목록이다 - 여기서는 발신자만 뺀다 */
+    private void fanout(List<Long> recipientIds, Long exceptMemberId, String message, String url) {
+        recipientIds.stream()
                 .filter(memberId -> !memberId.equals(exceptMemberId))
                 .forEach(memberId -> send(memberRepository.getReferenceById(memberId), message, url));
     }

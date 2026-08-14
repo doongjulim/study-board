@@ -11,6 +11,7 @@ import com.example.board.config.SecurityConfig;
 import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
+import com.example.board.plan.domain.ShareScope;
 import com.example.board.plan.domain.PlanSearchCondition;
 import com.example.board.plan.domain.PlanStatus;
 import com.example.board.plan.service.PlanService;
@@ -140,7 +141,7 @@ class PlanControllerTest {
     @Test
     @DisplayName("GET /plans/shared - 공유 플랜 목록이 200 을 반환한다")
     void shared() throws Exception {
-        given(planService.findShared(any())).willReturn(new PageImpl<>(List.of()));
+        given(planService.findShared(eq(MEMBER_ID), any())).willReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/plans/shared").with(memberAuth()))
                 .andExpect(status().isOk())
@@ -153,8 +154,9 @@ class PlanControllerTest {
     @DisplayName("GET /plans/shared/{id} - 공유된 플랜이면 상세와 댓글을 보여준다")
     void sharedDetail() throws Exception {
         Plan shared = planOwnedBy(999L);
-        shared.toggleShared();
+        shared.changeShareScope(ShareScope.PUBLIC);
         given(planService.findById(2L)).willReturn(shared);
+        given(planService.canView(shared, MEMBER_ID)).willReturn(true);
         given(commentService.findForPlan(2L)).willReturn(List.of());
 
         mockMvc.perform(get("/plans/shared/2").with(memberAuth()))
@@ -166,7 +168,9 @@ class PlanControllerTest {
     @Test
     @DisplayName("GET /plans/shared/{id} - 공유되지 않은 타인의 플랜은 404 를 반환한다")
     void sharedDetail_notShared() throws Exception {
-        given(planService.findById(2L)).willReturn(planOwnedBy(999L));
+        Plan hidden = planOwnedBy(999L);
+        given(planService.findById(2L)).willReturn(hidden);
+        given(planService.canView(hidden, MEMBER_ID)).willReturn(false);
 
         mockMvc.perform(get("/plans/shared/2").with(memberAuth()))
                 .andExpect(status().isNotFound());
@@ -175,7 +179,9 @@ class PlanControllerTest {
     @Test
     @DisplayName("GET /plans/shared/{id} - 공유 해제된 플랜이라도 본인은 볼 수 있다")
     void sharedDetail_ownerCanSeeUnshared() throws Exception {
-        given(planService.findById(2L)).willReturn(planOwnedBy(MEMBER_ID));
+        Plan mine = planOwnedBy(MEMBER_ID);
+        given(planService.findById(2L)).willReturn(mine);
+        given(planService.canView(mine, MEMBER_ID)).willReturn(true);
         given(commentService.findForPlan(2L)).willReturn(List.of());
 
         mockMvc.perform(get("/plans/shared/2").with(memberAuth()))
@@ -332,13 +338,16 @@ class PlanControllerTest {
     }
 
     @Test
-    @DisplayName("POST /plans/{id}/share - 공유 전환 후 해당 날짜로 이동한다")
+    @DisplayName("POST /plans/{id}/share - 범위를 바꾸고 해당 날짜로 이동한다")
     void share() throws Exception {
-        given(planService.toggleShared(1L, MEMBER_ID)).willReturn(plan());
+        given(planService.changeShareScope(1L, ShareScope.GROUP, MEMBER_ID)).willReturn(plan());
 
-        mockMvc.perform(post("/plans/1/share").with(csrf()).with(memberAuth()))
+        mockMvc.perform(post("/plans/1/share").with(csrf()).with(memberAuth())
+                        .param("scope", "GROUP"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
+
+        then(planService).should().changeShareScope(1L, ShareScope.GROUP, MEMBER_ID);
     }
 
     // ── 검색 ─────────────────────────────────────────────────

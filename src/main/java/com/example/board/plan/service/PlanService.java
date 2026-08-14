@@ -1,9 +1,11 @@
 package com.example.board.plan.service;
 
+import com.example.board.group.service.StudyGroupService;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanSearchCondition;
+import com.example.board.plan.domain.ShareScope;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.repository.PlanSpecifications;
 import com.example.board.plan.event.PlanSharedEvent;
@@ -29,6 +31,8 @@ public class PlanService {
 
     private final PlanRepository planRepository;
     private final MemberRepository memberRepository;
+    /** 그룹 공개의 노출 대상 판정에만 쓴다 - 읽기 전용 참조 (dday 와 같은 패턴) */
+    private final StudyGroupService studyGroupService;
     private final ApplicationEventPublisher eventPublisher;
 
     /** 내 하루 일정 */
@@ -49,9 +53,25 @@ public class PlanService {
                 memberId, month.atDay(1), month.atEndOfMonth());
     }
 
-    /** 공유된 플랜은 모든 회원의 것을 보여준다 */
-    public Page<Plan> findShared(Pageable pageable) {
-        return planRepository.findBySharedTrue(pageable);
+    /**
+     * 공유 플랜 목록. 전체 공개는 누구에게나, 그룹 공개는 같은 그룹 사람에게만 보인다.
+     * 그룹이 없는 회원은 전체 공개만 조회한다 (빈 in 절을 피하는 것이기도 하다).
+     */
+    public Page<Plan> findShared(Long viewerId, Pageable pageable) {
+        List<Long> fellowIds = studyGroupService.findFellowMemberIds(viewerId);
+        if (fellowIds.isEmpty()) {
+            return planRepository.findByShareScope(ShareScope.PUBLIC, pageable);
+        }
+        return planRepository.findSharedVisibleTo(fellowIds, pageable);
+    }
+
+    /** 공유 플랜 상세를 볼 자격 - 범위별 판단은 {@link ShareScope#visibleTo} 가 맡는다 */
+    public boolean canView(Plan plan, Long viewerId) {
+        boolean author = plan.isAuthoredBy(viewerId);
+        // 그룹 자격 조회는 필요할 때만 - 대부분의 열람은 PUBLIC 이라 여기서 끝난다
+        return plan.getShareScope().visibleTo(author,
+                !author && plan.getShareScope() == ShareScope.GROUP
+                        && studyGroupService.sharesGroupWith(viewerId, plan.getAuthor().getId()));
     }
 
     public Plan findById(Long id) {
@@ -150,12 +170,14 @@ public class PlanService {
         return plan;
     }
 
+    /** 공유 범위를 바꾼다. 새로 공유된 경우에만 알림 이벤트를 발행한다 (범위 조정은 소음이다) */
     @Transactional
-    public Plan toggleShared(Long id, Long memberId) {
+    public Plan changeShareScope(Long id, ShareScope scope, Long memberId) {
         Plan plan = findOwned(id, memberId);
-        if (plan.toggleShared()) {
+        if (plan.changeShareScope(scope)) {
             eventPublisher.publishEvent(new PlanSharedEvent(
-                    plan.getId(), plan.getAuthor().getId(), plan.getAuthor().getNickname(), plan.getTitle()));
+                    plan.getId(), plan.getAuthor().getId(), plan.getAuthor().getNickname(),
+                    plan.getTitle(), plan.getShareScope()));
         }
         return plan;
     }

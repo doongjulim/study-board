@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V17 study group */
-    private static final int EXPECTED_MIGRATIONS = 17;
+    /** V1 init ~ V18 plan share scope */
+    private static final int EXPECTED_MIGRATIONS = 18;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -187,7 +187,21 @@ class SchemaMigrationTest {
     }
 
     @Test
-    @DisplayName("V1~V17 이 H2 에서 모두 실행된다")
+    @DisplayName("V18: 공유 범위를 정하지 않고 만든 플랜은 비공개다")
+    void planDefaultsToPrivateScope() {
+        Long ownerId = createMember("quiet");
+        jdbc.update("""
+                insert into plan (title, author_id, category, plan_date, completed, reminder_sent)
+                values ('은밀한 계획', ?, 'ETC', ?, false, false)
+                """, ownerId, LocalDate.of(2026, 8, 14));
+
+        String scope = jdbc.queryForObject(
+                "select share_scope from plan where author_id = ?", String.class, ownerId);
+        assertThat(scope).isEqualTo("PRIVATE");
+    }
+
+    @Test
+    @DisplayName("V1~V18 이 H2 에서 모두 실행된다")
     void allMigrationsApply() {
         // SQL 이 깨져 있으면 migrate() 단계에서 FlywayException 이 터지므로, 여기 왔다면 전부 성공한 것이다
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);
@@ -245,8 +259,8 @@ class SchemaMigrationTest {
     void keepsSessionWhenPlanDeleted() {
         Long ownerId = createMember("planner");
         jdbc.update("""
-                insert into plan (title, author_id, category, plan_date, completed, shared, reminder_sent)
-                values ('알고리즘', ?, 'CODING_TEST', ?, false, false, false)
+                insert into plan (title, author_id, category, plan_date, completed, reminder_sent)
+                values ('알고리즘', ?, 'CODING_TEST', ?, false, false)
                 """, ownerId, LocalDate.of(2026, 8, 10));
         Long planId = jdbc.queryForObject(
                 "select id from plan where author_id = ?", Long.class, ownerId);

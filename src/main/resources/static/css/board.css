@@ -595,6 +595,15 @@ header.site .nickname:hover { color: var(--accent); }
 .crumb a { color: var(--ink-soft); text-decoration: none; }
 .crumb a:hover { color: var(--accent); }
 
+/* ── 공유 범위 선택 ─────────────────────────────── */
+/* 3단계라 토글 버튼으로는 표현되지 않는다 - 목록 안에 들어가도록 작게 */
+.share-form { display: flex; align-items: center; gap: 4px; }
+.share-select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--card); color: var(--ink); font-size: .8rem; }
+/* 라벨은 화면에서 감추되 스크린리더에는 남긴다 */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
 /* ── 일간 플래너: 한 줄 추가 · 이월 ─────────────── */
 .quick-add { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .quick-title { flex: 1; min-width: 12rem; }

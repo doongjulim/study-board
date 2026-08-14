@@ -1,10 +1,12 @@
 package com.example.board.plan.service;
 
+import com.example.board.group.service.StudyGroupService;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.domain.RepeatType;
+import com.example.board.plan.domain.ShareScope;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.event.PlanSharedEvent;
 import com.example.board.plan.repository.PlanRepository;
@@ -16,6 +18,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -35,6 +39,7 @@ class PlanServiceTest {
 
     @Mock PlanRepository planRepository;
     @Mock MemberRepository memberRepository;
+    @Mock StudyGroupService studyGroupService;
     @Mock ApplicationEventPublisher eventPublisher;
 
     @InjectMocks PlanService planService;
@@ -252,12 +257,12 @@ class PlanServiceTest {
     }
 
     @Test
-    @DisplayName("toggleShared - 공유로 전환되면 작성자 닉네임과 함께 PlanSharedEvent 를 발행한다")
-    void toggleShared_publishesEvent() {
+    @DisplayName("changeShareScope - 새로 공유되면 범위를 실은 PlanSharedEvent 를 발행한다")
+    void changeShareScope_publishesEventWithScope() {
         Plan plan = plan();
         given(planRepository.findById(1L)).willReturn(Optional.of(plan));
 
-        planService.toggleShared(1L, 1L);
+        planService.changeShareScope(1L, ShareScope.GROUP, 1L);
 
         assertThat(plan.isShared()).isTrue();
         ArgumentCaptor<PlanSharedEvent> captor = ArgumentCaptor.forClass(PlanSharedEvent.class);
@@ -265,19 +270,92 @@ class PlanServiceTest {
         assertThat(captor.getValue().title()).isEqualTo("자료구조 공부");
         assertThat(captor.getValue().nickname()).isEqualTo("동주");
         assertThat(captor.getValue().authorId()).isEqualTo(1L);
+        assertThat(captor.getValue().scope()).isEqualTo(ShareScope.GROUP);
     }
 
     @Test
-    @DisplayName("toggleShared - 공유 해제 시에는 이벤트를 발행하지 않는다")
-    void toggleShared_offDoesNotPublish() {
+    @DisplayName("changeShareScope - 이미 공유된 플랜의 범위 조정은 알리지 않는다 (같은 사람들에게 또 알리면 소음)")
+    void changeShareScope_wideningDoesNotPublish() {
         Plan plan = plan();
-        plan.toggleShared(); // 이미 공유 상태
+        plan.changeShareScope(ShareScope.GROUP); // 이미 그룹 공유 상태
         given(planRepository.findById(1L)).willReturn(Optional.of(plan));
 
-        planService.toggleShared(1L, 1L);
+        planService.changeShareScope(1L, ShareScope.PUBLIC, 1L);
+
+        assertThat(plan.getShareScope()).isEqualTo(ShareScope.PUBLIC);
+        then(eventPublisher).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("changeShareScope - 비공개로 돌릴 때도 이벤트는 없다")
+    void changeShareScope_toPrivateDoesNotPublish() {
+        Plan plan = plan();
+        plan.changeShareScope(ShareScope.PUBLIC);
+        given(planRepository.findById(1L)).willReturn(Optional.of(plan));
+
+        planService.changeShareScope(1L, ShareScope.PRIVATE, 1L);
 
         assertThat(plan.isShared()).isFalse();
         then(eventPublisher).shouldHaveNoInteractions();
+    }
+
+    // ── 공유 목록 / 열람 자격 ─────────────────────────────────
+
+    @Test
+    @DisplayName("findShared - 그룹이 없는 회원에게는 전체 공개만 보인다")
+    void findShared_withoutGroupsShowsOnlyPublic() {
+        given(studyGroupService.findFellowMemberIds(1L)).willReturn(List.of());
+        given(planRepository.findByShareScope(eq(ShareScope.PUBLIC), any()))
+                .willReturn(Page.empty());
+
+        planService.findShared(1L, Pageable.unpaged());
+
+        then(planRepository).should().findByShareScope(eq(ShareScope.PUBLIC), any());
+        then(planRepository).should(never()).findSharedVisibleTo(any(), any());
+    }
+
+    @Test
+    @DisplayName("findShared - 그룹이 있으면 같은 그룹 사람들의 그룹 공개까지 함께 조회한다")
+    void findShared_withGroupsIncludesFellowGroupPlans() {
+        given(studyGroupService.findFellowMemberIds(1L)).willReturn(List.of(1L, 2L, 3L));
+        given(planRepository.findSharedVisibleTo(eq(List.of(1L, 2L, 3L)), any()))
+                .willReturn(Page.empty());
+
+        planService.findShared(1L, Pageable.unpaged());
+
+        then(planRepository).should().findSharedVisibleTo(eq(List.of(1L, 2L, 3L)), any());
+    }
+
+    @Test
+    @DisplayName("canView - 그룹 공개 플랜은 같은 그룹일 때만 남이 볼 수 있다")
+    void canView_groupScopeRequiresSharedGroup() {
+        Plan plan = plan();
+        plan.changeShareScope(ShareScope.GROUP);
+
+        given(studyGroupService.sharesGroupWith(2L, 1L)).willReturn(true);
+        assertThat(planService.canView(plan, 2L)).isTrue();
+
+        given(studyGroupService.sharesGroupWith(3L, 1L)).willReturn(false);
+        assertThat(planService.canView(plan, 3L)).isFalse();
+    }
+
+    @Test
+    @DisplayName("canView - 전체 공개는 그룹 자격을 조회하지 않는다 (대부분의 열람이라 쿼리를 아낀다)")
+    void canView_publicSkipsGroupQuery() {
+        Plan plan = plan();
+        plan.changeShareScope(ShareScope.PUBLIC);
+
+        assertThat(planService.canView(plan, 2L)).isTrue();
+        then(studyGroupService).should(never()).sharesGroupWith(any(), any());
+    }
+
+    @Test
+    @DisplayName("canView - 비공개 플랜은 작성자 본인만 볼 수 있다")
+    void canView_privateOnlyForAuthor() {
+        Plan plan = plan();
+
+        assertThat(planService.canView(plan, 1L)).isTrue();
+        assertThat(planService.canView(plan, 2L)).isFalse();
     }
 
     // ── 이월 ─────────────────────────────────────────────────

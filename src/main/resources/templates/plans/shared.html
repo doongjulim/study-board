@@ -25,6 +25,7 @@
                 <div class="plan-meta">
                     <span class="tag-category" th:text="${plan.category.label}">분류</span>
                     <span th:text="${plan.author.nickname}">작성자</span>
+                    <span class="tag-shared" th:text="${plan.shareScope.label}">공유 범위</span>
                     <span th:if="${plan.completed}">✅ 완료한 플랜</span>
                 </div>
             </div>

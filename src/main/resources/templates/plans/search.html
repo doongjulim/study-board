@@ -77,7 +77,8 @@
                 <div class="plan-meta">
                     <span class="tag-category" th:text="${plan.category.label}">분류</span>
                     <span class="tag-repeat" th:if="${plan.partOfSeries}">🔁 반복</span>
-                    <span class="tag-shared" th:if="${plan.shared}">공유됨</span>
+                    <span class="tag-shared" th:if="${plan.shared}"
+                          th:text="${plan.shareScope.label}">공유 범위</span>
                 </div>
             </div>
             <div class="actions">

@@ -7,7 +7,8 @@ import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
-import com.example.board.plan.repository.PlanRepository;
+import com.example.board.plan.domain.ShareScope;
+import com.example.board.plan.service.PlanService;
 import com.example.board.post.domain.Post;
 import com.example.board.post.repository.PostRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +37,7 @@ class CommentServiceTest {
 
     @Mock CommentRepository commentRepository;
     @Mock PostRepository postRepository;
-    @Mock PlanRepository planRepository;
+    @Mock PlanService planService;
     @Mock MemberRepository memberRepository;
     @Mock ApplicationEventPublisher eventPublisher;
 
@@ -55,7 +56,7 @@ class CommentServiceTest {
     private Plan sharedPlan() {
         Plan plan = new Plan("모의면접", null, member(POST_AUTHOR_ID, "글쓴이"), PlanCategory.INTERVIEW,
                 LocalDate.of(2026, 7, 30), null, null);
-        plan.toggleShared();
+        plan.changeShareScope(ShareScope.PUBLIC);
         return plan;
     }
 
@@ -91,7 +92,9 @@ class CommentServiceTest {
     @Test
     @DisplayName("공유된 플랜에 댓글을 달면 플랜 작성자에게 알림 이벤트를 발행한다")
     void addToPlan_publishesEvent() {
-        given(planRepository.findById(2L)).willReturn(Optional.of(sharedPlan()));
+        Plan shared = sharedPlan();
+        given(planService.findById(2L)).willReturn(shared);
+        given(planService.canView(shared, COMMENTER_ID)).willReturn(true);
         given(memberRepository.getReferenceById(COMMENTER_ID)).willReturn(member(COMMENTER_ID, "댓글러"));
         given(commentRepository.save(any(Comment.class))).willAnswer(inv -> inv.getArgument(0));
 
@@ -104,11 +107,12 @@ class CommentServiceTest {
     }
 
     @Test
-    @DisplayName("공유되지 않은 플랜에는 타인이 댓글을 달 수 없다")
-    void addToPlan_notShared_denied() {
+    @DisplayName("볼 수 없는 플랜에는 댓글을 달 수 없다 (그룹 공개도 같은 그룹이 아니면 거절)")
+    void addToPlan_notVisible_denied() {
         Plan privatePlan = new Plan("비공개 플랜", null, member(POST_AUTHOR_ID, "글쓴이"), PlanCategory.ETC,
                 LocalDate.of(2026, 7, 30), null, null);
-        given(planRepository.findById(2L)).willReturn(Optional.of(privatePlan));
+        given(planService.findById(2L)).willReturn(privatePlan);
+        given(planService.canView(privatePlan, COMMENTER_ID)).willReturn(false);
 
         assertThatThrownBy(() -> commentService.addToPlan(2L, COMMENTER_ID, "몰래 댓글"))
                 .isInstanceOf(AccessDeniedException.class);

@@ -1,11 +1,14 @@
 package com.example.board.plan.repository;
 
 import com.example.board.plan.domain.Plan;
+import com.example.board.plan.domain.ShareScope;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -31,9 +34,22 @@ public interface PlanRepository extends JpaRepository<Plan, Long>, JpaSpecificat
     List<Plan> findByAuthor_IdAndPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
             Long authorId, LocalDate start, LocalDate end);
 
-    /** 공유된 플랜 목록 */
+    /** 공유 플랜 목록 (그룹이 없는 회원용) - 전체 공개만 보인다 */
     @EntityGraph(attributePaths = "author")
-    Page<Plan> findBySharedTrue(Pageable pageable);
+    Page<Plan> findByShareScope(ShareScope shareScope, Pageable pageable);
+
+    /**
+     * 공유 플랜 목록 - 전체 공개에 더해, 같은 그룹 사람들의 그룹 공개까지 보인다.
+     * 빈 컬렉션은 in () 구문 오류가 되므로 그룹이 없으면 {@link #findByShareScope} 를 쓴다.
+     */
+    @EntityGraph(attributePaths = "author")
+    @Query("""
+            select p from Plan p
+            where p.shareScope = com.example.board.plan.domain.ShareScope.PUBLIC
+               or (p.shareScope = com.example.board.plan.domain.ShareScope.GROUP
+                   and p.author.id in :fellowIds)
+            """)
+    Page<Plan> findSharedVisibleTo(@Param("fellowIds") List<Long> fellowIds, Pageable pageable);
 
     /** 같은 반복 묶음의 일정 전체 - 반복 일정 일괄 삭제에 사용 */
     @EntityGraph(attributePaths = "author")

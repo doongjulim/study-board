@@ -3,7 +3,9 @@ package com.example.board.member.repository;
 import com.example.board.member.domain.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +26,15 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
               and m.notificationPreference.planSharedEnabled = true
             """)
     List<Long> findIdsAllowingPlanSharedNotification();
+
+    /** 위와 같되 후보를 좁혀서 - 그룹 공개 fanout 은 같은 그룹 사람만 대상으로 한다 */
+    @Query("""
+            select m.id from Member m
+            where m.id in :candidateIds
+              and m.withdrawnAt is null
+              and m.notificationPreference.planSharedEnabled = true
+            """)
+    List<Long> findIdsAllowingPlanSharedNotificationIn(@Param("candidateIds") Collection<Long> candidateIds);
 
     boolean existsByLoginId(String loginId);
 

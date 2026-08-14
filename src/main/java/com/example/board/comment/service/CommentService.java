@@ -6,7 +6,7 @@ import com.example.board.comment.repository.CommentRepository;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
-import com.example.board.plan.repository.PlanRepository;
+import com.example.board.plan.service.PlanService;
 import com.example.board.post.domain.Post;
 import com.example.board.post.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,8 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
-    private final PlanRepository planRepository;
+    /** 플랜을 볼 자격 판정은 plan 모듈이 갖는다 - 규칙이 두 곳에 생기지 않게 읽기 전용으로만 쓴다 */
+    private final PlanService planService;
     private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -52,9 +53,9 @@ public class CommentService {
 
     @Transactional
     public Long addToPlan(Long planId, Long memberId, String content) {
-        Plan plan = planRepository.findById(planId)
-                .orElseThrow(() -> new IllegalArgumentException("플랜이 존재하지 않습니다. id=" + planId));
-        if (!plan.isShared() && !plan.isAuthoredBy(memberId)) {
+        Plan plan = planService.findById(planId);
+        // 볼 수 없는 플랜에는 댓글도 달 수 없다 (그룹 공개 플랜은 같은 그룹 사람까지)
+        if (!planService.canView(plan, memberId)) {
             throw new AccessDeniedException("공유된 플랜에만 댓글을 달 수 있습니다.");
         }
         Member commenter = memberRepository.getReferenceById(memberId);
