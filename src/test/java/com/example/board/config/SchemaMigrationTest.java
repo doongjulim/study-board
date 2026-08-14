@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V16 member notification preference */
-    private static final int EXPECTED_MIGRATIONS = 16;
+    /** V1 init ~ V17 study group */
+    private static final int EXPECTED_MIGRATIONS = 17;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -143,8 +143,51 @@ class SchemaMigrationTest {
         assertThat(allOn).isEqualTo(1);
     }
 
+    private Long createGroup(Long ownerId, String inviteCode) {
+        jdbc.update("insert into study_group (name, invite_code, owner_id) values (?, ?, ?)",
+                "코테 스터디", inviteCode, ownerId);
+        return jdbc.queryForObject(
+                "select id from study_group where invite_code = ?", Long.class, inviteCode);
+    }
+
     @Test
-    @DisplayName("V1~V16 이 H2 에서 모두 실행된다")
+    @DisplayName("V17: 같은 그룹에 같은 회원이 두 번 가입할 수 없다 (동시 가입 최종 방어선)")
+    void rejectsDuplicateMembership() {
+        Long ownerId = createMember("leader");
+        Long groupId = createGroup(ownerId, "AAAA2222");
+        jdbc.update("insert into group_member (group_id, member_id) values (?, ?)", groupId, ownerId);
+
+        assertThatThrownBy(() -> jdbc.update(
+                "insert into group_member (group_id, member_id) values (?, ?)", groupId, ownerId))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    @DisplayName("V17: 그룹을 지우면 소속 관계도 함께 사라진다")
+    void deletesMembershipsWithGroup() {
+        Long ownerId = createMember("closer");
+        Long groupId = createGroup(ownerId, "BBBB3333");
+        jdbc.update("insert into group_member (group_id, member_id) values (?, ?)", groupId, ownerId);
+
+        jdbc.update("delete from study_group where id = ?", groupId);
+
+        Integer remaining = jdbc.queryForObject(
+                "select count(*) from group_member where group_id = ?", Integer.class, groupId);
+        assertThat(remaining).isZero();
+    }
+
+    @Test
+    @DisplayName("V17: 같은 초대 코드는 두 그룹이 쓸 수 없다")
+    void rejectsDuplicateInviteCode() {
+        Long ownerId = createMember("coder");
+        createGroup(ownerId, "CCCC4444");
+
+        assertThatThrownBy(() -> createGroup(ownerId, "CCCC4444"))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    @DisplayName("V1~V17 이 H2 에서 모두 실행된다")
     void allMigrationsApply() {
         // SQL 이 깨져 있으면 migrate() 단계에서 FlywayException 이 터지므로, 여기 왔다면 전부 성공한 것이다
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);

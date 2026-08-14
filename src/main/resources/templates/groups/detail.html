@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('그룹 상세', 'groups', ~{::main})}">
+<body>
+<main class="container">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <nav class="crumb">
+        <a th:href="@{/groups}">← 내 그룹</a>
+    </nav>
+
+    <h2 class="page-title" th:text="${group.name}">그룹 이름</h2>
+    <p class="hint" th:if="${group.description != null && !group.description.isBlank()}"
+       th:text="${group.description}">소개</p>
+
+    <!-- 초대 코드는 멤버만 볼 수 있다 (컨트롤러가 아니라 서비스에서 막는다) -->
+    <div class="form-card invite-card">
+        <h3 class="stat-title">초대 코드</h3>
+        <p class="hint">이 코드를 아는 사람은 그룹에 가입할 수 있어요.</p>
+        <p class="invite-code" th:text="${group.inviteCode}">ABCD2345</p>
+    </div>
+
+    <h3 class="stat-title">멤버</h3>
+    <ul class="member-list">
+        <li th:each="membership : ${members}" class="member-item">
+            <span class="member-nickname" th:text="${membership.member.nickname}">닉네임</span>
+            <span class="tag-owner" th:if="${group.isOwnedBy(membership.member.id)}">그룹장</span>
+            <span class="member-joined"
+                  th:if="${membership.joinedAt != null}"
+                  th:text="${#temporals.format(membership.joinedAt, 'yyyy-MM-dd')} + ' 가입'">가입일</span>
+        </li>
+    </ul>
+
+    <div class="actions group-actions">
+        <form th:action="@{/groups/{id}/leave(id=${group.id})}" method="post"
+              onsubmit="return confirm('그룹에서 나갈까요? 그룹장이라면 가장 오래된 멤버가 이어받습니다.');">
+            <button type="submit" class="btn btn-sm">그룹 나가기</button>
+        </form>
+        <form th:if="${isOwner}" th:action="@{/groups/{id}/delete(id=${group.id})}" method="post"
+              onsubmit="return confirm('그룹을 삭제할까요? 되돌릴 수 없습니다.');">
+            <button type="submit" class="btn btn-sm btn-danger">그룹 삭제</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('스터디 그룹', 'groups', ~{::main})}">
+<body>
+<main class="container">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <h2 class="page-title">스터디 그룹</h2>
+    <p class="hint">그룹을 만들어 초대 코드를 나눠 주면, 그룹 공개로 올린 플랜을 서로 볼 수 있어요.</p>
+
+    <div class="group-forms">
+        <form class="form-card" method="post" th:object="${groupForm}" th:action="@{/groups}">
+            <h3 class="stat-title">새 그룹 만들기</h3>
+            <div class="form-group">
+                <label for="name">그룹 이름</label>
+                <input type="text" id="name" th:field="*{name}" placeholder="예) 상반기 코테 스터디">
+                <p class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+            </div>
+            <div class="form-group">
+                <label for="description">소개 (선택)</label>
+                <input type="text" id="description" th:field="*{description}"
+                       placeholder="예) 매일 두 문제씩 인증해요">
+                <p class="error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></p>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">만들기</button>
+            </div>
+        </form>
+
+        <form class="form-card" method="post" th:action="@{/groups/join}">
+            <h3 class="stat-title">초대 코드로 가입</h3>
+            <div class="form-group">
+                <label for="inviteCode">초대 코드</label>
+                <!-- 대소문자 구분 없이 받는다 (서비스가 대문자로 맞춘다) -->
+                <input type="text" id="inviteCode" name="inviteCode" maxlength="10"
+                       class="invite-input" placeholder="ABCD2345" autocomplete="off" required>
+                <p class="error" th:if="${joinError}" th:text="${joinError}"></p>
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn">가입하기</button>
+            </div>
+        </form>
+    </div>
+
+    <h3 class="stat-title">내 그룹</h3>
+    <ul class="group-list">
+        <li th:if="${groups.isEmpty()}" class="empty">아직 가입한 그룹이 없습니다.</li>
+        <li th:each="group : ${groups}" class="group-card">
+            <div class="group-main">
+                <a class="group-name" th:href="@{/groups/{id}(id=${group.id})}"
+                   th:text="${group.name}">그룹 이름</a>
+                <p class="group-desc"
+                   th:if="${group.description != null && !group.description.isBlank()}"
+                   th:text="${group.description}">소개</p>
+            </div>
+        </li>
+    </ul>
+</main>
+</body>
+</html>

@@ -571,6 +571,30 @@ header.site .nickname:hover { color: var(--accent); }
 .cal-more { display: block; text-decoration: none; color: var(--muted, #888); }
 .cal-more:hover { color: var(--accent); }
 
+/* ── 스터디 그룹 ───────────────────────────────── */
+/* 만들기·가입 두 폼을 나란히 두되, 좁아지면 자연스럽게 한 줄씩 내려간다 */
+.group-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 16px; }
+.group-forms .form-card { margin-top: 0; }
+.group-list { list-style: none; padding: 0; margin: 0; }
+.group-card { border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+  padding: 14px 16px; margin-bottom: 10px; }
+.group-name { font-weight: 700; text-decoration: none; color: inherit; }
+.group-name:hover { color: var(--accent); }
+.group-desc { margin: 4px 0 0; color: var(--ink-soft); font-size: .88rem; }
+/* 초대 코드는 옮겨 적는 값이라, 글자 사이를 벌리고 고정폭으로 보여 준다 */
+.invite-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.4rem; font-weight: 700; letter-spacing: .18em; color: var(--accent); margin: 6px 0 0; }
+.member-list { list-style: none; padding: 0; margin: 0 0 18px; }
+.member-item { display: flex; align-items: center; gap: 8px; padding: 10px 0;
+  border-bottom: 1px solid var(--line); }
+.member-joined { margin-left: auto; color: var(--ink-soft); font-size: .8rem; }
+.tag-owner { background: var(--accent); color: #fff; border-radius: 999px;
+  padding: 1px 8px; font-size: .72rem; font-weight: 700; }
+.group-actions { gap: 8px; }
+.crumb { margin-bottom: 10px; font-size: .88rem; }
+.crumb a { color: var(--ink-soft); text-decoration: none; }
+.crumb a:hover { color: var(--accent); }
+
 /* ── 일간 플래너: 한 줄 추가 · 이월 ─────────────── */
 .quick-add { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .quick-title { flex: 1; min-width: 12rem; }
