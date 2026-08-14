@@ -10,8 +10,10 @@ import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.PlanCategory;
 import com.example.board.session.domain.StudySession;
 import com.example.board.session.service.StudySessionService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -58,6 +60,12 @@ class StudySessionControllerTest {
     @Autowired MockMvc mockMvc;
     @MockBean StudySessionService studySessionService;
     @MockBean TokenService tokenService;
+
+    /** 호출 여부를 확인하는 테스트가 있으므로 실행 순서와 무관하게 깨끗한 상태에서 시작한다 */
+    @BeforeEach
+    void resetMocks() {
+        Mockito.reset(studySessionService);
+    }
 
     private static RequestPostProcessor memberAuth() {
         return authentication(new UsernamePasswordAuthenticationToken(

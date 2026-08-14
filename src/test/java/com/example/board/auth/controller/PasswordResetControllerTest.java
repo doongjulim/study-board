@@ -6,9 +6,11 @@ import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.auth.service.PasswordResetService;
 import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -29,6 +31,12 @@ class PasswordResetControllerTest {
     @Autowired MockMvc mockMvc;
     @MockBean PasswordResetService passwordResetService;
     @MockBean TokenService tokenService;
+
+    /** 호출 여부를 확인하는 테스트가 있으므로 실행 순서와 무관하게 깨끗한 상태에서 시작한다 */
+    @BeforeEach
+    void resetMocks() {
+        Mockito.reset(passwordResetService);
+    }
 
     @Nested
     @DisplayName("링크 요청")
