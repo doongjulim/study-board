@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('스터디플랜 - 취업 준비 학습 기록', '', ~{::main})}">
+<body>
+<main class="container">
+
+    <section class="hero">
+        <p class="hero-eyebrow">취업 준비생을 위한 학습 기록</p>
+        <h1 class="hero-title">
+            계획만 세우다 끝나지 않게,<br>
+            <strong>실제로 공부한 시간</strong>을 남기세요
+        </h1>
+        <p class="hero-sub">
+            계획에 체크만 하는 앱은 많습니다. 여기서는 타이머로 잰 실제 시간이 기록되고,
+            계획 대비 얼마나 해냈는지가 그대로 보입니다.
+        </p>
+        <div class="hero-actions">
+            <a class="btn btn-primary btn-lg" th:href="@{/signup}">무료로 시작하기</a>
+            <a class="btn btn-lg" th:href="@{/login}">로그인</a>
+        </div>
+        <p class="hint">둘러보기만 하려면 <a th:href="@{/posts}">게시판</a>은 로그인 없이 볼 수 있어요.</p>
+    </section>
+
+    <section class="feature-grid">
+        <div class="feature-card">
+            <span class="feature-icon">⏱</span>
+            <h3>실제 시간이 남습니다</h3>
+            <p>
+                30분 계획을 5분 만에 체크해도 30분으로 잡히는 통계는 믿을 수 없습니다.
+                시작 버튼을 누른 만큼만 기록됩니다.
+            </p>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon">📊</span>
+            <h3>계획 대비 실행률</h3>
+            <p>
+                "계획 3시간 / 실제 2시간 10분 (72%)" 처럼 나란히 보여 줍니다.
+                내가 계획을 과하게 잡는 편인지 알 수 있습니다.
+            </p>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon">🔥</span>
+            <h3>거짓말 못 하는 연속 기록</h3>
+            <p>
+                하루 목표 시간을 실제로 채운 날만 셉니다.
+                계획 하나 만들고 체크해서 이어지는 스트릭이 아닙니다.
+            </p>
+        </div>
+        <div class="feature-card">
+            <span class="feature-icon">🎯</span>
+            <h3>D-Day와 함께</h3>
+            <p>
+                시험·면접까지 남은 날이 플래너와 대시보드에 늘 떠 있습니다.
+                주간 학습 기록은 인증글로 옮겨 공유할 수 있습니다.
+            </p>
+        </div>
+    </section>
+
+    <section class="shots">
+        <figure class="shot">
+            <img th:src="@{/images/planner.png}" alt="플래너 화면 - 일간 일정과 D-Day 요약" loading="lazy">
+            <figcaption>일간·주간·월간 플래너와 D-Day</figcaption>
+        </figure>
+        <figure class="shot">
+            <img th:src="@{/images/stats.png}" alt="학습 통계 화면 - 완료율과 분류별 학습량" loading="lazy">
+            <figcaption>완료율·공부 시간·분류별 학습량</figcaption>
+        </figure>
+    </section>
+
+    <section class="cta">
+        <h2>오늘 30분부터 시작해 볼까요</h2>
+        <p class="hint">가입은 아이디와 비밀번호만 있으면 됩니다. 이메일은 선택이에요.</p>
+        <a class="btn btn-primary btn-lg" th:href="@{/signup}">회원가입</a>
+    </section>
+</main>
+</body>
+</html>

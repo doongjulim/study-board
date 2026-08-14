@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('시작하기', '', ~{::main})}">
+<body>
+<main class="container">
+
+    <h2 class="dash-greeting" th:text="|${nickname}님, 반가워요|">환영합니다</h2>
+    <p class="hint">3분이면 끝나요. 언제든 건너뛸 수 있습니다.</p>
+
+    <!-- 진행 표시 -->
+    <ol class="step-bar">
+        <li th:classappend="${progress.completedSteps() >= 1} ? 'done' : (${progress.isStep(1)} ? 'on' : '')">
+            <span class="step-num" th:text="${progress.completedSteps() >= 1} ? '✓' : '1'">1</span>
+            <span>목표 정하기</span>
+        </li>
+        <li th:classappend="${progress.completedSteps() >= 2} ? 'done' : (${progress.isStep(2)} ? 'on' : '')">
+            <span class="step-num" th:text="${progress.completedSteps() >= 2} ? '✓' : '2'">2</span>
+            <span>오늘 할 일</span>
+        </li>
+        <li th:classappend="${progress.isStep(3)} ? 'on'">
+            <span class="step-num">3</span>
+            <span>타이머 켜 보기</span>
+        </li>
+    </ol>
+
+    <!-- 1단계: D-Day -->
+    <form class="form-card" th:if="${progress.isStep(1)}"
+          method="post" th:object="${ddayForm}" th:action="@{/onboarding/dday}">
+        <h3 class="stat-title">목표가 뭔가요?</h3>
+        <p class="hint">시험일이나 면접일을 정해 두면 남은 날짜가 늘 눈에 들어옵니다.</p>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="title">목표</label>
+                <input type="text" id="title" th:field="*{title}" placeholder="예) 정보처리기사 실기" autofocus>
+                <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+            </div>
+            <div class="form-group">
+                <label for="targetDate">날짜</label>
+                <input type="date" id="targetDate" th:field="*{targetDate}">
+                <p class="error" th:if="${#fields.hasErrors('targetDate')}" th:errors="*{targetDate}"></p>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">다음</button>
+        </div>
+    </form>
+
+    <!-- 2단계: 오늘 계획 -->
+    <form class="form-card" th:if="${progress.isStep(2)}"
+          method="post" th:object="${planForm}" th:action="@{/onboarding/plan}">
+        <h3 class="stat-title">오늘은 뭘 공부하죠?</h3>
+        <p class="hint">거창하지 않아도 됩니다. 30분짜리 하나면 충분해요.</p>
+
+        <div class="form-group">
+            <label for="planTitle">할 일</label>
+            <input type="text" id="planTitle" th:field="*{title}" placeholder="예) 백준 DP 3문제" autofocus>
+            <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="category">분류</label>
+                <select id="category" th:field="*{category}" class="select-input">
+                    <option th:each="c : ${categories}" th:value="${c}" th:text="${c.label}"></option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="startTime">시작 시간 (선택)</label>
+                <input type="time" id="startTime" th:field="*{startTime}">
+                <p class="hint">넣어 두면 10분 전에 알려 드려요.</p>
+            </div>
+        </div>
+
+        <input type="hidden" th:field="*{planDate}">
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">다음</button>
+        </div>
+    </form>
+
+    <!-- 3단계: 타이머 체험 -->
+    <section class="form-card" th:if="${progress.isStep(3)}">
+        <h3 class="stat-title">마지막! 시작 버튼을 눌러 보세요</h3>
+        <p class="hint">
+            누르는 순간부터 실제 공부한 시간이 재집니다.
+            화면을 옮겨도 위쪽 배지에서 계속 돌아가고, 끝나면 다시 눌러 멈추면 됩니다.
+        </p>
+
+        <ul class="dash-plan-list">
+            <li class="dash-plan" th:each="plan : ${todayPlans}">
+                <span class="dash-plan-time"
+                      th:text="${plan.startTime != null} ? ${#temporals.format(plan.startTime, 'HH:mm')} : '종일'">시간</span>
+                <span class="dash-plan-title" th:text="${plan.title}">제목</span>
+                <span class="tag-category" th:text="${plan.category.label}">분류</span>
+                <button type="button" class="btn btn-sm btn-timer"
+                        th:attr="data-timer-start=${plan.id}">▶ 시작</button>
+            </li>
+        </ul>
+
+        <form method="post" th:action="@{/onboarding/finish}" class="actions">
+            <button type="submit" class="btn btn-primary">시작할게요</button>
+        </form>
+    </section>
+
+    <!-- 건너뛰기 -->
+    <form method="post" th:action="@{/onboarding/finish}" class="skip-form">
+        <button type="submit" class="btn btn-sm">건너뛰고 둘러보기</button>
+    </form>
+</main>
+</body>
+</html>

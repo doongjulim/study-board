@@ -52,6 +52,9 @@ public class Member {
     /** 탈퇴 시각. null 이면 활성 회원이다 (행을 지우지 않고 익명화만 한다) */
     private LocalDateTime withdrawnAt;
 
+    /** 첫 사용 안내를 마친 시각. null 이면 아직 안 봤다 */
+    private LocalDateTime onboardedAt;
+
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -109,6 +112,17 @@ public class Member {
 
     public boolean isWithdrawn() {
         return withdrawnAt != null;
+    }
+
+    /** 첫 사용 안내를 마쳤다고 기록한다 (건너뛰기도 마친 것으로 본다 - 다시 붙잡지 않는다) */
+    public void completeOnboarding(LocalDateTime at) {
+        if (onboardedAt == null) {
+            this.onboardedAt = at;
+        }
+    }
+
+    public boolean isOnboarded() {
+        return onboardedAt != null;
     }
 
     private static String blankToNull(String value) {

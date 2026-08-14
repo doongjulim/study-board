@@ -59,6 +59,12 @@ public class MemberService {
                 .orElseThrow(() -> new IllegalArgumentException("회원이 존재하지 않습니다. id=" + memberId));
     }
 
+    /** 첫 사용 안내를 마쳤다고 기록한다 (끝까지 봤든 건너뛰었든 다시 붙잡지 않는다) */
+    @Transactional
+    public void completeOnboarding(Long memberId) {
+        findActive(memberId).completeOnboarding(LocalDateTime.now(clock));
+    }
+
     /** 비밀번호 찾기 - 없는 이메일이어도 그 사실을 알려서는 안 되므로 예외 대신 빈 값을 준다 */
     public Optional<Member> findActiveByEmail(String email) {
         String normalized = normalize(email);
