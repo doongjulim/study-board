@@ -32,13 +32,22 @@
         <tr th:each="week : ${weeks}">
             <td th:each="day : ${week}"
                 th:classappend="${(day.monthValue != month.monthValue ? 'muted ' : '') + (day == today ? 'today' : '')}">
-                <a class="day-num" th:href="@{/plans/daily(date=${day})}" th:text="${day.dayOfMonth}">1</a>
+                <div class="cal-head">
+                    <a class="day-num" th:href="@{/plans/daily(date=${day})}" th:text="${day.dayOfMonth}">1</a>
+                    <!-- 빈 칸에서 바로 그날 일정을 만들 수 있게 한다 -->
+                    <a class="cal-add" th:href="@{/plans/new(date=${day})}"
+                       th:title="|${#temporals.format(day, 'M월 d일')}에 일정 추가|" aria-label="일정 추가">+</a>
+                </div>
                 <th:block th:with="dayPlans=${plansByDate[day]}">
                     <th:block th:if="${dayPlans != null}">
-                        <div class="cal-plan" th:each="plan, stat : ${dayPlans}" th:if="${stat.index < 3}"
-                             th:classappend="${plan.completed} ? 'done'" th:text="${plan.title}"></div>
-                        <div class="cal-more" th:if="${dayPlans.size() > 3}"
-                             th:text="|+${dayPlans.size() - 3}개 더|"></div>
+                        <a class="cal-plan" th:each="plan, stat : ${dayPlans}" th:if="${stat.index < 3}"
+                           th:href="@{/plans/daily(date=${day})}"
+                           th:classappend="${plan.completed} ? 'done'"
+                           th:title="${plan.title}" th:text="${plan.title}"></a>
+                        <!-- 표시만 되고 눌리지 않던 자리 - 그날 목록으로 보낸다 -->
+                        <a class="cal-more" th:if="${dayPlans.size() > 3}"
+                           th:href="@{/plans/daily(date=${day})}"
+                           th:text="|+${dayPlans.size() - 3}개 더|"></a>
                     </th:block>
                 </th:block>
             </td>

@@ -45,6 +45,28 @@
         </div>
     </div>
     <div id="toast-box" class="toast-box"></div>
+
+    <!--
+      좁은 화면 전용 하단 탭바. 헤더의 메뉴는 모바일에서 숨기고 이걸로 대신한다.
+      엄지가 닿는 자리에 자주 쓰는 다섯 곳만 둔다 (로그인한 사람에게만 보인다).
+    -->
+    <nav class="tabbar" th:if="${currentMember != null}" aria-label="주요 메뉴">
+        <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">
+            <span class="tab-icon" aria-hidden="true">🏠</span><span>홈</span>
+        </a>
+        <a th:href="@{/plans/daily}" th:classappend="${active == 'plans'} ? 'on'">
+            <span class="tab-icon" aria-hidden="true">📅</span><span>플래너</span>
+        </a>
+        <a th:href="@{/stats}" th:classappend="${active == 'stats'} ? 'on'">
+            <span class="tab-icon" aria-hidden="true">📊</span><span>통계</span>
+        </a>
+        <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">
+            <span class="tab-icon" aria-hidden="true">📋</span><span>게시판</span>
+        </a>
+        <a th:href="@{/me}" th:classappend="${active == 'me'} ? 'on'">
+            <span class="tab-icon" aria-hidden="true">👤</span><span>내 정보</span>
+        </a>
+    </nav>
     <script th:src="@{/js/theme.js}" defer></script>
     <script th:src="@{/js/notification.js}" defer></script>
     <script th:src="@{/js/timer.js}" defer></script>

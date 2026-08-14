@@ -231,18 +231,32 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
 
 /* ── 반응형 ──────────────────────────────────────────────── */
 @media (max-width: 720px) {
-  .week-grid { grid-template-columns: 1fr; }
-  .week-day { min-height: auto; }
+  /* 한 주가 한 줄로 늘어서야 "주간" 이 의미가 있다.
+     세로로 쌓으면 일간 뷰를 일곱 번 붙여 놓은 것과 다르지 않아, 좁혀서 가로로 유지한다.
+     (.scroll-x 안에 있어 넘치면 가로로 밀린다) */
+  .week-grid { grid-template-columns: repeat(7, minmax(7.5rem, 1fr)); }
+  .week-day { min-height: 8rem; }
   .calendar td { height: 68px; }
+  .calendar { min-width: 34rem; }
   .plan-card { flex-wrap: wrap; }
   .plan-card .actions { width: 100%; justify-content: flex-end; }
   .form-row { flex-direction: column; gap: 0; }
-  /* 메뉴가 늘어나 한 줄에 안 들어가므로 아래로 내리고 가로 스크롤시킨다 (좁은 화면에서 글자가 세로로 쪼개지는 것 방지) */
-  header.site .container { flex-wrap: wrap; row-gap: 8px; }
-  header.site .gnb { order: 3; width: 100%; flex: none; overflow-x: auto; }
-  header.site .gnb a { padding: 6px 8px; font-size: .85rem; white-space: nowrap; }
+  /* 헤더 메뉴는 하단 탭바가 대신하므로 감춰서 헤더를 한 줄로 유지한다 */
+  header.site .gnb { display: none; }
   .header-controls { margin-left: auto; }
   .auth-menu .nickname { display: none; }
+  /* 월간 달력은 칸이 좁아 hover 가 없으므로 추가 버튼을 항상 보여 준다 */
+  .cal-add { opacity: 1; }
+
+  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: var(--card); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom); }
+  .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 0 6px; text-decoration: none; color: var(--ink-soft); font-size: .68rem; }
+  .tabbar a.on { color: var(--accent); font-weight: 700; }
+  .tab-icon { font-size: 1.15rem; line-height: 1; }
+  /* 탭바에 본문이 가리지 않도록 아래 여백을 둔다 */
+  .container, .container-wide { padding-bottom: 76px; }
 }
 
 /* ── 다크모드 (시스템 설정) ──────────────────────────────── */
@@ -331,7 +345,7 @@ table.board { min-width: 480px; }
 
 /* ── 모바일 추가 브레이크포인트 (≤ 480px) ───────────────── */
 @media (max-width: 480px) {
-  .container, .container-wide { padding: 14px 12px 56px; }
+  .container, .container-wide { padding: 14px 12px 76px; }
   header.site .container { gap: 6px; padding: 0 12px; }
   .brand { font-size: .9rem; }
   .gnb a { padding: 4px 7px; font-size: .8rem; }
@@ -535,11 +549,24 @@ header.site .nickname:hover { color: var(--accent); }
   white-space: nowrap; }
 .dash-plan .btn { flex-shrink: 0; }
 
+/* ── 모바일 하단 탭바 (좁은 화면에서만 보인다) ──── */
+.tabbar { display: none; }
+
 /* ── 플랜 검색 ─────────────────────────────────── */
 .search-panel { margin-bottom: 18px; }
 .search-panel .select-input { width: 100%; }
 /* 검색 결과의 체크 표시는 누를 수 없는 상태 표시라 span 이다 (.plan-card .check 가 모양을 맡는다) */
 .plan-card span.check { cursor: default; }
+
+/* ── 월간 달력 ─────────────────────────────────── */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.cal-add { opacity: 0; text-decoration: none; color: var(--accent); font-weight: 700;
+  font-size: .9rem; line-height: 1; padding: 0 4px; transition: opacity .15s; }
+.calendar td:hover .cal-add, .cal-add:focus { opacity: 1; }
+.cal-plan { display: block; text-decoration: none; color: inherit;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-more { display: block; text-decoration: none; color: var(--muted, #888); }
+.cal-more:hover { color: var(--accent); }
 
 /* ── 일간 플래너: 한 줄 추가 · 이월 ─────────────── */
 .quick-add { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
