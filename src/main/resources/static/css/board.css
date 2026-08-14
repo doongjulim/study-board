@@ -535,6 +535,12 @@ header.site .nickname:hover { color: var(--accent); }
   white-space: nowrap; }
 .dash-plan .btn { flex-shrink: 0; }
 
+/* ── 플랜 검색 ─────────────────────────────────── */
+.search-panel { margin-bottom: 18px; }
+.search-panel .select-input { width: 100%; }
+/* 검색 결과의 체크 표시는 누를 수 없는 상태 표시라 span 이다 (.plan-card .check 가 모양을 맡는다) */
+.plan-card span.check { cursor: default; }
+
 /* ── 일간 플래너: 한 줄 추가 · 이월 ─────────────── */
 .quick-add { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .quick-title { flex: 1; min-width: 12rem; }

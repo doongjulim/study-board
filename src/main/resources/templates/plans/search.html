@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('플래너 - 검색', 'plans', ~{::main})}">
+<body>
+<main class="container">
+
+    <nav class="view-tabs">
+        <a th:href="@{/plans/daily}">일간</a>
+        <a th:href="@{/plans/weekly}">주간</a>
+        <a th:href="@{/plans/monthly}">월간</a>
+        <a class="on" th:href="@{/plans/search}">검색</a>
+    </nav>
+
+    <form class="form-card search-panel" method="get" th:action="@{/plans/search}">
+        <div class="form-group">
+            <label for="keyword">검색어</label>
+            <input type="text" id="keyword" name="keyword" th:value="${condition.keyword()}"
+                   placeholder="제목·메모에서 찾습니다" autocomplete="off">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="category">분류</label>
+                <select id="category" name="category" class="select-input">
+                    <option value="">전체 분류</option>
+                    <option th:each="c : ${categories}" th:value="${c}" th:text="${c.label}"
+                            th:selected="${c == condition.category()}"></option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="status">완료 여부</label>
+                <select id="status" name="status" class="select-input">
+                    <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.label}"
+                            th:selected="${s == condition.status()}"></option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="from">시작일</label>
+                <input type="date" id="from" name="from" th:value="${condition.from()}">
+            </div>
+            <div class="form-group">
+                <label for="to">종료일</label>
+                <input type="date" id="to" name="to" th:value="${condition.to()}">
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">검색</button>
+            <a class="btn" th:href="@{/plans/search}">조건 초기화</a>
+        </div>
+    </form>
+
+    <div class="toolbar">
+        <span class="hint" th:if="${condition.isEmpty()}">조건 없이 내 모든 일정을 최근 순으로 보여 줍니다.</span>
+        <span class="hint" th:unless="${condition.isEmpty()}"
+              th:text="|조건에 맞는 일정 ${results.totalElements}개|">검색 결과</span>
+    </div>
+
+    <ul class="plan-list">
+        <li th:if="${results.isEmpty()}" class="empty plan-empty">조건에 맞는 일정이 없습니다.</li>
+        <li th:each="plan : ${results.content}" class="plan-card"
+            th:classappend="${plan.completed} ? 'done'">
+            <span class="check" th:text="${plan.completed} ? '✅' : '⬜'"></span>
+            <div class="plan-main">
+                <div class="plan-time">
+                    <a th:href="@{/plans/daily(date=${plan.planDate})}"
+                       th:text="${#temporals.format(plan.planDate, 'yyyy-MM-dd (E)')}">날짜</a>
+                    <span th:if="${plan.startTime != null}"
+                          th:text="${#temporals.format(plan.startTime, 'HH:mm')}">시간</span>
+                </div>
+                <div class="plan-title" th:text="${plan.title}">제목</div>
+                <div class="plan-content" th:if="${plan.content != null && !plan.content.isBlank()}"
+                     th:text="${plan.content}"></div>
+                <div class="plan-meta">
+                    <span class="tag-category" th:text="${plan.category.label}">분류</span>
+                    <span class="tag-repeat" th:if="${plan.partOfSeries}">🔁 반복</span>
+                    <span class="tag-shared" th:if="${plan.shared}">공유됨</span>
+                </div>
+            </div>
+            <div class="actions">
+                <a class="btn btn-sm" th:href="@{/plans/{id}/edit(id=${plan.id})}">수정</a>
+            </div>
+        </li>
+    </ul>
+
+    <!-- 검색 조건은 페이지를 넘겨도 유지되어야 하므로 기준 URL 에 함께 싣는다 -->
+    <th:block th:with="pageUrl=@{/plans/search(keyword=${condition.keyword()},
+                                               category=${condition.category()},
+                                               status=${condition.status()},
+                                               from=${condition.from()},
+                                               to=${condition.to()})}">
+        <nav th:replace="~{fragments/pagination :: pagination(${results}, ${pageBlock}, ${pageUrl})}"></nav>
+    </th:block>
+</main>
+</body>
+</html>

@@ -9,6 +9,7 @@
         <a th:href="@{/plans/daily(date=${date})}">일간</a>
         <a class="on" th:href="@{/plans/weekly(date=${date})}">주간</a>
         <a th:href="@{/plans/monthly(month=${#temporals.format(date, 'yyyy-MM')})}">월간</a>
+        <a th:href="@{/plans/search}">검색</a>
     </nav>
 
     <div class="plan-nav">

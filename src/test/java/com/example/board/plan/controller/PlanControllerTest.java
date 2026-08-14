@@ -11,9 +11,12 @@ import com.example.board.config.SecurityConfig;
 import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
+import com.example.board.plan.domain.PlanSearchCondition;
+import com.example.board.plan.domain.PlanStatus;
 import com.example.board.plan.service.PlanService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -29,6 +32,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
@@ -333,6 +337,65 @@ class PlanControllerTest {
         given(planService.toggleShared(1L, MEMBER_ID)).willReturn(plan());
 
         mockMvc.perform(post("/plans/1/share").with(csrf()).with(memberAuth()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
+    }
+
+    // ── 검색 ─────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("GET /plans/search - 조건 없이도 내 일정을 보여 준다")
+    void search_withoutCondition() throws Exception {
+        given(planService.search(eq(MEMBER_ID), any(PlanSearchCondition.class), any()))
+                .willReturn(new PageImpl<>(List.of(plan())));
+
+        mockMvc.perform(get("/plans/search").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("plans/search"))
+                .andExpect(model().attributeExists("results", "condition", "pageBlock", "statuses"));
+    }
+
+    @Test
+    @DisplayName("GET /plans/search - 넘긴 조건이 그대로 검색에 전달된다")
+    void search_passesCondition() throws Exception {
+        given(planService.search(eq(MEMBER_ID), any(PlanSearchCondition.class), any()))
+                .willReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/plans/search")
+                        .param("keyword", "  알고리즘 ")
+                        .param("category", "CODING_TEST")
+                        .param("status", "TODO")
+                        .param("from", "2026-07-01")
+                        .param("to", "2026-07-31")
+                        .with(memberAuth()))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<PlanSearchCondition> captor = ArgumentCaptor.forClass(PlanSearchCondition.class);
+        then(planService).should().search(eq(MEMBER_ID), captor.capture(), any());
+        PlanSearchCondition condition = captor.getValue();
+        assertThat(condition.keyword()).isEqualTo("알고리즘");
+        assertThat(condition.category()).isEqualTo(PlanCategory.CODING_TEST);
+        assertThat(condition.status()).isEqualTo(PlanStatus.TODO);
+        assertThat(condition.from()).isEqualTo(LocalDate.of(2026, 7, 1));
+    }
+
+    @Test
+    @DisplayName("GET /plans/search - 비로그인은 로그인 화면으로 보낸다")
+    void search_requiresLogin() throws Exception {
+        mockMvc.perform(get("/plans/search"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    @DisplayName("POST /plans/rollover - 남은 일정을 옮기고 그날 플래너로 돌아간다")
+    void rollover() throws Exception {
+        given(planService.rollover(MEMBER_ID, LocalDate.of(2026, 7, 8), LocalDate.of(2026, 7, 9)))
+                .willReturn(2);
+
+        mockMvc.perform(post("/plans/rollover")
+                        .param("from", "2026-07-08")
+                        .param("to", "2026-07-09")
+                        .with(csrf()).with(memberAuth()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
     }

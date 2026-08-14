@@ -3,7 +3,9 @@ package com.example.board.plan.service;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.plan.domain.Plan;
+import com.example.board.plan.domain.PlanSearchCondition;
 import com.example.board.plan.dto.PlanForm;
+import com.example.board.plan.repository.PlanSpecifications;
 import com.example.board.plan.event.PlanSharedEvent;
 import com.example.board.plan.repository.PlanRepository;
 import lombok.RequiredArgsConstructor;
@@ -112,6 +114,16 @@ public class PlanService {
                 .toList();
         planRepository.deleteAll(series);
         return series.size();
+    }
+
+    /**
+     * 내 계획 검색. 반복 일정이 한 번에 180건까지 생기므로 거르는 수단이 필요하다.
+     * 소유 조건을 항상 먼저 걸어 남의 계획이 섞이지 않게 한다.
+     */
+    public Page<Plan> search(Long memberId, PlanSearchCondition condition, Pageable pageable) {
+        return planRepository.findAll(
+                PlanSpecifications.ownedBy(memberId).and(PlanSpecifications.matching(condition)),
+                pageable);
     }
 
     /** 그날 남은 일정 - 이월 안내 배너에 쓴다 */

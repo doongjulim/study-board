@@ -8,6 +8,8 @@ import com.example.board.dday.service.DdayService;
 import com.example.board.plan.domain.DailyProgress;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
+import com.example.board.plan.domain.PlanSearchCondition;
+import com.example.board.plan.domain.PlanStatus;
 import com.example.board.plan.domain.RepeatType;
 import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.service.PlanService;
@@ -15,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -114,6 +117,31 @@ public class PlanController {
         model.addAttribute("nextMonth", target.plusMonths(1));
         model.addAttribute("today", LocalDate.now());
         return "plans/monthly";
+    }
+
+    /** 내 계획 검색 - 키워드·분류·완료 여부·기간을 조합한다 */
+    @GetMapping("/search")
+    public String search(@RequestParam(required = false) String keyword,
+                         @RequestParam(required = false) PlanCategory category,
+                         @RequestParam(required = false) PlanStatus status,
+                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                         @PageableDefault(size = 20) Pageable pageable,
+                         @AuthenticationPrincipal MemberPrincipal principal,
+                         Model model) {
+        PlanSearchCondition condition = PlanSearchCondition.of(keyword, category, status, from, to);
+        // 최근 날짜부터, 같은 날 안에서는 시간순
+        Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                Sort.by(Sort.Order.desc("planDate"), Sort.Order.asc("startTime"), Sort.Order.asc("id")));
+
+        Page<Plan> results = planService.search(principal.id(), condition, sorted);
+
+        model.addAttribute("results", results);
+        model.addAttribute("pageBlock", PageBlock.of(results));
+        model.addAttribute("condition", condition);
+        model.addAttribute("statuses", PlanStatus.values());
+        model.addAttribute("today", LocalDate.now());
+        return "plans/search";
     }
 
     /** 공유된 플랜 목록 */
