@@ -75,6 +75,10 @@
   어제 못 끝낸 일정은 배너에서 오늘로 옮긴다(`Plan.moveTo` — 완료한 일정은 지난 기록이 바뀌므로 거부).
   **JSON API 는 기존 폼 경로를 대체하지 않고 위에 얹는다** — JS 가 없어도 플래너를 쓸 수 있어야 하기 때문이다.
   JSON 을 기대하는 화면에 HTML 오류 페이지가 가지 않도록 `PlanApiController` 가 예외를 자체 처리한다
+- **검색(plan)**: `/plans/search` 에서 키워드·분류·완료 여부·기간을 조합한다.
+  조건 정규화(빈 검색어, 거꾸로 넣은 기간)는 순수 값 객체 `PlanSearchCondition` 이 맡고,
+  쿼리는 `PlanSpecifications` 가 조건이 있을 때만 where 절을 붙인다(JPQL 의 `:param is null or ...` 나열을 피한다).
+  소유 조건(`ownedBy`)을 항상 먼저 걸어 남의 계획이 섞이지 않게 한다
 - **분류·반복(plan)**: `PlanCategory` enum 으로 학습 분류, `RepeatType` enum 이 반복 날짜 생성을 책임진다(규칙 변경이 enum 안에만 머묾).
   반복 생성분은 `seriesId` 로 묶여 한꺼번에 삭제할 수 있고, 한 번에 최대 180건 상한을 둔다
 - **학습 통계(stats)**: `StudyStatistics`/`StudyStreak` 는 플랜·세션 목록만으로 계산되는 순수 값 객체라 DB 없이 검증한다.
@@ -89,11 +93,20 @@
 - **댓글(comment)**: 단일 `Comment` 엔티티가 게시글/공유 플랜 중 하나에 달림(DB check 제약, on delete cascade). 댓글 UI 는 `fragments/comments.html` 재사용, 알림은 `CommentAddedEvent` 로 결합 차단
 - **업로드 보안(file)**: `FileStore` 확장자 화이트리스트(무확장자 거부), `/files/{id}/view` 는 이미지만 인라인·그 외 다운로드 리다이렉트
 - **모듈 간 결합 차단**: plan 모듈은 `PlanSharedEvent`/`PlanReminderEvent`만 발행하고, notification 모듈의 `NotificationEventListener`가 구독 (Spring 이벤트로 DIP 준수)
-- **리마인더**: `PlanReminderScheduler`가 1분마다 시작 10분 전 일정을 찾아 알림 발행 (`reminderSent` 플래그로 중복 방지).
+- **알림 설정**: 회원이 리마인더 시점(0~60분 전)과 종류별 수신 여부를 정한다(`Member.notificationPreference`, `@Embeddable`).
+  member 모듈이 notification 모듈을 알게 되지 않도록, 설정은 항목별 메서드로만 노출하고
+  **알림 종류와 항목을 잇는 일은 `NotificationType` 이 한다**.
+  공유 알림 fanout 은 사람 수만큼 설정을 되묻지 않도록 조회 단계에서 걸러 낸다(`findIdsAllowingPlanSharedNotification`)
+- **리마인더**: `PlanReminderScheduler`가 1분마다 일정을 찾아 알림 발행 (`reminderSent` 플래그로 중복 방지).
+  알림 시점이 회원마다 다르므로 조회 구간은 가장 이른 시점(`MAX_LEAD_MINUTES`)으로 한 번만 잡고,
+  실제로 보낼지는 회원 설정으로 판단한다 — 구간을 회원별로 나누면 매 분 회원 수만큼 쿼리가 나간다.
+  아직 시점이 아닌 일정은 발송됨으로 표시하지 않고 다음 분에 다시 본다.
   확인 구간이 자정을 넘기면 오늘 남은 시간과 다음 날 새벽을 나눠 조회해 새벽 일정이 누락되지 않게 한다
 - **SSE 재연결**: 알림 이벤트에 알림 id 를 실어 보내고, 재연결 시 `Last-Event-ID` 이후의 알림을 재전송한다
 - **인증글 연동**: `WeeklyReport`(stats)가 한 주 플랜으로 게시글 초안을 만들고, `PostController`가 이를 읽기 전용으로 사용한다
 - **공통 헤더**: `templates/fragments/header.html` 프래그먼트를 모든 페이지에서 `th:replace`로 재사용
+- **모바일**: 720px 이하에서 헤더 메뉴를 감추고 **하단 탭바**(홈/플래너/통계/게시판/내 정보)로 대신한다.
+  주간 뷰는 1열로 무너뜨리지 않고 7열을 유지한 채 가로 스크롤한다 — 세로로 쌓으면 "주간" 의 의미가 사라지기 때문
 - **다크모드**: `board.css`의 `prefers-color-scheme: dark` 미디어쿼리로 자동 전환
 
 
