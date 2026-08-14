@@ -3,6 +3,7 @@ package com.example.board.notification.service;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.notification.domain.Notification;
+import com.example.board.notification.domain.NotificationType;
 import com.example.board.notification.repository.NotificationRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,7 +34,20 @@ class NotificationServiceTest {
     @InjectMocks NotificationService notificationService;
 
     private Member member() {
-        return new Member("tester1", "encoded-password", "테스터");
+        return memberWithId(1L);
+    }
+
+    private Member memberWithId(long id) {
+        Member member = new Member("tester" + id, "encoded-password", "테스터" + id);
+        ReflectionTestUtils.setField(member, "id", id);
+        return member;
+    }
+
+    /** 해당 종류의 알림을 꺼 둔 회원 */
+    private Member memberWithNotificationsOff() {
+        Member member = memberWithId(1L);
+        member.changeNotificationPreference(false, 10, false, false);
+        return member;
     }
 
     private Notification notification(long id, String message) {
@@ -44,21 +59,57 @@ class NotificationServiceTest {
     @Test
     @DisplayName("notify - 수신자에게 알림을 저장하고 해당 회원에게만 SSE 전송한다")
     void notify_savesAndSendsToRecipient() {
-        given(memberRepository.getReferenceById(1L)).willReturn(member());
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(notificationRepository.save(any(Notification.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 
-        notificationService.notify(1L, "동주님이 플랜을 공유했습니다", "/plans/shared");
+        notificationService.notify(1L, NotificationType.COMMENT, "댓글이 달렸습니다", "/posts/1");
 
         then(notificationRepository).should().save(any(Notification.class));
         then(emitterRegistry).should().send(eq(1L), eq("notification"), anyString(), any());
     }
 
     @Test
+    @DisplayName("notify - 그 종류를 꺼 둔 회원에게는 알림을 남기지 않는다")
+    void notify_respectsPreference() {
+        given(memberRepository.findById(1L)).willReturn(Optional.of(memberWithNotificationsOff()));
+
+        notificationService.notify(1L, NotificationType.COMMENT, "댓글이 달렸습니다", "/posts/1");
+
+        then(notificationRepository).should(never()).save(any());
+        then(emitterRegistry).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("notify - 리마인더는 켜고 댓글만 꺼 둔 회원은 리마인더를 받는다")
+    void notify_perTypeSetting() {
+        Member member = memberWithId(1L);
+        member.changeNotificationPreference(true, 10, true, false);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(notificationRepository.save(any(Notification.class)))
+                .willAnswer(inv -> inv.getArgument(0));
+
+        notificationService.notify(1L, NotificationType.REMINDER, "곧 시작해요", "/plans/daily");
+
+        then(notificationRepository).should().save(any(Notification.class));
+    }
+
+    @Test
+    @DisplayName("notify - 존재하지 않는 회원이면 조용히 넘어간다")
+    void notify_unknownRecipient() {
+        given(memberRepository.findById(99L)).willReturn(Optional.empty());
+
+        notificationService.notify(99L, NotificationType.COMMENT, "댓글", "/posts/1");
+
+        then(notificationRepository).should(never()).save(any());
+    }
+
+    @Test
     @DisplayName("notifyAllExcept - 발신자를 제외한 모든 회원에게 알림을 만든다")
     void notifyAllExcept() {
-        given(memberRepository.findAllIds()).willReturn(List.of(1L, 2L, 3L));
-        given(memberRepository.getReferenceById(anyLong())).willReturn(member());
+        given(memberRepository.findIdsAllowingPlanSharedNotification()).willReturn(List.of(1L, 2L, 3L));
+        given(memberRepository.getReferenceById(1L)).willReturn(memberWithId(1L));
+        given(memberRepository.getReferenceById(3L)).willReturn(memberWithId(3L));
         given(notificationRepository.save(any(Notification.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 

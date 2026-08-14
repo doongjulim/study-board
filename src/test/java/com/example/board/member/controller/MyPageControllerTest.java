@@ -8,13 +8,17 @@ import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
 import com.example.board.member.domain.Member;
+import com.example.board.member.dto.NotificationSettingForm;
 import com.example.board.member.dto.PasswordChangeForm;
 import com.example.board.member.dto.ProfileForm;
 import com.example.board.member.exception.DuplicateMemberException;
 import com.example.board.member.service.MemberService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -28,6 +32,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.*;
@@ -45,6 +50,12 @@ class MyPageControllerTest {
     @Autowired MockMvc mockMvc;
     @MockBean MemberService memberService;
     @MockBean TokenService tokenService;
+
+    /** 호출 여부를 확인하는 테스트가 있으므로 실행 순서와 무관하게 깨끗한 상태에서 시작한다 */
+    @BeforeEach
+    void resetMocks() {
+        Mockito.reset(memberService);
+    }
 
     private static RequestPostProcessor memberAuth() {
         return authentication(new UsernamePasswordAuthenticationToken(
@@ -223,6 +234,62 @@ class MyPageControllerTest {
                     .andExpect(status().isForbidden());
 
             then(memberService).should(never()).withdraw(any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("알림 설정")
+    class NotificationSetting {
+
+        @Test
+        @DisplayName("저장하면 마이페이지로 돌아간다")
+        void success() throws Exception {
+            given(memberService.findActive(MEMBER_ID)).willReturn(member());
+
+            mockMvc.perform(post("/me/notifications")
+                            .param("reminderEnabled", "true")
+                            .param("reminderLeadMinutes", "30")
+                            .param("planSharedEnabled", "false")
+                            .param("commentEnabled", "true")
+                            .with(csrf()).with(memberAuth()))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/me"));
+
+            then(memberService).should()
+                    .updateNotificationSetting(eq(MEMBER_ID), any(NotificationSettingForm.class));
+        }
+
+        @Test
+        @DisplayName("체크를 풀면 꺼진 값으로 전달된다 (체크박스는 값이 오지 않는다)")
+        void uncheckedBecomesFalse() throws Exception {
+            given(memberService.findActive(MEMBER_ID)).willReturn(member());
+
+            mockMvc.perform(post("/me/notifications")
+                            .param("reminderLeadMinutes", "10")
+                            .with(csrf()).with(memberAuth()))
+                    .andExpect(status().is3xxRedirection());
+
+            ArgumentCaptor<NotificationSettingForm> captor =
+                    ArgumentCaptor.forClass(NotificationSettingForm.class);
+            then(memberService).should().updateNotificationSetting(eq(MEMBER_ID), captor.capture());
+            assertThat(captor.getValue().isReminderEnabled()).isFalse();
+            assertThat(captor.getValue().isCommentEnabled()).isFalse();
+        }
+
+        @Test
+        @DisplayName("상한을 넘는 알림 시점은 저장하지 않는다")
+        void rejectsTooLongLead() throws Exception {
+            given(memberService.findActive(MEMBER_ID)).willReturn(member());
+
+            mockMvc.perform(post("/me/notifications")
+                            .param("reminderEnabled", "true")
+                            .param("reminderLeadMinutes", "120")
+                            .with(csrf()).with(memberAuth()))
+                    .andExpect(status().isOk())
+                    .andExpect(model().attributeHasFieldErrors(
+                            "notificationSettingForm", "reminderLeadMinutes"));
+
+            then(memberService).should(never()).updateNotificationSetting(any(), any());
         }
     }
 }

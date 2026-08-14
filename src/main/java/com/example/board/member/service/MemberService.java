@@ -3,6 +3,7 @@ package com.example.board.member.service;
 import com.example.board.auth.exception.LoginFailedException;
 import com.example.board.auth.service.RefreshTokenService;
 import com.example.board.member.domain.Member;
+import com.example.board.member.dto.NotificationSettingForm;
 import com.example.board.member.dto.PasswordChangeForm;
 import com.example.board.member.dto.ProfileForm;
 import com.example.board.member.dto.SignupForm;
@@ -57,6 +58,14 @@ public class MemberService {
         return memberRepository.findById(memberId)
                 .filter(member -> !member.isWithdrawn())
                 .orElseThrow(() -> new IllegalArgumentException("회원이 존재하지 않습니다. id=" + memberId));
+    }
+
+    /** 알림 설정 변경 (언제·무엇을 받을지) */
+    @Transactional
+    public void updateNotificationSetting(Long memberId, NotificationSettingForm form) {
+        findActive(memberId).changeNotificationPreference(
+                form.isReminderEnabled(), form.getReminderLeadMinutes(),
+                form.isPlanSharedEnabled(), form.isCommentEnabled());
     }
 
     /** 첫 사용 안내를 마쳤다고 기록한다 (끝까지 봤든 건너뛰었든 다시 붙잡지 않는다) */

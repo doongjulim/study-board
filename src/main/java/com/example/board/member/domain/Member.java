@@ -55,6 +55,10 @@ public class Member {
     /** 첫 사용 안내를 마친 시각. null 이면 아직 안 봤다 */
     private LocalDateTime onboardedAt;
 
+    /** 알림 설정 - 언제·무엇을 받을지 */
+    @Embedded
+    private NotificationPreference notificationPreference = NotificationPreference.createDefault();
+
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -68,6 +72,13 @@ public class Member {
         this.nickname = nickname;
         this.email = blankToNull(email);
         this.dailyGoalMinutes = DEFAULT_DAILY_GOAL_MINUTES;
+        this.notificationPreference = NotificationPreference.createDefault();
+    }
+
+    public void changeNotificationPreference(boolean reminderEnabled, int reminderLeadMinutes,
+                                             boolean planSharedEnabled, boolean commentEnabled) {
+        this.notificationPreference = notificationPreference.change(
+                reminderEnabled, reminderLeadMinutes, planSharedEnabled, commentEnabled);
     }
 
     public void changeNickname(String nickname) {

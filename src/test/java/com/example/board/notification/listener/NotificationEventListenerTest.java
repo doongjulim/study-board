@@ -1,6 +1,7 @@
 package com.example.board.notification.listener;
 
 import com.example.board.comment.event.CommentAddedEvent;
+import com.example.board.notification.domain.NotificationType;
 import com.example.board.notification.service.NotificationService;
 import com.example.board.plan.event.PlanReminderEvent;
 import com.example.board.plan.event.PlanSharedEvent;
@@ -39,7 +40,7 @@ class NotificationEventListenerTest {
         listener.handleCommentAdded(new CommentAddedEvent(7L, "댓글러", "면접 후기", "/posts/3"));
 
         then(notificationService).should()
-                .notify(eq(7L), contains("면접 후기"), eq("/posts/3"));
+                .notify(eq(7L), eq(NotificationType.COMMENT), contains("면접 후기"), eq("/posts/3"));
     }
 
     @Test
@@ -48,6 +49,6 @@ class NotificationEventListenerTest {
         listener.handlePlanReminder(new PlanReminderEvent(1L, 7L, "영어 스터디", LocalTime.of(10, 5)));
 
         then(notificationService).should()
-                .notify(eq(7L), contains("영어 스터디"), eq("/plans/daily"));
+                .notify(eq(7L), eq(NotificationType.REMINDER), contains("영어 스터디"), eq("/plans/daily"));
     }
 }

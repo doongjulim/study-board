@@ -89,6 +89,14 @@ public class Plan {
         return seriesId != null;
     }
 
+    /** 시작 시각(날짜+시간). 시간이 없는 종일 일정은 없다 */
+    public LocalDateTime startsAt() {
+        if (startTime == null) {
+            throw new IllegalStateException("종일 일정에는 시작 시각이 없습니다.");
+        }
+        return planDate.atTime(startTime);
+    }
+
     /** 계획된 공부 시간(분). 종일 일정처럼 시간이 없으면 0분으로 본다 */
     public long getStudyMinutes() {
         if (startTime == null || endTime == null) {

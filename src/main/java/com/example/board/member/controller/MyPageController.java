@@ -4,6 +4,7 @@ import com.example.board.auth.AuthCookies;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.exception.LoginFailedException;
 import com.example.board.member.domain.Member;
+import com.example.board.member.dto.NotificationSettingForm;
 import com.example.board.member.dto.PasswordChangeForm;
 import com.example.board.member.dto.ProfileForm;
 import com.example.board.member.exception.DuplicateMemberException;
@@ -54,6 +55,20 @@ public class MyPageController {
             return backToPage(model, member);
         }
         redirectAttributes.addFlashAttribute("message", "프로필을 수정했습니다.");
+        return "redirect:/me";
+    }
+
+    @PostMapping("/notifications")
+    public String updateNotificationSetting(@Valid @ModelAttribute NotificationSettingForm notificationSettingForm,
+                                            BindingResult bindingResult,
+                                            @AuthenticationPrincipal MemberPrincipal principal,
+                                            Model model,
+                                            RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            return backToPage(model, memberService.findActive(principal.id()));
+        }
+        memberService.updateNotificationSetting(principal.id(), notificationSettingForm);
+        redirectAttributes.addFlashAttribute("message", "알림 설정을 저장했습니다.");
         return "redirect:/me";
     }
 
@@ -113,6 +128,8 @@ public class MyPageController {
         model.addAttribute("member", member);
         model.addAttribute("profileForm", toForm(member));
         model.addAttribute("passwordChangeForm", new PasswordChangeForm());
+        model.addAttribute("notificationSettingForm",
+                NotificationSettingForm.from(member.getNotificationPreference()));
     }
 
     private void fillMissingForms(Model model, Member member) {
@@ -121,6 +138,10 @@ public class MyPageController {
         }
         if (!model.containsAttribute("passwordChangeForm")) {
             model.addAttribute("passwordChangeForm", new PasswordChangeForm());
+        }
+        if (!model.containsAttribute("notificationSettingForm")) {
+            model.addAttribute("notificationSettingForm",
+                    NotificationSettingForm.from(member.getNotificationPreference()));
         }
     }
 

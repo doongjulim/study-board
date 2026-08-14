@@ -1,7 +1,9 @@
 package com.example.board.notification.service;
 
+import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.notification.domain.Notification;
+import com.example.board.notification.domain.NotificationType;
 import com.example.board.notification.dto.NotificationResponse;
 import com.example.board.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,21 +27,33 @@ public class NotificationService {
     private final MemberRepository memberRepository;
     private final SseEmitterRegistry emitterRegistry;
 
-    /** 특정 회원에게 알림을 저장하고, 접속 중이면 실시간 전송한다 */
+    /**
+     * 특정 회원에게 알림을 저장하고, 접속 중이면 실시간 전송한다.
+     * 그 종류를 꺼 둔 회원에게는 아무것도 남기지 않는다 (읽지 않은 개수도 늘지 않는다).
+     */
     @Transactional
-    public void notify(Long recipientId, String message, String url) {
-        Notification saved = notificationRepository.save(
-                new Notification(memberRepository.getReferenceById(recipientId), message, url));
-        emitterRegistry.send(recipientId, EVENT_NAME, String.valueOf(saved.getId()),
-                NotificationResponse.from(saved));
+    public void notify(Long recipientId, NotificationType type, String message, String url) {
+        memberRepository.findById(recipientId)
+                .filter(recipient -> !recipient.isWithdrawn())
+                .filter(recipient -> type.allowedBy(recipient.getNotificationPreference()))
+                .ifPresent(recipient -> send(recipient, message, url));
     }
 
-    /** 발신자를 제외한 모든 회원에게 알림을 뿌린다 (플랜 공유 등 공지형) */
+    /**
+     * 발신자를 제외한 모든 회원에게 플랜 공유 소식을 뿌린다.
+     * 공유 알림을 꺼 둔 회원과 탈퇴한 회원은 조회 단계에서 걸러, 사람 수만큼 설정을 되묻지 않는다.
+     */
     @Transactional
     public void notifyAllExcept(Long exceptMemberId, String message, String url) {
-        memberRepository.findAllIds().stream()
+        memberRepository.findIdsAllowingPlanSharedNotification().stream()
                 .filter(memberId -> !memberId.equals(exceptMemberId))
-                .forEach(memberId -> notify(memberId, message, url));
+                .forEach(memberId -> send(memberRepository.getReferenceById(memberId), message, url));
+    }
+
+    private void send(Member recipient, String message, String url) {
+        Notification saved = notificationRepository.save(new Notification(recipient, message, url));
+        emitterRegistry.send(recipient.getId(), EVENT_NAME, String.valueOf(saved.getId()),
+                NotificationResponse.from(saved));
     }
 
     /**

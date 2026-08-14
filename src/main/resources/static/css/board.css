@@ -454,6 +454,9 @@ table.board { min-width: 480px; }
 /* ── 마이페이지 ────────────────────────────────── */
 .form-card + .form-card { margin-top: 20px; }
 .form-card .stat-title { margin-top: 0; }
+/* 체크박스는 라벨 전체가 클릭 영역이 되도록 한 줄로 묶는다 */
+.check-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 400; }
+.check-row input[type="checkbox"] { width: auto; margin: 0; }
 /* 되돌릴 수 없는 작업은 시각적으로도 구분해 실수를 줄인다 */
 .danger-zone { border-color: var(--danger); }
 .danger-zone .stat-title { color: var(--danger); }

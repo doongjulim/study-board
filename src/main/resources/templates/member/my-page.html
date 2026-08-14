@@ -40,6 +40,46 @@
         </div>
     </form>
 
+    <!-- 알림 -->
+    <form class="form-card" method="post" th:object="${notificationSettingForm}"
+          th:action="@{/me/notifications}">
+        <h3 class="stat-title">알림</h3>
+
+        <div class="form-group check-row">
+            <label>
+                <input type="checkbox" th:field="*{reminderEnabled}">
+                일정 시작 전 리마인더 받기
+            </label>
+        </div>
+
+        <div class="form-group">
+            <label for="reminderLeadMinutes">몇 분 전에 알릴까요</label>
+            <input type="number" id="reminderLeadMinutes" th:field="*{reminderLeadMinutes}"
+                   min="0" max="60" step="5">
+            <p class="hint">0 으로 두면 시작 시각에 알립니다. 최대 60분 전까지 가능합니다.</p>
+            <p class="error" th:if="${#fields.hasErrors('reminderLeadMinutes')}"
+               th:errors="*{reminderLeadMinutes}"></p>
+        </div>
+
+        <div class="form-group check-row">
+            <label>
+                <input type="checkbox" th:field="*{planSharedEnabled}">
+                다른 회원이 플랜을 공유했을 때 알림 받기
+            </label>
+        </div>
+
+        <div class="form-group check-row">
+            <label>
+                <input type="checkbox" th:field="*{commentEnabled}">
+                내 글·플랜에 댓글이 달렸을 때 알림 받기
+            </label>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">알림 설정 저장</button>
+        </div>
+    </form>
+
     <!-- 비밀번호 -->
     <form class="form-card" method="post" th:object="${passwordChangeForm}" th:action="@{/me/password}">
         <h3 class="stat-title">비밀번호 변경</h3>

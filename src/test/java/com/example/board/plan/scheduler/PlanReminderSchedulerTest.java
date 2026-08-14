@@ -21,6 +21,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,11 +46,11 @@ class PlanReminderSchedulerTest {
     }
 
     @Test
-    @DisplayName("10분 내에 시작하는 플랜에 리마인더 이벤트를 발행하고 재발송을 막는다")
+    @DisplayName("알림 시점이 된 플랜에 리마인더 이벤트를 발행하고 재발송을 막는다")
     void sendReminder() {
         Plan plan = plan("영어 스터디", TODAY, LocalTime.of(10, 5));
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
-                TODAY, LocalTime.of(10, 0), LocalTime.of(10, 10)))
+                TODAY, LocalTime.of(10, 0), LocalTime.of(11, 0)))
                 .willReturn(List.of(plan));
 
         scheduler.sendUpcomingPlanReminders(LocalDateTime.of(2026, 7, 9, 10, 0));
@@ -83,7 +84,7 @@ class PlanReminderSchedulerTest {
         then(planRepository).should().findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
                 TODAY, LocalTime.of(23, 55), LocalTime.MAX);
         then(planRepository).should().findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
-                TOMORROW, LocalTime.MIN, LocalTime.of(0, 5));
+                TOMORROW, LocalTime.MIN, LocalTime.of(0, 55));
     }
 
     @Test
@@ -93,7 +94,7 @@ class PlanReminderSchedulerTest {
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
                 TODAY, LocalTime.of(23, 55), LocalTime.MAX)).willReturn(List.of());
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
-                TOMORROW, LocalTime.MIN, LocalTime.of(0, 5))).willReturn(List.of(earlyMorningPlan));
+                TOMORROW, LocalTime.MIN, LocalTime.of(0, 55))).willReturn(List.of(earlyMorningPlan));
 
         scheduler.sendUpcomingPlanReminders(LocalDateTime.of(2026, 7, 9, 23, 55));
 
@@ -111,12 +112,57 @@ class PlanReminderSchedulerTest {
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
                 TODAY, LocalTime.of(23, 55), LocalTime.MAX)).willReturn(List.of(tonightPlan));
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
-                TOMORROW, LocalTime.MIN, LocalTime.of(0, 5))).willReturn(List.of(earlyMorningPlan));
+                TOMORROW, LocalTime.MIN, LocalTime.of(0, 55))).willReturn(List.of(earlyMorningPlan));
 
         scheduler.sendUpcomingPlanReminders(LocalDateTime.of(2026, 7, 9, 23, 55));
 
         then(eventPublisher).should(times(2)).publishEvent(any(PlanReminderEvent.class));
         assertThat(tonightPlan.isReminderSent()).isTrue();
         assertThat(earlyMorningPlan.isReminderSent()).isTrue();
+    }
+
+    @Test
+    @DisplayName("아직 그 회원의 알림 시점이 아니면 보내지 않고 발송됨으로도 표시하지 않는다")
+    void beforeMemberLeadTime() {
+        // 기본 설정은 10분 전 - 40분 뒤 일정은 아직 이르다
+        Plan plan = plan("영어 스터디", TODAY, LocalTime.of(10, 40));
+        given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
+                TODAY, LocalTime.of(10, 0), LocalTime.of(11, 0)))
+                .willReturn(List.of(plan));
+
+        scheduler.sendUpcomingPlanReminders(LocalDateTime.of(2026, 7, 9, 10, 0));
+
+        assertThat(plan.isReminderSent()).isFalse();
+        then(eventPublisher).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("리드타임을 길게 잡은 회원은 더 일찍 받는다")
+    void longerLeadTime() {
+        Plan plan = plan("모의면접", TODAY, LocalTime.of(10, 40));
+        plan.getAuthor().changeNotificationPreference(true, 60, true, true);
+        given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
+                TODAY, LocalTime.of(10, 0), LocalTime.of(11, 0)))
+                .willReturn(List.of(plan));
+
+        scheduler.sendUpcomingPlanReminders(LocalDateTime.of(2026, 7, 9, 10, 0));
+
+        assertThat(plan.isReminderSent()).isTrue();
+        then(eventPublisher).should().publishEvent(any(PlanReminderEvent.class));
+    }
+
+    @Test
+    @DisplayName("리마인더를 꺼 둔 회원에게는 보내지 않는다")
+    void reminderDisabled() {
+        Plan plan = plan("영어 스터디", TODAY, LocalTime.of(10, 5));
+        plan.getAuthor().changeNotificationPreference(false, 10, true, true);
+        given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
+                TODAY, LocalTime.of(10, 0), LocalTime.of(11, 0)))
+                .willReturn(List.of(plan));
+
+        scheduler.sendUpcomingPlanReminders(LocalDateTime.of(2026, 7, 9, 10, 0));
+
+        assertThat(plan.isReminderSent()).isFalse();
+        then(eventPublisher).shouldHaveNoInteractions();
     }
 }

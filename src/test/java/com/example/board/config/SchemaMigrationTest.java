@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V15 member onboarding */
-    private static final int EXPECTED_MIGRATIONS = 15;
+    /** V1 init ~ V16 member notification preference */
+    private static final int EXPECTED_MIGRATIONS = 16;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -130,7 +130,21 @@ class SchemaMigrationTest {
     }
 
     @Test
-    @DisplayName("V1~V15 가 H2 에서 모두 실행된다")
+    @DisplayName("V16: 기존 회원은 알림이 모두 켜진 상태로 시작한다")
+    void notificationDefaults() {
+        Long ownerId = createMember("noisy");
+
+        Integer allOn = jdbc.queryForObject("""
+                select count(*) from member
+                where id = ? and reminder_enabled = true and reminder_lead_minutes = 10
+                  and plan_shared_enabled = true and comment_enabled = true
+                """, Integer.class, ownerId);
+
+        assertThat(allOn).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("V1~V16 이 H2 에서 모두 실행된다")
     void allMigrationsApply() {
         // SQL 이 깨져 있으면 migrate() 단계에서 FlywayException 이 터지므로, 여기 왔다면 전부 성공한 것이다
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);
