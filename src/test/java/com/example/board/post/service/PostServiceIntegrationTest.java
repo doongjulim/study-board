@@ -122,7 +122,7 @@ class PostServiceIntegrationTest {
         postService.create(form("JPA 활용", "내용"), author.getId());
 
         Page<PostSummary> result = postService.findAll("spring",
-                SearchType.TITLE, PageRequest.of(0, 10));
+                SearchType.TITLE, null, PageRequest.of(0, 10));
 
         assertThat(result.getContent())
                 .isNotEmpty()
@@ -135,7 +135,7 @@ class PostServiceIntegrationTest {
         postService.create(form("아무제목", "본문에 Spring 키워드가 있음"), author.getId());
 
         Page<PostSummary> result = postService.findAll("spring",
-                com.example.board.post.dto.SearchType.TITLE_CONTENT, PageRequest.of(0, 10));
+                com.example.board.post.dto.SearchType.TITLE_CONTENT, null, PageRequest.of(0, 10));
 
         assertThat(result.getContent())
                 .anyMatch(s -> s.title().equals("아무제목"));
@@ -150,7 +150,7 @@ class PostServiceIntegrationTest {
         postService.create(form("제목B", "내용"), park.getId());
 
         Page<PostSummary> result = postService.findAll("김코딩",
-                com.example.board.post.dto.SearchType.WRITER, PageRequest.of(0, 10));
+                com.example.board.post.dto.SearchType.WRITER, null, PageRequest.of(0, 10));
 
         assertThat(result.getContent())
                 .isNotEmpty()
