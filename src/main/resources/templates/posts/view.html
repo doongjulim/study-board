@@ -5,15 +5,33 @@
 <main class="container">
     <div th:if="${message}" class="flash" th:text="${message}"></div>
 
-    <h1 class="post-title" th:text="${post.title}">제목</h1>
+    <h1 class="post-title">
+        <span class="tag-category" th:text="${post.category.label}">분류</span>
+        <span th:text="${post.title}">제목</span>
+    </h1>
     <div class="post-meta">
         <span th:text="'작성자: ' + ${post.author.nickname}"></span>
+        <span th:text="'조회 ' + ${post.viewCount}"></span>
         <span th:text="'작성일: ' + ${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"></span>
         <span th:if="${post.updatedAt != null and !post.updatedAt.equals(post.createdAt)}"
               th:text="'수정일: ' + ${#temporals.format(post.updatedAt, 'yyyy-MM-dd HH:mm')}"></span>
     </div>
 
-    <div class="post-body" th:text="${post.content}">내용</div>
+    <!--
+      마크다운을 그린 HTML 이라 utext 로 넣는다.
+      이 값은 MarkdownRenderer 가 허용 목록으로 살균한 뒤에만 모델에 담긴다 - 원문을 그대로 넣으면 XSS 다.
+    -->
+    <div class="post-body markdown" th:utext="${contentHtml}">내용</div>
+
+    <!-- 좋아요: 로그인한 사람만 누를 수 있고, 내가 누른 상태가 바로 보여야 한다 -->
+    <div class="like-box">
+        <form th:if="${currentMember != null}" th:action="@{/posts/{id}/like(id=${post.id})}" method="post">
+            <button type="submit" class="btn like-btn" th:classappend="${liked} ? 'on'"
+                    th:text="(${liked} ? '♥ 좋아요 ' : '♡ 좋아요 ') + ${post.likeCount}">♡ 좋아요 0</button>
+        </form>
+        <span th:if="${currentMember == null}" class="like-btn muted"
+              th:text="'♡ 좋아요 ' + ${post.likeCount}">♡ 좋아요 0</span>
+    </div>
 
     <div class="attach" th:if="${!post.files.isEmpty()}">
         <h3>첨부파일</h3>

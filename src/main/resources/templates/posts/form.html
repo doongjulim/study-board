@@ -13,8 +13,20 @@
             <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
         </div>
         <div class="form-group">
+            <label for="category">분류</label>
+            <select id="category" class="select-input" th:field="*{category}">
+                <option th:each="item : ${categories}"
+                        th:value="${item}" th:text="${item.label}"></option>
+            </select>
+        </div>
+        <div class="form-group">
             <label for="content">내용</label>
-            <textarea id="content" th:field="*{content}" placeholder="내용을 입력하세요"></textarea>
+            <textarea id="content" th:field="*{content}"
+                      placeholder="내용을 입력하세요 (마크다운으로 씁니다)"></textarea>
+            <p class="hint">
+                마크다운을 쓸 수 있어요 — <code>**굵게**</code>, <code># 제목</code>,
+                <code>- 목록</code>, <code>[링크](주소)</code>, <code>```코드```</code>
+            </p>
             <p class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
         </div>
         <div class="form-group">

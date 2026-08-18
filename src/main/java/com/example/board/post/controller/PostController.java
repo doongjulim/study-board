@@ -3,8 +3,10 @@ package com.example.board.post.controller;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.service.CommentService;
+import com.example.board.common.markdown.MarkdownRenderer;
 import com.example.board.common.web.PageBlock;
 import com.example.board.post.domain.Post;
+import com.example.board.post.domain.PostCategory;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.PostSummary;
 import com.example.board.post.dto.SearchType;
@@ -39,38 +41,65 @@ public class PostController {
     /** 주간 인증글 초안 생성을 위한 읽기 전용 의존 */
     private final WeeklyReportService weeklyReportService;
 
+    /** 분류 선택지는 목록·작성·수정 화면이 모두 쓰므로 한곳에서 채운다 */
+    @ModelAttribute("categories")
+    public PostCategory[] categories() {
+        return PostCategory.values();
+    }
+
     /** 목록 (검색 + 정렬 + 페이징) */
     @GetMapping
     public String list(@RequestParam(required = false) String keyword,
                        @RequestParam(required = false, defaultValue = "TITLE") SearchType searchType,
+                       @RequestParam(required = false) PostCategory category,
                        @RequestParam(required = false, defaultValue = "latest") String sort,
                        @PageableDefault(size = 10) Pageable pageable,
+                       @AuthenticationPrincipal MemberPrincipal principal,
                        Model model) {
         Sort order = switch (sort) {
             case "oldest" -> Sort.by(Sort.Direction.ASC, "id");
             case "title" -> Sort.by(Sort.Direction.ASC, "title");
+            case "popular" -> Sort.by(Sort.Direction.DESC, "likeCount").and(Sort.by(Sort.Direction.DESC, "id"));
             default -> Sort.by(Sort.Direction.DESC, "id");
         };
         Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), order);
 
-        Page<PostSummary> posts = postService.findAll(keyword, searchType, sorted);
+        Page<PostSummary> posts = postService.findAll(keyword, searchType, category, sorted);
+        Long viewerId = (principal != null) ? principal.id() : null;
 
         model.addAttribute("posts", posts);
         model.addAttribute("keyword", keyword);
         model.addAttribute("searchType", searchType);
         model.addAttribute("searchTypes", SearchType.values());
+        model.addAttribute("category", category);
         model.addAttribute("sort", sort);
+        model.addAttribute("likedPostIds", postService.findLikedPostIds(viewerId, posts.getContent()));
         model.addAttribute("pageBlock", PageBlock.of(posts));
         return "posts/list";
     }
 
-    /** 상세 */
+    /** 상세 - 여는 김에 조회수를 올린다 (작성자 본인의 조회는 세지 않는다) */
     @GetMapping("/{id}")
-    public String view(@PathVariable Long id, Model model) {
-        model.addAttribute("post", postService.findById(id));
+    public String view(@PathVariable Long id,
+                       @AuthenticationPrincipal MemberPrincipal principal,
+                       Model model) {
+        Long viewerId = (principal != null) ? principal.id() : null;
+        Post post = postService.read(id, viewerId);
+
+        model.addAttribute("post", post);
+        model.addAttribute("contentHtml", MarkdownRenderer.toSafeHtml(post.getContent()));
+        model.addAttribute("liked", postService.hasLiked(id, viewerId));
         model.addAttribute("comments", commentService.findForPost(id));
         model.addAttribute("commentForm", new CommentForm());
         return "posts/view";
+    }
+
+    /** 좋아요 켜기·끄기 */
+    @PostMapping("/{id}/like")
+    public String toggleLike(@PathVariable Long id,
+                             @AuthenticationPrincipal MemberPrincipal principal) {
+        postService.toggleLike(id, principal.id());
+        return "redirect:/posts/" + id;
     }
 
     /**

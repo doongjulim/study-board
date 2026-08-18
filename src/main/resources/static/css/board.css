@@ -601,6 +601,37 @@ header.site .nickname:hover { color: var(--accent); }
 .crumb a { color: var(--ink-soft); text-decoration: none; }
 .crumb a:hover { color: var(--accent); }
 
+/* ── 게시판: 분류·좋아요·마크다운 ───────────────── */
+.board .num-col { width: 4.5rem; }
+.board td.num.liked { color: var(--danger); font-weight: 700; }
+.like-box { margin: 20px 0; }
+.like-btn { font-size: .95rem; }
+.like-btn.on { border-color: var(--danger); color: var(--danger); font-weight: 700; }
+.like-btn.muted { display: inline-block; color: var(--ink-soft); cursor: default; }
+
+/* 마크다운 본문 - 사용자가 만든 구조라 기본 여백을 여기서 통제한다 */
+.markdown { line-height: 1.75; }
+.markdown h1, .markdown h2, .markdown h3 { margin: 1.4em 0 .5em; line-height: 1.35; }
+.markdown h1 { font-size: 1.5rem; }
+.markdown h2 { font-size: 1.28rem; }
+.markdown h3 { font-size: 1.1rem; }
+.markdown p { margin: .7em 0; }
+.markdown ul, .markdown ol { padding-left: 1.4em; margin: .7em 0; }
+.markdown li { margin: .25em 0; }
+.markdown blockquote { margin: .9em 0; padding: 2px 14px; border-left: 3px solid var(--accent);
+  color: var(--ink-soft); }
+.markdown code { background: var(--accent-soft); border-radius: 4px; padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; }
+/* 코드 블록은 줄바꿈을 그대로 두고, 긴 줄은 가로로 민다 */
+.markdown pre { background: var(--accent-soft); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 14px; overflow-x: auto; margin: .9em 0; }
+.markdown pre code { background: none; padding: 0; }
+.markdown img { max-width: 100%; height: auto; border-radius: 8px; }
+.markdown table { border-collapse: collapse; margin: .9em 0; width: 100%; }
+.markdown th, .markdown td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; }
+.markdown hr { border: 0; border-top: 1px solid var(--line); margin: 1.4em 0; }
+.markdown a { color: var(--accent); }
+
 /* ── 캘린더 연동 ───────────────────────────────── */
 /* 주소는 통째로 복사하는 값이라 줄바꿈 없이 한 줄로 두고, 눌러서 전체 선택되게 한다 */
 .feed-url { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;

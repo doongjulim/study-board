@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V20 member calendar token */
-    private static final int EXPECTED_MIGRATIONS = 20;
+    /** V1 init ~ V21 post category·like·view */
+    private static final int EXPECTED_MIGRATIONS = 21;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -258,8 +258,65 @@ class SchemaMigrationTest {
                 .isInstanceOf(DataAccessException.class);
     }
 
+    private Long createPost(Long authorId, String title) {
+        jdbc.update("insert into post (title, content, author_id) values (?, ?, ?)",
+                title, "본문", authorId);
+        return jdbc.queryForObject("select id from post where title = ?", Long.class, title);
+    }
+
     @Test
-    @DisplayName("V1~V20 이 H2 에서 모두 실행된다")
+    @DisplayName("V21: 분류를 정하지 않고 쓴 글은 자유 게시글이다 (분류가 없던 시절의 글과 같은 자리)")
+    void postDefaultsToFreeCategory() {
+        Long authorId = createMember("writer-1");
+        Long postId = createPost(authorId, "분류 없는 글");
+
+        String category = jdbc.queryForObject(
+                "select category from post where id = ?", String.class, postId);
+        assertThat(category).isEqualTo("FREE");
+    }
+
+    @Test
+    @DisplayName("V21: 같은 사람이 같은 글에 좋아요를 두 번 누를 수 없다 (동시 클릭 최종 방어선)")
+    void rejectsDuplicateLike() {
+        Long authorId = createMember("writer-2");
+        Long postId = createPost(authorId, "좋아요 글");
+        jdbc.update("insert into post_like (post_id, member_id) values (?, ?)", postId, authorId);
+
+        assertThatThrownBy(() -> jdbc.update(
+                "insert into post_like (post_id, member_id) values (?, ?)", postId, authorId))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    @DisplayName("V21: 글을 지우면 좋아요도 함께 사라진다")
+    void deletesLikesWithPost() {
+        Long authorId = createMember("writer-3");
+        Long postId = createPost(authorId, "지울 글");
+        jdbc.update("insert into post_like (post_id, member_id) values (?, ?)", postId, authorId);
+
+        jdbc.update("delete from post where id = ?", postId);
+
+        Integer remaining = jdbc.queryForObject(
+                "select count(*) from post_like where post_id = ?", Integer.class, postId);
+        assertThat(remaining).isZero();
+    }
+
+    @Test
+    @DisplayName("V21: 조회수·좋아요 수는 0 에서 시작한다")
+    void countersStartAtZero() {
+        Long authorId = createMember("writer-4");
+        Long postId = createPost(authorId, "새 글");
+
+        Integer views = jdbc.queryForObject(
+                "select view_count from post where id = ?", Integer.class, postId);
+        Integer likes = jdbc.queryForObject(
+                "select like_count from post where id = ?", Integer.class, postId);
+        assertThat(views).isZero();
+        assertThat(likes).isZero();
+    }
+
+    @Test
+    @DisplayName("V1~V21 이 H2 에서 모두 실행된다")
     void allMigrationsApply() {
         // SQL 이 깨져 있으면 migrate() 단계에서 FlywayException 이 터지므로, 여기 왔다면 전부 성공한 것이다
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);

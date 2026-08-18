@@ -8,6 +8,7 @@ import com.example.board.post.domain.Post;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.PostSummary;
 import com.example.board.post.repository.AttachedFileRepository;
+import com.example.board.post.repository.PostLikeRepository;
 import com.example.board.post.repository.PostRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import static org.mockito.BDDMockito.*;
 class PostServiceTest {
 
     @Mock PostRepository postRepository;
+    @Mock PostLikeRepository postLikeRepository;
     @Mock AttachedFileRepository fileRepository;
     @Mock MemberRepository memberRepository;
     @Mock FileStore fileStore;
@@ -57,72 +59,72 @@ class PostServiceTest {
     void findAll_noKeyword() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<PostSummary> page = new PageImpl<>(List.of());
-        given(postRepository.findSummaries(pageable)).willReturn(page);
+        given(postRepository.findSummaries(null, pageable)).willReturn(page);
 
-        Page<PostSummary> result = postService.findAll(null, com.example.board.post.dto.SearchType.TITLE, pageable);
+        Page<PostSummary> result = postService.findAll(null, com.example.board.post.dto.SearchType.TITLE, null, pageable);
 
         assertThat(result).isSameAs(page);
-        then(postRepository).should(never()).findSummariesByTitle(any(), any());
+        then(postRepository).should(never()).findSummariesByTitle(any(), any(), any());
     }
 
     @Test
     @DisplayName("keyword 가 공백이면 전체 조회한다")
     void findAll_blankKeyword() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findSummaries(pageable)).willReturn(Page.empty());
+        given(postRepository.findSummaries(null, pageable)).willReturn(Page.empty());
 
-        postService.findAll("   ", com.example.board.post.dto.SearchType.TITLE, pageable);
+        postService.findAll("   ", com.example.board.post.dto.SearchType.TITLE, null, pageable);
 
-        then(postRepository).should().findSummaries(pageable);
-        then(postRepository).should(never()).findSummariesByTitle(any(), any());
+        then(postRepository).should().findSummaries(null, pageable);
+        then(postRepository).should(never()).findSummariesByTitle(any(), any(), any());
     }
 
     @Test
     @DisplayName("keyword 가 있으면 제목 검색을 한다")
     void findAll_withKeyword() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findSummariesByTitle("spring", pageable))
+        given(postRepository.findSummariesByTitle("spring", null, pageable))
                 .willReturn(Page.empty());
 
-        postService.findAll("spring", com.example.board.post.dto.SearchType.TITLE, pageable);
+        postService.findAll("spring", com.example.board.post.dto.SearchType.TITLE, null, pageable);
 
-        then(postRepository).should().findSummariesByTitle("spring", pageable);
+        then(postRepository).should().findSummariesByTitle("spring", null, pageable);
     }
 
     @Test
     @DisplayName("TITLE_CONTENT 검색 타입이면 제목+내용 검색을 한다")
     void findAll_titleContent() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findSummariesByTitleOrContent("spring", pageable))
+        given(postRepository.findSummariesByTitleOrContent("spring", null, pageable))
                 .willReturn(Page.empty());
 
-        postService.findAll("spring", com.example.board.post.dto.SearchType.TITLE_CONTENT, pageable);
+        postService.findAll("spring", com.example.board.post.dto.SearchType.TITLE_CONTENT, null, pageable);
 
-        then(postRepository).should().findSummariesByTitleOrContent("spring", pageable);
+        then(postRepository).should().findSummariesByTitleOrContent("spring", null, pageable);
     }
 
     @Test
     @DisplayName("WRITER 검색 타입이면 작성자 닉네임 검색을 한다")
     void findAll_writer() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findSummariesByAuthorNickname("tester", pageable))
+        given(postRepository.findSummariesByAuthorNickname("tester", null, pageable))
                 .willReturn(Page.empty());
 
-        postService.findAll("tester", com.example.board.post.dto.SearchType.WRITER, pageable);
+        postService.findAll("tester", com.example.board.post.dto.SearchType.WRITER, null, pageable);
 
-        then(postRepository).should().findSummariesByAuthorNickname("tester", pageable);
+        then(postRepository).should().findSummariesByAuthorNickname("tester", null, pageable);
     }
 
     @Test
     @DisplayName("searchType 이 null 이면 제목 검색으로 동작한다")
     void findAll_nullSearchType() {
         Pageable pageable = PageRequest.of(0, 10);
-        given(postRepository.findSummariesByTitle("spring", pageable))
+        given(postRepository.findSummariesByTitle("spring", null, pageable))
                 .willReturn(Page.empty());
 
-        postService.findAll("spring", null, pageable);
+        postService.findAll("spring", null, null, pageable);
 
-        then(postRepository).should().findSummariesByTitle("spring", pageable);
+        then(postRepository).should().findSummariesByTitle("spring", null, pageable);
     }
 
     // ── findById ──────────────────────────────────────────────

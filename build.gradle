@@ -25,6 +25,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation 'org.flywaydb:flyway-core'
+    // 마크다운: 렌더링(commonmark)과 살균(jsoup)을 나눠서 쓴다.
+    // 렌더러는 원본에 든 HTML 을 그대로 통과시키므로, 살균을 거치지 않으면 그대로 XSS 가 된다.
+    implementation 'org.commonmark:commonmark:0.22.0'
+    implementation 'org.jsoup:jsoup:1.18.1'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'

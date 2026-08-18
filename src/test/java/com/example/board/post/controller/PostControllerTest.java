@@ -9,6 +9,7 @@ import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
 import com.example.board.member.domain.Member;
 import com.example.board.post.domain.Post;
+import com.example.board.post.domain.PostCategory;
 import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.SearchType;
 import com.example.board.post.service.PostService;
@@ -66,7 +67,7 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /posts - 목록 페이지가 200 을 반환한다")
     void list() throws Exception {
-        given(postService.findAll(isNull(), any(SearchType.class), any(Pageable.class)))
+        given(postService.findAll(isNull(), any(SearchType.class), any(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/posts"))
@@ -78,7 +79,7 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /posts?keyword=spring - keyword 가 모델에 담긴다")
     void list_withKeyword() throws Exception {
-        given(postService.findAll(eq("spring"), any(SearchType.class), any(Pageable.class)))
+        given(postService.findAll(eq("spring"), any(SearchType.class), any(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/posts").param("keyword", "spring"))
@@ -89,7 +90,7 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /posts?searchType=TITLE_CONTENT - 검색 타입이 서비스로 전달된다")
     void list_withSearchType() throws Exception {
-        given(postService.findAll(eq("spring"), eq(SearchType.TITLE_CONTENT), any(Pageable.class)))
+        given(postService.findAll(eq("spring"), eq(SearchType.TITLE_CONTENT), any(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/posts")
@@ -102,7 +103,7 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /posts?sort=oldest - 정렬 파라미터가 모델에 담긴다")
     void list_withSort() throws Exception {
-        given(postService.findAll(isNull(), any(SearchType.class), any(Pageable.class)))
+        given(postService.findAll(isNull(), any(SearchType.class), any(), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/posts").param("sort", "oldest"))
@@ -113,7 +114,7 @@ class PostControllerTest {
     @Test
     @DisplayName("존재하지 않는 게시글 조회 시 404 페이지를 반환한다")
     void view_notFound() throws Exception {
-        given(postService.findById(999L))
+        given(postService.read(eq(999L), any()))
                 .willThrow(new IllegalArgumentException("게시글이 존재하지 않습니다. id=999"));
 
         mockMvc.perform(get("/posts/999"))
@@ -121,17 +122,66 @@ class PostControllerTest {
                 .andExpect(view().name("error/404"));
     }
 
+    @Test
+    @DisplayName("GET /posts?category=QUESTION - 분류를 그대로 서비스에 넘긴다")
+    void listFiltersByCategory() throws Exception {
+        given(postService.findAll(any(), any(SearchType.class), any(), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/posts").param("category", "QUESTION"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("category", PostCategory.QUESTION))
+                .andExpect(model().attributeExists("categories", "likedPostIds"));
+
+        then(postService).should().findAll(any(), any(SearchType.class),
+                eq(PostCategory.QUESTION), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("POST /posts/{id}/like - 좋아요를 전환하고 상세로 돌아간다")
+    void toggleLike() throws Exception {
+        mockMvc.perform(post("/posts/1/like").with(csrf()).with(memberAuth()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/posts/1"));
+
+        then(postService).should().toggleLike(1L, 1L);
+    }
+
+    @Test
+    @DisplayName("POST /posts/{id}/like - 로그인 없이는 누를 수 없다")
+    void likeRequiresLogin() throws Exception {
+        mockMvc.perform(post("/posts/1/like").with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/login*"));
+
+        then(postService).should(never()).toggleLike(any(), any());
+    }
+
     // ── GET /posts/{id} ───────────────────────────────────────
 
     @Test
     @DisplayName("GET /posts/{id} - 상세 페이지가 200 을 반환한다")
     void viewDetail() throws Exception {
-        given(postService.findById(1L)).willReturn(postFixture());
+        given(postService.read(eq(1L), any())).willReturn(postFixture());
 
         mockMvc.perform(get("/posts/1"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/view"))
-                .andExpect(model().attributeExists("post"));
+                .andExpect(model().attributeExists("post", "contentHtml", "liked"));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{id} - 본문의 마크다운은 살균된 HTML 로 모델에 담긴다")
+    void detailSanitizesMarkdown() throws Exception {
+        Post dangerous = new Post("제목", "**굵게**<script>alert(1)</script>", postFixture().getAuthor());
+        given(postService.read(eq(2L), any())).willReturn(dangerous);
+
+        mockMvc.perform(get("/posts/2"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("contentHtml",
+                        org.hamcrest.Matchers.allOf(
+                                org.hamcrest.Matchers.containsString("<strong>굵게</strong>"),
+                                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("<script")))));
     }
 
     // ── GET /posts/new ────────────────────────────────────────

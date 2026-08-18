@@ -109,7 +109,7 @@ class PostServiceIntegrationTest {
         }
 
         PageRequest pageable = PageRequest.of(0, 10, Sort.by("id").descending());
-        Page<PostSummary> page = postService.findAll(null, SearchType.TITLE, pageable);
+        Page<PostSummary> page = postService.findAll(null, SearchType.TITLE, null, pageable);
 
         assertThat(page.getContent()).hasSize(10);
         assertThat(page.getTotalElements()).isGreaterThanOrEqualTo(15);
