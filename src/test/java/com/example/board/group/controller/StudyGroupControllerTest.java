@@ -9,6 +9,9 @@ import com.example.board.config.SecurityConfig;
 import com.example.board.group.domain.StudyGroup;
 import com.example.board.group.dto.GroupForm;
 import com.example.board.group.service.StudyGroupService;
+import com.example.board.stats.domain.GroupRanking;
+import com.example.board.stats.domain.WeeklyChallenge;
+import com.example.board.stats.service.GroupStatsService;
 import com.example.board.member.domain.Member;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +20,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,6 +29,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -36,19 +44,31 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(StudyGroupController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class,
+        StudyGroupControllerTest.FixedClockConfig.class})
 class StudyGroupControllerTest {
 
     private static final long MEMBER_ID = 1L;
 
+    @TestConfiguration
+    static class FixedClockConfig {
+        static final LocalDate TODAY = LocalDate.of(2026, 8, 12);
+
+        @Bean
+        Clock clock() {
+            return Clock.fixed(TODAY.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+        }
+    }
+
     @Autowired MockMvc mockMvc;
     @MockBean StudyGroupService studyGroupService;
+    @MockBean GroupStatsService groupStatsService;
     @MockBean TokenService tokenService;
 
     /** 호출 여부를 확인하는 테스트가 있으므로 실행 순서와 무관하게 깨끗한 상태에서 시작한다 */
     @BeforeEach
     void resetMocks() {
-        Mockito.reset(studyGroupService);
+        Mockito.reset(studyGroupService, groupStatsService);
     }
 
     private static RequestPostProcessor memberAuth() {
@@ -132,15 +152,34 @@ class StudyGroupControllerTest {
     }
 
     @Test
-    @DisplayName("GET /groups/{id} - 멤버에게 상세와 초대 코드를 보여 준다")
+    @DisplayName("GET /groups/{id} - 멤버에게 상세·초대 코드와 이번 주 순위를 보여 준다")
     void detail() throws Exception {
         given(studyGroupService.findGroupForMember(10L, MEMBER_ID)).willReturn(group());
         given(studyGroupService.findMembers(10L)).willReturn(List.of());
+        given(groupStatsService.weeklyRanking(eq(10L), eq(MEMBER_ID), any()))
+                .willReturn(GroupRanking.of(List.of(), MEMBER_ID, 7));
+        given(groupStatsService.weeklyChallenge(eq(10L), any()))
+                .willReturn(WeeklyChallenge.of(List.of(), FixedClockConfig.TODAY));
 
         mockMvc.perform(get("/groups/10").with(memberAuth()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("groups/detail"))
-                .andExpect(model().attributeExists("group", "members", "isOwner"));
+                .andExpect(model().attributeExists("group", "members", "isOwner", "ranking", "challenge"));
+    }
+
+    @Test
+    @DisplayName("GET /groups/{id} - 순위는 오늘이 속한 주를 기준으로 묻는다")
+    void detailAsksCurrentWeek() throws Exception {
+        given(studyGroupService.findGroupForMember(10L, MEMBER_ID)).willReturn(group());
+        given(studyGroupService.findMembers(10L)).willReturn(List.of());
+        given(groupStatsService.weeklyRanking(any(), any(), any()))
+                .willReturn(GroupRanking.of(List.of(), MEMBER_ID, 7));
+        given(groupStatsService.weeklyChallenge(any(), any()))
+                .willReturn(WeeklyChallenge.of(List.of(), FixedClockConfig.TODAY));
+
+        mockMvc.perform(get("/groups/10").with(memberAuth())).andExpect(status().isOk());
+
+        then(groupStatsService).should().weeklyRanking(10L, MEMBER_ID, FixedClockConfig.TODAY);
     }
 
     @Test

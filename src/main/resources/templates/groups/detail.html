@@ -20,6 +20,52 @@
         <p class="invite-code" th:text="${group.inviteCode}">ABCD2345</p>
     </div>
 
+    <!-- 이번 주 우리 그룹: 순위표가 그룹을 매일 열어 볼 이유가 된다 -->
+    <div class="form-card challenge-card">
+        <h3 class="stat-title">이번 주 우리 그룹</h3>
+        <p class="hint">
+            <span th:text="${#temporals.format(challenge.weekStart, 'M월 d일')}">월요일</span>부터 오늘까지
+        </p>
+        <div class="challenge-figures">
+            <div class="figure">
+                <span class="figure-value" th:text="${challenge.readableTotal}">0분</span>
+                <span class="figure-label">함께 공부한 시간</span>
+            </div>
+            <div class="figure">
+                <span class="figure-value"
+                      th:text="${challenge.achievedCount} + ' / ' + ${challenge.challengerCount}">0 / 0</span>
+                <span class="figure-label">주간 목표 달성</span>
+            </div>
+            <div class="figure">
+                <span class="figure-value" th:text="${challenge.achievementRate} + '%'">0%</span>
+                <span class="figure-label">달성률</span>
+            </div>
+        </div>
+        <!-- 막대 하나짜리 차트도 CSS 로 그린다 (외부 라이브러리 금지) -->
+        <div class="challenge-bar" role="img"
+             th:attr="aria-label='주간 목표 달성률 ' + ${challenge.achievementRate} + '퍼센트'">
+            <span class="challenge-bar-fill" th:style="'width:' + ${challenge.achievementRate} + '%'"></span>
+        </div>
+    </div>
+
+    <h3 class="stat-title">이번 주 순위</h3>
+    <p class="empty" th:if="${ranking.empty}">이번 주에는 아직 아무도 타이머를 켜지 않았어요.</p>
+    <ol class="rank-list" th:unless="${ranking.empty}">
+        <li th:each="row : ${ranking.rows}" class="rank-item" th:classappend="${row.me} ? 'mine'">
+            <span class="rank-no" th:text="${row.rank}">1</span>
+            <div class="rank-main">
+                <div class="rank-head">
+                    <span class="rank-nickname" th:text="${row.nickname}">닉네임</span>
+                    <span class="tag-goal" th:if="${row.goalMet}" title="주간 목표 달성">목표 달성</span>
+                    <span class="rank-time" th:text="${row.readableTime}">0분</span>
+                </div>
+                <div class="rank-bar">
+                    <span class="rank-bar-fill" th:style="'width:' + ${row.share} + '%'"></span>
+                </div>
+            </div>
+        </li>
+    </ol>
+
     <h3 class="stat-title">멤버</h3>
     <ul class="member-list">
         <li th:each="membership : ${members}" class="member-item">

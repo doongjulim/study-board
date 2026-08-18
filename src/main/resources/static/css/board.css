@@ -7,6 +7,8 @@
   --accent: #2f6b4f;
   --accent-soft: #eaf2ed;
   --danger: #b0453b;
+  /* 달성·성공 표시. accent 와 구분되어야 "우리 색"과 "해냈다"가 섞이지 않는다 */
+  --ok: #2e7d32;
 }
 
 * { box-sizing: border-box; }
@@ -270,8 +272,12 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
     --accent: #69b48d;
     --accent-soft: #25352c;
     --danger: #e08379;
+    --ok: #62c17d;
   }
   :root:not([data-theme="light"]) .btn-primary { color: #10150f; }
+  /* 다크모드의 accent·ok 는 밝은 녹색이라 흰 글자로는 읽히지 않는다 */
+  :root:not([data-theme="light"]) .tag-owner,
+  :root:not([data-theme="light"]) .tag-goal { color: #10150f; }
   :root:not([data-theme="light"]) .view-tabs a.on { color: #10150f; }
   :root:not([data-theme="light"]) .pagination .current { color: #10150f; }
   :root:not([data-theme="light"]) .calendar td.today .day-num { color: #10150f; }
@@ -594,6 +600,33 @@ header.site .nickname:hover { color: var(--accent); }
 .crumb { margin-bottom: 10px; font-size: .88rem; }
 .crumb a { color: var(--ink-soft); text-decoration: none; }
 .crumb a:hover { color: var(--accent); }
+
+/* ── 그룹 주간 챌린지 · 순위 ─────────────────────── */
+.challenge-card .hint { margin-top: 2px; }
+.challenge-figures { display: flex; flex-wrap: wrap; gap: 22px; margin: 12px 0 10px; }
+.figure { display: flex; flex-direction: column; gap: 2px; }
+.figure-value { font-size: 1.35rem; font-weight: 700; color: var(--accent); }
+.figure-label { font-size: .78rem; color: var(--ink-soft); }
+/* 달성률 막대 - 외부 차트 라이브러리 없이 CSS 로만 그린다 */
+.challenge-bar { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.challenge-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent);
+  transition: width .3s; }
+
+.rank-list { list-style: none; counter-reset: none; padding: 0; margin: 0 0 20px; }
+.rank-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border: 1px solid transparent; border-radius: 10px; }
+/* 내 줄만 테두리를 줘서 표에서 어디쯤인지 바로 찾게 한다 */
+.rank-item.mine { border-color: var(--accent); background: var(--card); }
+.rank-no { width: 1.6rem; text-align: center; font-weight: 700; color: var(--ink-soft); flex-shrink: 0; }
+.rank-item.mine .rank-no { color: var(--accent); }
+.rank-main { flex: 1; min-width: 0; }
+.rank-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+.rank-nickname { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-time { margin-left: auto; font-size: .85rem; color: var(--ink-soft); flex-shrink: 0; }
+.rank-bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.rank-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+.tag-goal { background: var(--ok); color: #fff; border-radius: 999px;
+  padding: 1px 7px; font-size: .68rem; font-weight: 700; flex-shrink: 0; }
 
 /* ── 공유 범위 선택 ─────────────────────────────── */
 /* 3단계라 토글 버튼으로는 표현되지 않는다 - 목록 안에 들어가도록 작게 */

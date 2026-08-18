@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +28,14 @@ public interface StudySessionRepository extends JpaRepository<StudySession, Long
     @EntityGraph(attributePaths = "plan")
     List<StudySession> findByOwner_IdAndStudyDateBetweenOrderByStartedAtAsc(
             Long ownerId, LocalDate from, LocalDate to);
+
+    /**
+     * 여러 회원의 기간 학습 기록 - 그룹 순위 집계에 쓴다.
+     * 합계를 SQL 로 내지 않는 이유는, 진행 중인 세션을 0분으로 보는 규칙이
+     * StudySession.minutes() 한 곳에만 있어야 하기 때문이다 (그룹은 최대 수십 명이라 양도 적다).
+     */
+    List<StudySession> findByOwner_IdInAndStudyDateBetween(
+            Collection<Long> ownerIds, LocalDate from, LocalDate to);
 
     /** 오래 켜둔 채 방치된 세션 - 자동 종료 대상 */
     List<StudySession> findByEndedAtIsNullAndStartedAtBefore(LocalDateTime threshold);
