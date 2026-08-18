@@ -36,6 +36,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             """)
     List<Long> findIdsAllowingPlanSharedNotificationIn(@Param("candidateIds") Collection<Long> candidateIds);
 
+    /** 캘린더 구독 - 로그인 없이 들어오는 요청이라 토큰만으로 주인을 찾는다 */
+    Optional<Member> findByCalendarToken(String calendarToken);
+
     boolean existsByLoginId(String loginId);
 
     boolean existsByNickname(String nickname);

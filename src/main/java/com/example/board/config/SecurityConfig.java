@@ -44,6 +44,9 @@ public class SecurityConfig {
                                 "/css/**", "/js/**", "/images/**", "/h2-console/**", "/error").permitAll()
                         // 게시판 읽기(목록·상세·첨부파일)는 공개, 쓰기는 인증 필요
                         .requestMatchers(HttpMethod.GET, "/", "/posts", "/posts/{id:\\d+}", "/files/**").permitAll()
+                        // 캘린더 구독은 구글 캘린더가 로그인 없이 읽어 가야 한다 (주소의 토큰이 곧 열쇠).
+                        // .ics 로 끝나는 경로만 열어, 같은 prefix 의 내려받기·발급은 인증 아래 남긴다
+                        .requestMatchers(HttpMethod.GET, "/calendar/*.ics").permitAll()
                         // 플래너·알림 등 나머지는 전부 로그인 필요
                         .anyRequest().authenticated())
                 // 미인증 접근은 원래 가려던 경로를 들고 로그인 페이지로 보낸다

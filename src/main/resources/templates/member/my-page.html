@@ -113,6 +113,53 @@
         </div>
     </form>
 
+    <!-- 캘린더 연동 -->
+    <section class="form-card">
+        <h3 class="stat-title">캘린더 연동</h3>
+        <p class="hint">
+            쓰던 캘린더 앱에 이 플래너를 얹을 수 있어요. 구독 주소를 구글 캘린더의
+            "URL로 캘린더 추가" 에 붙여 넣으면 계획이 자동으로 따라옵니다.
+        </p>
+
+        <div th:if="${member.hasCalendarToken()}">
+            <!-- 주소 자체가 열쇠라, 아는 사람은 계획 제목을 볼 수 있다 -->
+            <p class="hint">이 주소를 아는 사람은 내 계획 제목과 시각을 볼 수 있어요. 새어 나갔다면 재발급하세요.</p>
+            <input type="text" class="feed-url" readonly onclick="this.select()"
+                   th:value="${baseUrl} + '/calendar/' + ${member.calendarToken} + '.ics'">
+            <div class="actions">
+                <form th:action="@{/calendar/token}" method="post"
+                      onsubmit="return confirm('새 주소를 발급할까요? 지금 주소로 등록해 둔 캘린더는 더 이상 갱신되지 않습니다.');">
+                    <button type="submit" class="btn btn-sm">주소 재발급</button>
+                </form>
+                <form th:action="@{/calendar/token/revoke}" method="post"
+                      onsubmit="return confirm('구독을 끊을까요?');">
+                    <button type="submit" class="btn btn-sm btn-danger">구독 끊기</button>
+                </form>
+            </div>
+        </div>
+        <div th:unless="${member.hasCalendarToken()}" class="actions">
+            <form th:action="@{/calendar/token}" method="post">
+                <button type="submit" class="btn btn-primary">구독 주소 만들기</button>
+            </form>
+        </div>
+
+        <h4 class="export-title">내려받기</h4>
+        <p class="hint">계획을 CSV 로 받아 엑셀에서 열어 볼 수 있어요. 기간을 비우면 최근 석 달을 받습니다.</p>
+        <form th:action="@{/calendar/export.csv}" method="get" class="form-row export-form">
+            <div class="form-group">
+                <label for="export-from">시작일</label>
+                <input type="date" id="export-from" name="from">
+            </div>
+            <div class="form-group">
+                <label for="export-to">종료일</label>
+                <input type="date" id="export-to" name="to">
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn">CSV 내려받기</button>
+            </div>
+        </form>
+    </section>
+
     <!-- 탈퇴 -->
     <section class="form-card danger-zone">
         <h3 class="stat-title">회원 탈퇴</h3>

@@ -55,6 +55,17 @@ public class Member {
     /** 첫 사용 안내를 마친 시각. null 이면 아직 안 봤다 */
     private LocalDateTime onboardedAt;
 
+    /**
+     * 캘린더 구독 주소에 들어가는 토큰. 발급하지 않았으면 null 이다.
+     *
+     * <p>재설정 토큰과 달리 해시가 아니라 원문을 저장한다. 구글 캘린더에 등록할 주소를
+     * 사용자가 기기를 바꿀 때마다 다시 볼 수 있어야 하는데, 해시만 갖고 있으면
+     * 볼 때마다 재발급해야 하고 그때마다 기존 구독이 끊긴다.
+     * 대신 이 주소로 나가는 것은 본인 계획의 제목·시각뿐이고, 노출되면 재발급으로 무효화한다.</p>
+     */
+    @Column(unique = true, length = 100)
+    private String calendarToken;
+
     /** 알림 설정 - 언제·무엇을 받을지 */
     @Embedded
     private NotificationPreference notificationPreference = NotificationPreference.createDefault();
@@ -119,6 +130,8 @@ public class Member {
         this.nickname = "탈퇴한 회원" + id;
         this.password = UNUSABLE_PASSWORD;
         this.email = null;
+        // 구독 주소는 로그인 없이 열리므로, 끊지 않으면 탈퇴 후에도 계획이 계속 흘러나간다
+        this.calendarToken = null;
     }
 
     public boolean isWithdrawn() {
@@ -134,6 +147,20 @@ public class Member {
 
     public boolean isOnboarded() {
         return onboardedAt != null;
+    }
+
+    /** 구독 주소를 새로 발급한다. 다시 부르면 이전 주소는 그 즉시 무효가 된다 */
+    public void issueCalendarToken(String token) {
+        this.calendarToken = token;
+    }
+
+    /** 구독을 끊는다 - 주소가 새어 나갔을 때 되돌릴 수단이 있어야 한다 */
+    public void revokeCalendarToken() {
+        this.calendarToken = null;
+    }
+
+    public boolean hasCalendarToken() {
+        return calendarToken != null;
     }
 
     private static String blankToNull(String value) {

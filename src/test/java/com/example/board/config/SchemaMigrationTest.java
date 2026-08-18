@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V19 retrospective */
-    private static final int EXPECTED_MIGRATIONS = 19;
+    /** V1 init ~ V20 member calendar token */
+    private static final int EXPECTED_MIGRATIONS = 20;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -235,7 +235,31 @@ class SchemaMigrationTest {
     }
 
     @Test
-    @DisplayName("V1~V19 가 H2 에서 모두 실행된다")
+    @DisplayName("V20: 구독 주소를 만들지 않은 회원이 여럿이어도 유니크 제약에 걸리지 않는다")
+    void allowsManyMembersWithoutCalendarToken() {
+        createMember("no-feed-1");
+        createMember("no-feed-2");
+
+        Integer count = jdbc.queryForObject(
+                "select count(*) from member where calendar_token is null", Integer.class);
+
+        assertThat(count).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("V20: 같은 구독 토큰은 두 회원이 쓸 수 없다")
+    void rejectsDuplicateCalendarToken() {
+        Long first = createMember("feed-1");
+        Long second = createMember("feed-2");
+        jdbc.update("update member set calendar_token = ? where id = ?", "same-token", first);
+
+        assertThatThrownBy(() -> jdbc.update(
+                "update member set calendar_token = ? where id = ?", "same-token", second))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    @DisplayName("V1~V20 이 H2 에서 모두 실행된다")
     void allMigrationsApply() {
         // SQL 이 깨져 있으면 migrate() 단계에서 FlywayException 이 터지므로, 여기 왔다면 전부 성공한 것이다
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);

@@ -601,6 +601,14 @@ header.site .nickname:hover { color: var(--accent); }
 .crumb a { color: var(--ink-soft); text-decoration: none; }
 .crumb a:hover { color: var(--accent); }
 
+/* ── 캘린더 연동 ───────────────────────────────── */
+/* 주소는 통째로 복사하는 값이라 줄바꿈 없이 한 줄로 두고, 눌러서 전체 선택되게 한다 */
+.feed-url { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--accent-soft); color: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .82rem; cursor: pointer; }
+.export-title { margin: 22px 0 4px; font-size: .95rem; }
+.export-form { align-items: flex-end; }
+
 /* ── 회고 ──────────────────────────────────────── */
 .retro-card { margin-top: 20px; }
 .retro-input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
