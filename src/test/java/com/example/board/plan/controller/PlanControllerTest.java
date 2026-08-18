@@ -15,6 +15,7 @@ import com.example.board.plan.domain.ShareScope;
 import com.example.board.plan.domain.PlanSearchCondition;
 import com.example.board.plan.domain.PlanStatus;
 import com.example.board.plan.service.PlanService;
+import com.example.board.retro.service.RetrospectiveService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -50,6 +51,7 @@ class PlanControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean PlanService planService;
+    @MockBean RetrospectiveService retrospectiveService;
     @MockBean TokenService tokenService;
     @MockBean CommentService commentService;
     @MockBean DdayService ddayService;

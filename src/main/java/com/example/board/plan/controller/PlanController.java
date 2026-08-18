@@ -13,6 +13,8 @@ import com.example.board.plan.domain.PlanStatus;
 import com.example.board.plan.domain.RepeatType;
 import com.example.board.plan.domain.ShareScope;
 import com.example.board.plan.dto.PlanForm;
+import com.example.board.retro.domain.RetroType;
+import com.example.board.retro.service.RetrospectiveService;
 import com.example.board.plan.service.PlanService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +49,8 @@ public class PlanController {
     private final CommentService commentService;
     /** 일간 뷰 상단에 남은 날짜를 보여주기 위한 읽기 전용 의존 */
     private final DdayService ddayService;
+    /** 회고는 계획을 보던 자리에서 바로 적는 것이라 같은 화면에 싣는다 (읽기 전용) */
+    private final RetrospectiveService retrospectiveService;
 
     @GetMapping
     public String home() {
@@ -72,6 +76,9 @@ public class PlanController {
         // 어제 남긴 일정을 그대로 흘려보내지 않도록 안내한다
         model.addAttribute("leftoverCount", planService.findUnfinished(previous, principal.id()).size());
         model.addAttribute("shareScopes", ShareScope.values());
+        model.addAttribute("retro",
+                retrospectiveService.find(principal.id(), RetroType.DAILY, target).orElse(null));
+        model.addAttribute("retroType", RetroType.DAILY);
         return "plans/daily"; // 분류 선택지(categories)는 @ModelAttribute 가 이미 채운다
     }
 
@@ -99,6 +106,11 @@ public class PlanController {
         model.addAttribute("prevWeek", weekStart.minusWeeks(1));
         model.addAttribute("nextWeek", weekStart.plusWeeks(1));
         model.addAttribute("today", LocalDate.now());
+        model.addAttribute("retro",
+                retrospectiveService.find(principal.id(), RetroType.WEEKLY, weekStart).orElse(null));
+        model.addAttribute("retroType", RetroType.WEEKLY);
+        model.addAttribute("dailyRetros",
+                retrospectiveService.findDailies(principal.id(), weekStart, weekStart.plusDays(6)));
         return "plans/weekly";
     }
 

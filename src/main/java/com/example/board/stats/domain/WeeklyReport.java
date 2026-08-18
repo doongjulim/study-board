@@ -1,6 +1,7 @@
 package com.example.board.stats.domain;
 
 import com.example.board.plan.domain.Plan;
+import com.example.board.retro.domain.Retrospective;
 import com.example.board.session.domain.StudySession;
 
 import java.time.LocalDate;
@@ -23,17 +24,32 @@ public record WeeklyReport(String title, String content) {
         return of(plans, List.of(), from, to);
     }
 
+    /** 회고를 쓰지 않은 주 */
     public static WeeklyReport of(List<Plan> plans, List<StudySession> sessions,
                                   LocalDate from, LocalDate to) {
+        return of(plans, sessions, List.of(), null, from, to);
+    }
+
+    /**
+     * 회고까지 실어 초안을 만든다.
+     *
+     * <p>숫자만 붙은 인증글은 남이 읽을 이유가 없다. 그 주에 무엇을 느꼈는지가 들어가야
+     * 글이 되고, 이미 적어 둔 회고를 그대로 옮기면 인증글을 새로 쓰지 않아도 된다.</p>
+     */
+    public static WeeklyReport of(List<Plan> plans, List<StudySession> sessions,
+                                  List<Retrospective> dailyRetros, Retrospective weeklyRetro,
+                                  LocalDate from, LocalDate to) {
         StudyStatistics statistics = StudyStatistics.of(plans, sessions, from, to);
-        return new WeeklyReport(buildTitle(from, to), buildContent(plans, statistics));
+        return new WeeklyReport(buildTitle(from, to),
+                buildContent(plans, statistics, dailyRetros, weeklyRetro));
     }
 
     private static String buildTitle(LocalDate from, LocalDate to) {
         return "[%s~%s] 이번 주 학습 인증".formatted(from.format(TITLE_DATE), to.format(TITLE_DATE));
     }
 
-    private static String buildContent(List<Plan> plans, StudyStatistics statistics) {
+    private static String buildContent(List<Plan> plans, StudyStatistics statistics,
+                                       List<Retrospective> dailyRetros, Retrospective weeklyRetro) {
         StringBuilder content = new StringBuilder();
         content.append("이번 주 완료율 %d%% (%d/%d)%n".formatted(
                 statistics.completionRate(), statistics.completedCount(), statistics.totalCount()));
@@ -47,8 +63,17 @@ public record WeeklyReport(String title, String content) {
         }
         content.append(System.lineSeparator());
 
+        // 주간 회고를 숫자 바로 아래 둔다 - 이 글에서 남이 읽을 이유가 있는 유일한 부분이다
+        if (weeklyRetro != null) {
+            content.append("📝 이번 주 회고%n".formatted());
+            content.append(weeklyRetro.getContent()).append(System.lineSeparator());
+            content.append(System.lineSeparator());
+        }
+
         appendPlanLines(content, "✅ 해낸 계획", plans.stream().filter(Plan::isCompleted).toList());
         appendPlanLines(content, "⏳ 남은 계획", plans.stream().filter(plan -> !plan.isCompleted()).toList());
+
+        appendRetroLines(content, dailyRetros);
 
         if (!statistics.categories().isEmpty()) {
             content.append("📊 분류별 공부 시간%n".formatted());
@@ -68,6 +93,17 @@ public record WeeklyReport(String title, String content) {
                 plan.getCategory().getLabel(),
                 plan.getTitle(),
                 durationSuffix(plan))));
+        content.append(System.lineSeparator());
+    }
+
+    /** 하루 회고는 날짜와 함께 한 줄씩 - 그 주가 어떻게 흘러갔는지가 드러난다 */
+    private static void appendRetroLines(StringBuilder content, List<Retrospective> dailyRetros) {
+        if (dailyRetros.isEmpty()) {
+            return;
+        }
+        content.append("🗒 하루 회고%n".formatted());
+        dailyRetros.forEach(retro -> content.append("- %s %s%n".formatted(
+                retro.getTargetDate().format(LINE_DATE), retro.getContent())));
         content.append(System.lineSeparator());
     }
 

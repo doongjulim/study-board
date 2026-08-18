@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  회고 입력 공통 프래그먼트.
+
+  하루 회고와 주간 회고는 길이와 안내 문구만 다르고 동작이 같아, 주기를 넘겨 한 틀을 쓴다.
+  판단(길이 제한·매달릴 날짜)은 RetroType 이 하므로 여기서는 값만 꺼내 쓴다.
+
+  사용법:
+    <section th:replace="~{fragments/retro :: retroBox(${retro}, ${retroType}, ${date})}"></section>
+-->
+<section class="form-card retro-card" th:fragment="retroBox(retro, retroType, date)">
+    <h3 class="stat-title" th:text="${retroType.label}">회고</h3>
+    <p class="hint" th:if="${retroType.name() == 'DAILY'}">
+        오늘 어땠나요? 한 줄이면 충분해요. 다음 주에 같은 실수를 반복하지 않게 해 줍니다.
+    </p>
+    <p class="hint" th:unless="${retroType.name() == 'DAILY'}">
+        이번 주를 돌아보세요. 여기 적은 내용은 주간 인증글 초안에 그대로 실립니다.
+    </p>
+
+    <p class="error" th:if="${retroError}" th:text="${retroError}"></p>
+
+    <form method="post" th:action="@{/retros}">
+        <input type="hidden" name="type" th:value="${retroType}">
+        <input type="hidden" name="date" th:value="${date}">
+        <label class="sr-only" for="retro-content" th:text="${retroType.label}">회고</label>
+        <textarea id="retro-content" name="content" class="retro-input"
+                  th:rows="${retroType.name() == 'DAILY'} ? 2 : 6"
+                  th:maxlength="${retroType.maxLength}"
+                  th:text="${retro != null} ? ${retro.content} : ''"
+                  th:placeholder="${retroType.name() == 'DAILY'}
+                        ? '예) 오전엔 집중이 잘 됐는데 저녁에 늘어졌다'
+                        : '예) 계획을 과하게 잡았다. 다음 주엔 하루 두 개까지만.'"></textarea>
+        <div class="actions retro-actions">
+            <span class="hint retro-saved" th:if="${retro != null && retro.updatedAt != null}"
+                  th:text="${#temporals.format(retro.updatedAt, 'M월 d일 HH:mm')} + ' 저장됨'">저장 시각</span>
+            <button type="submit" class="btn btn-primary btn-sm">저장</button>
+        </div>
+    </form>
+
+    <form th:if="${retro != null}" th:action="@{/retros/{id}/delete(id=${retro.id})}" method="post"
+          onsubmit="return confirm('회고를 지울까요?');">
+        <input type="hidden" name="type" th:value="${retroType}">
+        <input type="hidden" name="date" th:value="${date}">
+        <button type="submit" class="btn btn-sm btn-danger">회고 지우기</button>
+    </form>
+</section>
+</body>
+</html>

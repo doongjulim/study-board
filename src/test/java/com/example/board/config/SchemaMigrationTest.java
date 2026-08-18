@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V18 plan share scope */
-    private static final int EXPECTED_MIGRATIONS = 18;
+    /** V1 init ~ V19 retrospective */
+    private static final int EXPECTED_MIGRATIONS = 19;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -201,7 +201,41 @@ class SchemaMigrationTest {
     }
 
     @Test
-    @DisplayName("V1~V18 이 H2 에서 모두 실행된다")
+    @DisplayName("V19: 같은 날짜에 같은 주기의 회고를 두 개 쓸 수 없다 (고쳐 쓰기의 최종 방어선)")
+    void rejectsDuplicateRetrospective() {
+        Long ownerId = createMember("writer");
+        jdbc.update("""
+                insert into retrospective (owner_id, type, target_date, content)
+                values (?, 'DAILY', ?, '집중 잘 됨')
+                """, ownerId, LocalDate.of(2026, 8, 12));
+
+        assertThatThrownBy(() -> jdbc.update("""
+                insert into retrospective (owner_id, type, target_date, content)
+                values (?, 'DAILY', ?, '두 번째')
+                """, ownerId, LocalDate.of(2026, 8, 12)))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    @DisplayName("V19: 같은 날이라도 주기가 다르면 따로 쓸 수 있다")
+    void allowsDailyAndWeeklyOnSameDate() {
+        Long ownerId = createMember("both");
+        jdbc.update("""
+                insert into retrospective (owner_id, type, target_date, content)
+                values (?, 'DAILY', ?, '하루 회고')
+                """, ownerId, LocalDate.of(2026, 8, 10));
+        jdbc.update("""
+                insert into retrospective (owner_id, type, target_date, content)
+                values (?, 'WEEKLY', ?, '주간 회고')
+                """, ownerId, LocalDate.of(2026, 8, 10));
+
+        Integer count = jdbc.queryForObject(
+                "select count(*) from retrospective where owner_id = ?", Integer.class, ownerId);
+        assertThat(count).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("V1~V19 가 H2 에서 모두 실행된다")
     void allMigrationsApply() {
         // SQL 이 깨져 있으면 migrate() 단계에서 FlywayException 이 터지므로, 여기 왔다면 전부 성공한 것이다
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);

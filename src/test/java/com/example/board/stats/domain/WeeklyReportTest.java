@@ -3,6 +3,8 @@ package com.example.board.stats.domain;
 import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
+import com.example.board.retro.domain.RetroType;
+import com.example.board.retro.domain.Retrospective;
 import com.example.board.session.domain.StudySession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,40 @@ class WeeklyReportTest {
         StudySession session = StudySession.start(author, null, category, start);
         session.stop(start.plusMinutes(minutes));
         return session;
+    }
+
+    private Retrospective retro(RetroType type, LocalDate date, String content) {
+        return Retrospective.write(author, type, date, content);
+    }
+
+    @Test
+    @DisplayName("주간 회고는 숫자 바로 아래에 실린다 - 남이 읽을 이유가 되는 유일한 부분이다")
+    void weeklyRetroGoesRightAfterNumbers() {
+        WeeklyReport report = WeeklyReport.of(List.of(), List.of(), List.of(),
+                retro(RetroType.WEEKLY, MONDAY, "계획을 과하게 잡았다"), MONDAY, SUNDAY);
+
+        assertThat(report.content()).contains("📝 이번 주 회고", "계획을 과하게 잡았다");
+        assertThat(report.content().indexOf("📝 이번 주 회고"))
+                .isGreaterThan(report.content().indexOf("총 공부 시간"));
+    }
+
+    @Test
+    @DisplayName("하루 회고는 날짜와 함께 한 줄씩 실린다")
+    void dailyRetrosBecomeLines() {
+        WeeklyReport report = WeeklyReport.of(List.of(), List.of(),
+                List.of(retro(RetroType.DAILY, MONDAY, "오전에 집중 잘 됨"),
+                        retro(RetroType.DAILY, MONDAY.plusDays(1), "저녁에 늘어짐")),
+                null, MONDAY, SUNDAY);
+
+        assertThat(report.content()).contains("🗒 하루 회고", "8/3(월) 오전에 집중 잘 됨", "8/4(화) 저녁에 늘어짐");
+    }
+
+    @Test
+    @DisplayName("회고를 쓰지 않은 주에는 회고 칸이 아예 나오지 않는다")
+    void noRetroMeansNoSection() {
+        WeeklyReport report = WeeklyReport.of(List.of(), MONDAY, SUNDAY);
+
+        assertThat(report.content()).doesNotContain("📝 이번 주 회고", "🗒 하루 회고");
     }
 
     @Test

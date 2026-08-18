@@ -40,6 +40,20 @@
         </div>
     </div>
     </div>
+
+    <!-- 그 주 하루 회고를 모아 두면, 주간 회고를 쓸 때 무슨 일이 있었는지 되짚을 수 있다 -->
+    <div class="form-card" th:if="${!dailyRetros.isEmpty()}">
+        <h3 class="stat-title">이번 주 하루 회고</h3>
+        <ul class="retro-lines">
+            <li th:each="line : ${dailyRetros}">
+                <a class="retro-date" th:href="@{/plans/daily(date=${line.targetDate})}"
+                   th:text="${#temporals.format(line.targetDate, 'M/d(E)')}">날짜</a>
+                <span th:text="${line.content}">내용</span>
+            </li>
+        </ul>
+    </div>
+
+    <section th:replace="~{fragments/retro :: retroBox(${retro}, ${retroType}, ${weekStart})}"></section>
 </main>
 </body>
 </html>

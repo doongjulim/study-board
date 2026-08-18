@@ -601,6 +601,20 @@ header.site .nickname:hover { color: var(--accent); }
 .crumb a { color: var(--ink-soft); text-decoration: none; }
 .crumb a:hover { color: var(--accent); }
 
+/* ── 회고 ──────────────────────────────────────── */
+.retro-card { margin-top: 20px; }
+.retro-input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--card); color: var(--ink); font: inherit; resize: vertical; }
+.retro-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+/* 저장 시각을 왼쪽 끝에 붙여, 버튼과 붙어 잘못 눌리지 않게 한다 */
+.retro-saved { margin-right: auto; }
+.retro-lines { list-style: none; padding: 0; margin: 8px 0 0; }
+.retro-lines li { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+.retro-lines li:last-child { border-bottom: 0; }
+.retro-date { flex-shrink: 0; color: var(--ink-soft); text-decoration: none; font-size: .85rem;
+  min-width: 4.5rem; }
+.retro-date:hover { color: var(--accent); }
+
 /* ── 그룹 주간 챌린지 · 순위 ─────────────────────── */
 .challenge-card .hint { margin-top: 2px; }
 .challenge-figures { display: flex; flex-wrap: wrap; gap: 22px; margin: 12px 0 10px; }
