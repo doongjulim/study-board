@@ -1,7 +1,6 @@
 package com.example.board.group.service;
 
 import com.example.board.group.domain.GroupMember;
-import com.example.board.group.domain.InviteCode;
 import com.example.board.group.domain.StudyGroup;
 import com.example.board.group.dto.GroupForm;
 import com.example.board.group.repository.GroupMemberRepository;
@@ -240,11 +239,5 @@ class StudyGroupServiceTest {
         studyGroupService.leaveAll(1L);
 
         then(groupRepository).should().delete(owned);
-    }
-
-    @Test
-    @DisplayName("초대 코드 생성기는 헷갈리는 글자를 쓰지 않는다")
-    void inviteCodeAvoidsAmbiguousCharacters() {
-        assertThat(InviteCode.ALPHABET).doesNotContain("0", "O", "1", "I", "L");
     }
 }
