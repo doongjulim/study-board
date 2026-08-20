@@ -14,7 +14,10 @@ spring:
     show-sql: false
   h2:
     console:
-      enabled: true
+      # 기본값을 꺼 둔다. 켜져 있으면 DB 를 브라우저에서 그대로 열 수 있으므로,
+      # 운영에서 끄는 것을 "잊지 않아야" 하는 구조는 언젠가 잊는다.
+      # 로컬에서 필요할 때만 H2_CONSOLE_ENABLED=true 로 켠다.
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
   servlet:
     multipart:
