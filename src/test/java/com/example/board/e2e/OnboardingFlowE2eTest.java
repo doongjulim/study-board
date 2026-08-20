@@ -3,7 +3,6 @@ package com.example.board.e2e;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDate;
 import java.util.regex.Pattern;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -59,13 +58,16 @@ class OnboardingFlowE2eTest extends E2eSupport {
         assertThat(page).hasURL(url("/"));
 
         // ── 첫 계획 등록 ───────────────────────────────────
-        String today = LocalDate.now().toString();
+        // 한 줄 추가는 화면을 넘기지 않는다 - plans.js 가 폼 제출을 가로채 fetch 로 보내고
+        // 돌아온 값으로 그 자리에 줄을 붙인다. 그래서 "주소가 바뀌었는가" 가 아니라
+        // "목록에 줄이 생겼는가" 로 확인해야 한다. 주소로 확인하면 JS 를 껐을 때만 통과한다
         page.navigate(url("/plans/daily"));
         page.fill(".quick-title", "이커머스 스터디 첫 모임");
         button("추가").click();
 
-        assertThat(page).hasURL(url("/plans/daily?date=" + today));
-        assertThat(page.locator(".plan-title").first()).containsText("이커머스 스터디 첫 모임");
+        assertThat(page.locator("#plan-list .plan-title").first())
+                .containsText("이커머스 스터디 첫 모임");
+        assertThat(page).hasURL(url("/plans/daily"));
     }
 
     @Test

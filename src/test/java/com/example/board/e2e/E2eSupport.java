@@ -6,6 +6,7 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.AriaRole;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -41,6 +44,9 @@ abstract class E2eSupport {
     protected BrowserContext context;
     protected Page page;
 
+    /** 응답을 받은 그 자리에서 본문을 읽으면 이벤트 스레드가 막힐 수 있어, 모아 두었다가 테스트가 끝난 뒤 읽는다 */
+    private final List<Response> failedResponses = new ArrayList<>();
+
     @BeforeAll
     static void launchBrowser() {
         playwright = Playwright.create();
@@ -61,12 +67,60 @@ abstract class E2eSupport {
     void openPage() {
         context = browser.newContext();
         page = context.newPage();
+        failedResponses.clear();
+        watchForTrouble();
     }
 
     @AfterEach
     void closePage() {
+        reportTrouble();
         if (context != null) {
             context.close();
+        }
+    }
+
+    /**
+     * 브라우저 쪽에서 벌어진 일을 기록해 둔다.
+     *
+     * <p>E2E 가 깨졌을 때 기본 메시지는 "주소가 예상과 다르다" 뿐이라, 서버가 403 을 줬는지
+     * 500 을 줬는지, 스크립트가 터졌는지가 드러나지 않는다. 원인을 알아내려고 매번 사람이
+     * 브라우저를 다시 띄우게 되는데, 그 정보는 실패한 그 실행이 이미 손에 쥐고 있던 것이다.</p>
+     *
+     * <p>대화상자를 닫아 주는 것은 편의가 아니라 필수다 - {@code alert} 이 열려 있으면
+     * 브라우저가 모든 명령에 응답을 멈춰, 테스트가 실패가 아니라 <b>정지</b>한다.</p>
+     */
+    private void watchForTrouble() {
+        page.onDialog(dialog -> {
+            System.out.println("[E2E] 대화상자(" + dialog.type() + "): " + dialog.message());
+            dialog.dismiss();
+        });
+        page.onPageError(error -> System.out.println("[E2E] 스크립트 오류: " + error));
+        page.onResponse(response -> {
+            if (response.status() >= 400) {
+                failedResponses.add(response);
+            }
+        });
+    }
+
+    private void reportTrouble() {
+        for (Response response : failedResponses) {
+            System.out.println("[E2E] " + response.status() + " "
+                    + response.request().method() + " " + response.url());
+            System.out.println("[E2E]   본문: " + summarize(response));
+        }
+    }
+
+    /** 오류 페이지에서 사람이 읽을 문장만 남긴다 - HTML 전체를 찍으면 정작 원인이 묻힌다 */
+    private static String summarize(Response response) {
+        try {
+            String text = response.text()
+                    .replaceAll("(?s)<(script|style)\\b.*?</\\1>", " ")
+                    .replaceAll("<[^>]+>", " ")
+                    .replaceAll("\\s+", " ")
+                    .trim();
+            return text.length() > 400 ? text.substring(0, 400) + "…" : text;
+        } catch (RuntimeException e) {
+            return "(본문을 읽지 못했다: " + e.getMessage() + ")";
         }
     }
 
