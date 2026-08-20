@@ -3,8 +3,10 @@ package com.example.board.auth.controller;
 import com.example.board.auth.AuthCookies;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.exception.LoginFailedException;
+import com.example.board.auth.exception.TooManyLoginAttemptsException;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
+import com.example.board.auth.service.LoginAttemptLimiter;
 import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
 import com.example.board.member.domain.Member;
@@ -39,6 +41,7 @@ class AuthControllerTest {
     @Autowired MockMvc mockMvc;
     @MockBean MemberService memberService;
     @MockBean TokenService tokenService;
+    @MockBean LoginAttemptLimiter loginAttemptLimiter;
 
     private Member member() {
         return new Member("tester1", "encoded-password", "테스터");
@@ -102,6 +105,67 @@ class AuthControllerTest {
                         .param("password", "password123")
                         .param("redirect", "//evil.com/phish"))
                 .andExpect(redirectedUrl("/"));
+    }
+
+    @Test
+    @DisplayName("POST /login - 인증에 실패하면 그 출처의 실패로 기록한다")
+    void login_failIsRecorded() throws Exception {
+        given(memberService.authenticate(anyString(), anyString()))
+                .willThrow(new LoginFailedException());
+
+        mockMvc.perform(post("/login").with(csrf())
+                        .param("loginId", "tester1")
+                        .param("password", "wrong"))
+                .andExpect(status().isOk());
+
+        then(loginAttemptLimiter).should().recordFailure(anyString());
+    }
+
+    @Test
+    @DisplayName("POST /login - 막혀 있으면 비밀번호를 확인조차 하지 않는다")
+    void login_blockedSkipsAuthentication() throws Exception {
+        willThrow(new TooManyLoginAttemptsException(600))
+                .given(loginAttemptLimiter).checkNotBlocked(anyString());
+
+        mockMvc.perform(post("/login").with(csrf())
+                        .param("loginId", "tester1")
+                        .param("password", "password123"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/login"))
+                .andExpect(model().hasErrors())
+                .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE));
+
+        then(memberService).should(never()).authenticate(anyString(), anyString());
+        then(loginAttemptLimiter).should(never()).recordFailure(anyString());
+    }
+
+    @Test
+    @DisplayName("POST /login - 성공하면 그 출처의 실패 기록을 지운다")
+    void login_successClearsAttempts() throws Exception {
+        given(memberService.authenticate("tester1", "password123")).willReturn(member());
+        given(tokenService.issueFor(any(Member.class))).willReturn(tokenPair());
+
+        mockMvc.perform(post("/login").with(csrf())
+                        .param("loginId", "tester1")
+                        .param("password", "password123"))
+                .andExpect(status().is3xxRedirection());
+
+        then(loginAttemptLimiter).should().recordSuccess(anyString());
+    }
+
+    @Test
+    @DisplayName("POST /login - 프록시 뒤에서는 X-Forwarded-For 의 원 클라이언트를 기준으로 센다")
+    void login_usesForwardedClientIp() throws Exception {
+        given(memberService.authenticate(anyString(), anyString()))
+                .willThrow(new LoginFailedException());
+
+        mockMvc.perform(post("/login").with(csrf())
+                        .header("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
+                        .param("loginId", "tester1")
+                        .param("password", "wrong"))
+                .andExpect(status().isOk());
+
+        then(loginAttemptLimiter).should().recordFailure("203.0.113.7");
     }
 
     @Test
