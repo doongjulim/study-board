@@ -64,6 +64,14 @@
   개인 학습 데이터(계획·D-Day·학습 기록·알림)는 `MemberWithdrawnEvent` 를 각 모듈 리스너가 받아 **스스로 정리**한다
   (member 모듈은 다른 모듈을 모른다. 학습 기록이 계획을 참조하므로 `@Order` 로 세션 → 계획 순서를 지킨다)
 - **접근 정책**: 게시판 읽기 공개, 플래너·그룹·알림·마이페이지·모든 쓰기는 인증 필요. 미인증은 `/login?redirect=...`
+- **DB 이식**: 공통 마이그레이션은 `db/migration`, DB 마다 문법이 갈리는 것만 `db/migration/{vendor}` 에 둔다.
+  현재 갈리는 것은 **V11(회원당 진행 중 세션 1개)** 하나 — H2 는 부분 인덱스가 없어 계산 컬럼을 두고 그 위에 유니크를,
+  PostgreSQL 은 `create unique index ... where ended_at is null` 로 끝난다. 같은 규칙을 DB 마다 자연스러운 방식으로 적은 것이고,
+  버전 번호(V11)를 맞춘 것은 어느 DB 로 가든 이력의 자리가 같아야 하기 때문이다.
+  `SchemaMigrationTest` 의 locations 도 애플리케이션과 같은 구성이어야 실제로 도는 스키마를 검증하는 것이 된다.
+  `driver-class-name` 은 적지 않는다 — URL 에서 유추되므로 적어 두면 DB 를 바꿀 때 같이 고쳐야 한다
+- **PostgreSQL 검증**: `PostgresMigrationTest` 는 `POSTGRES_URL` 환경변수가 있을 때만 돈다.
+  CI 가 서비스 컨테이너를 띄워 넘겨 준다 — "로컬에 DB 를 깔아야 테스트가 돈다" 로 만들면 아무도 돌리지 않는다
 - **h2-console**: 기본값이 꺼짐(`H2_CONSOLE_ENABLED`). 콘솔용 보안 예외(csrf 무시·프레임 허용·인증 면제)를
   **콘솔이 켜졌을 때만 만들어지는 별도 필터체인**에 몰아넣어, 콘솔을 끄면 구멍도 함께 사라지게 했다.
   예외와 콘솔을 따로 관리하면 언젠가 어긋난다. 경로는 `PathRequest.toH2Console()` 로 잡아 설정 변경을 따라간다

@@ -67,6 +67,18 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 - 컨테이너로 띄울 때 `/app/data`(H2)·`/app/uploads`(첨부파일)에 볼륨을 붙이지 않으면
   컨테이너를 지울 때 데이터가 함께 사라진다
 
+## PostgreSQL 로 띄우기
+
+로컬 개발은 H2 파일 DB 로 충분하지만, 운영과 같은 DB 에서 확인하고 싶을 때는
+
+```bash
+docker compose up --build
+```
+
+마이그레이션 중 DB 문법이 갈리는 것은 V11(진행 중 세션 유니크) 하나뿐이며,
+`db/migration/h2` 와 `db/migration/postgresql` 로 나뉘어 있다.
+PostgreSQL 쪽이 실제로 도는지는 CI 가 매번 확인한다(`PostgresMigrationTest`).
+
 ## 실행 방법
 
 ```bash
