@@ -33,6 +33,10 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
     runtimeOnly 'com.h2database:h2'
+    // 운영 DB. 드라이버가 있어도 URL 이 h2 면 쓰이지 않으므로, 이미지 하나로 두 DB 를 다 띄울 수 있다.
+    // Flyway 10 부터 DB 별 지원이 별도 모듈로 빠져, PostgreSQL 은 이것이 있어야 마이그레이션이 돈다
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

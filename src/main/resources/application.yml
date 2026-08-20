@@ -1,7 +1,8 @@
 spring:
   datasource:
+    # 운영에서는 SPRING_DATASOURCE_URL/USERNAME/PASSWORD 환경변수로 덮어쓴다 (PostgreSQL 등).
+    # 드라이버 클래스는 적지 않는다 - URL 에서 유추되므로, 적어 두면 DB 를 바꿀 때 같이 고쳐야 한다
     url: jdbc:h2:file:./data/boarddb
-    driver-class-name: org.h2.Driver
     username: sa
     password:
   jpa:
@@ -12,6 +13,12 @@ spring:
       hibernate:
         format_sql: true
     show-sql: false
+  flyway:
+    # 공통 마이그레이션 + 현재 DB 전용 마이그레이션을 함께 읽는다.
+    # 부분 인덱스처럼 DB 마다 문법이 갈리는 것만 {vendor} 쪽에 두고, 나머지는 공통에 둔다
+    # (H2 는 db/migration/h2, PostgreSQL 은 db/migration/postgresql).
+    locations: classpath:db/migration,classpath:db/migration/{vendor}
+
   h2:
     console:
       # 기본값을 꺼 둔다. 켜져 있으면 DB 를 브라우저에서 그대로 열 수 있으므로,

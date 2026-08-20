@@ -45,7 +45,9 @@ class SchemaMigrationTest {
 
         result = Flyway.configure()
                 .dataSource(dataSource)
-                .locations("classpath:db/migration")
+                // 공통 + H2 전용(V11 계산 컬럼). 애플리케이션의 flyway.locations 와 같은 구성이어야
+                // 이 테스트가 실제로 도는 스키마를 검증하는 것이 된다
+                .locations("classpath:db/migration", "classpath:db/migration/h2")
                 .load()
                 .migrate();
 
