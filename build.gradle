@@ -40,10 +40,36 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // E2E: 실제 브라우저로 화면을 눌러 본다. Node 툴체인 대신 Java 바인딩을 쓰는 이유는
+    // 빌드가 하나로 유지되고, CI 에 npm 단계를 더하지 않아도 되기 때문이다
+    testImplementation 'com.microsoft.playwright:playwright:1.47.0'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        // E2E 는 브라우저를 내려받고 앱을 띄우므로 기본 test 에서 뺀다.
+        // ./gradlew test 가 느려지거나 네트워크 없이는 실패하는 순간, 사람들은 테스트를 안 돌리게 된다
+        excludeTags 'e2e'
+    }
+}
+
+/**
+ * 실제 브라우저로 도는 테스트. 처음 한 번은 브라우저를 내려받는다(수백 MB).
+ *
+ *   ./gradlew e2eTest
+ */
+tasks.register('e2eTest', Test) {
+    description = '실제 브라우저로 핵심 흐름을 확인한다'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'e2e'
+    }
+    // 브라우저가 뜨는 시간이 있어 단위 테스트보다 오래 걸린다 - 실패를 빨리 보려면 로그가 필요하다
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+    }
 }
