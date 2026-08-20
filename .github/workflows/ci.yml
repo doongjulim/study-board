@@ -61,11 +61,25 @@ jobs:
       - name: 빌드와 테스트
         run: ./gradlew build --no-daemon
 
+      # 브라우저는 수백 MB 라 매번 내려받으면 실행 시간의 대부분을 여기서 쓴다
+      - name: 브라우저 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('build.gradle') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      # 단위 테스트가 못 보는 것 - CSRF 토큰·로그인 쿠키·리다이렉트가 실제 브라우저에서 이어지는가
+      - name: E2E
+        run: ./gradlew e2eTest --no-daemon
+
       # 실패했을 때 어느 테스트가 왜 깨졌는지 보려면 리포트가 필요하다
       - name: 테스트 리포트 보관
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: build/reports/tests/test
+          path: |
+            build/reports/tests/test
+            build/reports/tests/e2eTest
           retention-days: 7
