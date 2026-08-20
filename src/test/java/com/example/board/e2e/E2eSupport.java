@@ -44,7 +44,8 @@ abstract class E2eSupport {
     protected BrowserContext context;
     protected Page page;
 
-    /** 응답을 받은 그 자리에서 본문을 읽으면 이벤트 스레드가 막힐 수 있어, 모아 두었다가 테스트가 끝난 뒤 읽는다 */
+    /** 응답을 받은 그 자리에서 본문·헤더를 읽으면 이벤트 스레드가 막힐 수 있어, 모아 두었다가 테스트가 끝난 뒤 읽는다 */
+    private final List<Response> responses = new ArrayList<>();
     private final List<Response> failedResponses = new ArrayList<>();
 
     @BeforeAll
@@ -67,6 +68,7 @@ abstract class E2eSupport {
     void openPage() {
         context = browser.newContext();
         page = context.newPage();
+        responses.clear();
         failedResponses.clear();
         watchForTrouble();
     }
@@ -96,6 +98,7 @@ abstract class E2eSupport {
         });
         page.onPageError(error -> System.out.println("[E2E] 스크립트 오류: " + error));
         page.onResponse(response -> {
+            responses.add(response);
             if (response.status() >= 400) {
                 failedResponses.add(response);
             }
@@ -103,18 +106,45 @@ abstract class E2eSupport {
     }
 
     private void reportTrouble() {
+        if (failedResponses.isEmpty()) {
+            return;
+        }
         for (Response response : failedResponses) {
             System.out.println("[E2E] " + response.status() + " "
                     + response.request().method() + " " + response.url());
             System.out.println("[E2E]   보낸 값: " + response.request().postData());
             System.out.println("[E2E]   본문: " + summarize(response));
         }
-        if (!failedResponses.isEmpty()) {
-            // 403 의 대부분은 CSRF 다. 폼에 토큰이 실렸는지(보낸 값)와 쿠키에 토큰이 있는지를
-            // 나란히 봐야 "안 실렸다" 와 "실렸는데 다르다" 가 갈린다
-            context.cookies().forEach(cookie ->
-                    System.out.println("[E2E]   쿠키: " + cookie.name + "=" + abbreviate(cookie.value)));
+        // 403 의 대부분은 CSRF 다. 그런데 "토큰이 어긋났다" 는 어긋나게 만든 앞선 응답이 있어야 생긴다.
+        // 어떤 응답이 토큰을 새로 내려 줬는지 보려면 주고받은 순서를 통째로 봐야 한다
+        System.out.println("[E2E] --- 주고받은 순서 ---");
+        for (Response response : responses) {
+            System.out.println("[E2E] " + response.status() + " "
+                    + response.request().method() + " " + path(response.url())
+                    + setCookieOf(response));
         }
+        System.out.println("[E2E] --- 끝난 뒤 쿠키 ---");
+        context.cookies().forEach(cookie ->
+                System.out.println("[E2E] " + cookie.name + "=" + abbreviate(cookie.value)));
+    }
+
+    /** 임의 포트가 매번 달라 주소 전체를 찍으면 눈으로 비교하기 어렵다 */
+    private static String path(String url) {
+        int slash = url.indexOf('/', url.indexOf("//") + 2);
+        return slash < 0 ? url : url.substring(slash);
+    }
+
+    private static String setCookieOf(Response response) {
+        String setCookie = response.headers().get("set-cookie");
+        if (setCookie == null) {
+            return "";
+        }
+        StringBuilder names = new StringBuilder();
+        for (String line : setCookie.split("\n")) {
+            names.append(names.isEmpty() ? "  ← Set-Cookie: " : ", ")
+                    .append(line.split("=", 2)[0]);
+        }
+        return names.toString();
     }
 
     private static String abbreviate(String value) {
