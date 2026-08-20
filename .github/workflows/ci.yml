@@ -1,0 +1,46 @@
+# 푸시·PR 마다 빌드와 테스트를 돌린다.
+#
+# 이 파이프라인이 없던 동안 "로컬에서 컴파일해 보기 전에는 깨진 줄 몰랐던" 일이 두 번 있었다.
+# 사람이 잊지 않아야 지켜지는 규칙은 언젠가 잊히므로, 기계가 매번 확인하게 한다.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 같은 브랜치에 연달아 밀면 앞선 실행은 취소한다 - 마지막 커밋의 결과만 의미가 있다
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 프로젝트 toolchain 이 17 이므로 그대로 맞춘다 (gradle/gradle-daemon-jvm.properties)
+      - name: JDK 17 준비
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 의존성·빌드 캐시를 붙여 두 번째 실행부터는 내려받기가 사라진다
+      - name: Gradle 설정
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 빌드와 테스트
+        run: ./gradlew build --no-daemon
+
+      # 실패했을 때 어느 테스트가 왜 깨졌는지 보려면 리포트가 필요하다
+      - name: 테스트 리포트 보관
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: build/reports/tests/test
+          retention-days: 7

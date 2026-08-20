@@ -16,7 +16,7 @@
 ./gradlew bootRun
 ```
 
-- H2 콘솔: http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:file:./data/boarddb`, 사용자: `sa`)
+- H2 콘솔: `H2_CONSOLE_ENABLED=true` 로 띄웠을 때만 http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:file:./data/boarddb`, 사용자: `sa`)
 - H2 파일 DB(`./data/`) — 재시작해도 데이터 유지, 스키마는 Flyway로 관리
 
 ## 빌드 & 테스트
@@ -64,6 +64,14 @@
   개인 학습 데이터(계획·D-Day·학습 기록·알림)는 `MemberWithdrawnEvent` 를 각 모듈 리스너가 받아 **스스로 정리**한다
   (member 모듈은 다른 모듈을 모른다. 학습 기록이 계획을 참조하므로 `@Order` 로 세션 → 계획 순서를 지킨다)
 - **접근 정책**: 게시판 읽기 공개, 플래너·그룹·알림·마이페이지·모든 쓰기는 인증 필요. 미인증은 `/login?redirect=...`
+- **h2-console**: 기본값이 꺼짐(`H2_CONSOLE_ENABLED`). 콘솔용 보안 예외(csrf 무시·프레임 허용·인증 면제)를
+  **콘솔이 켜졌을 때만 만들어지는 별도 필터체인**에 몰아넣어, 콘솔을 끄면 구멍도 함께 사라지게 했다.
+  예외와 콘솔을 따로 관리하면 언젠가 어긋난다. 경로는 `PathRequest.toH2Console()` 로 잡아 설정 변경을 따라간다
+- **로그인 시도 제한**: `LoginAttempts`(순수 값 객체) + `LoginAttemptLimiter`(메모리·`Clock`).
+  10분 안에 10회 실패하면 15분 차단. **아이디가 아니라 요청 출처(IP)로 센다** —
+  아이디 기준이면 남의 아이디를 아는 사람이 일부러 틀려서 그 사람을 잠글 수 있다(계정 잠금 DoS).
+  창은 마지막이 아니라 **처음 실패로부터** 재고(안 그러면 계속 찌르는 동안 창이 밀려 영원히 안 막힌다),
+  막힌 동안의 시도는 형량을 늘리지 않는다. 서버가 여러 대면 대수만큼 허용되지만 목적은 '느리게 만들기'다
 - **소유권**: 서비스 계층 `findOwned()` 로 본인 글/플랜만 수정·삭제 (위반 시 AccessDeniedException → 403)
 - **목록 조회**: 게시글 목록은 `PostSummary` DTO 프로젝션 (open-in-view=false + lazy 컬렉션 문제 회피, DB 페이징 유지)
 - **트랜잭션**: `@Transactional(readOnly = true)` 기본 적용, 쓰기 메서드만 `@Transactional` 추가

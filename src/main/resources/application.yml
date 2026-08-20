@@ -25,7 +25,9 @@ spring:
       max-request-size: 50MB
 
 file:
-  upload-dir: ${user.home}/board-uploads/
+  # 컨테이너에서는 볼륨 경로로 바꾼다. 환경변수 이름을 명시하는 이유는
+  # 완화 바인딩 규칙상 file.upload-dir 의 자동 대응이 FILE_UPLOADDIR 이라 헷갈리기 때문이다
+  upload-dir: ${FILE_UPLOAD_DIR:${user.home}/board-uploads/}
 
 app:
   # 비밀번호 재설정 메일에 담을 링크의 앞부분 - 배포 주소에 맞춰 바꾼다

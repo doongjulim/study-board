@@ -59,6 +59,14 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 | ![인증글](docs/images/post.png) | ![D-Day](docs/images/dday.png) |
 | 한 주 학습 기록을 초안으로 자동 생성 | 목표일 카운트다운 (D-n / D-DAY / D+n) |
 
+## 운영 주의 사항
+
+- **h2-console 은 기본으로 꺼져 있다.** 로컬에서 필요하면 `H2_CONSOLE_ENABLED=true` 로 켠다.
+  켤 때만 보안 예외가 함께 생기므로, 끄면 예외도 사라진다
+- **JWT_SECRET 은 반드시 환경변수로 교체한다** (기본값은 로컬 개발용)
+- 컨테이너로 띄울 때 `/app/data`(H2)·`/app/uploads`(첨부파일)에 볼륨을 붙이지 않으면
+  컨테이너를 지울 때 데이터가 함께 사라진다
+
 ## 실행 방법
 
 ```bash
