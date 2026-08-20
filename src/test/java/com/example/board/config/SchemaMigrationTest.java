@@ -9,9 +9,13 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -47,11 +51,33 @@ class SchemaMigrationTest {
                 .dataSource(dataSource)
                 // 공통 + H2 전용(V11 계산 컬럼). 애플리케이션의 flyway.locations 와 같은 구성이어야
                 // 이 테스트가 실제로 도는 스키마를 검증하는 것이 된다
-                .locations("classpath:db/migration", "classpath:db/migration/h2")
+                .locations("classpath:db/migration", "classpath:db/vendor/h2")
                 .load()
                 .migrate();
 
         jdbc = new JdbcTemplate(dataSource);
+    }
+
+    /**
+     * 이 검사가 있는 이유: 벤더별 마이그레이션을 db/migration 안에 두었다가
+     * 모든 마이그레이션 테스트가 한꺼번에 깨진 적이 있다.
+     *
+     * <p>Flyway 는 location 을 <b>재귀로</b> 훑는다. db/migration/h2 처럼 하위에 두면
+     * 공통 위치 하나만으로도 h2 와 postgresql 의 V11 이 함께 수집되어 버전이 중복되고,
+     * migrate() 가 아니라 그 앞 단계에서 FlywayException 이 터진다.
+     * 그래서 벤더 폴더는 db/vendor 로 빼 두었고, 다시 안으로 들어오지 못하게 여기서 막는다.</p>
+     */
+    @Test
+    @DisplayName("공통 마이그레이션 폴더에는 하위 폴더가 없다 - 있으면 재귀 스캔에 버전이 중복된다")
+    void commonLocationHasNoSubdirectories() throws Exception {
+        URL location = getClass().getClassLoader().getResource("db/migration");
+        assertThat(location).as("db/migration 이 클래스패스에 있어야 한다").isNotNull();
+
+        try (Stream<Path> entries = Files.list(Path.of(location.toURI()))) {
+            assertThat(entries.filter(Files::isDirectory))
+                    .as("벤더별 마이그레이션은 db/vendor 로 빼야 한다")
+                    .isEmpty();
+        }
     }
 
     private Long createMember(String loginId) {

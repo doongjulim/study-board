@@ -64,7 +64,9 @@
   개인 학습 데이터(계획·D-Day·학습 기록·알림)는 `MemberWithdrawnEvent` 를 각 모듈 리스너가 받아 **스스로 정리**한다
   (member 모듈은 다른 모듈을 모른다. 학습 기록이 계획을 참조하므로 `@Order` 로 세션 → 계획 순서를 지킨다)
 - **접근 정책**: 게시판 읽기 공개, 플래너·그룹·알림·마이페이지·모든 쓰기는 인증 필요. 미인증은 `/login?redirect=...`
-- **DB 이식**: 공통 마이그레이션은 `db/migration`, DB 마다 문법이 갈리는 것만 `db/migration/{vendor}` 에 둔다.
+- **DB 이식**: 공통 마이그레이션은 `db/migration`, DB 마다 문법이 갈리는 것만 `db/vendor/{vendor}` 에 둔다.
+  **벤더 폴더를 `db/migration` 안에 두면 안 된다** — Flyway 는 location 을 재귀로 훑어서,
+  공통 위치 하나만으로도 두 벤더의 같은 버전이 함께 잡혀 `FlywayException`(버전 중복)으로 부팅이 막힌다.
   현재 갈리는 것은 **V11(회원당 진행 중 세션 1개)** 하나 — H2 는 부분 인덱스가 없어 계산 컬럼을 두고 그 위에 유니크를,
   PostgreSQL 은 `create unique index ... where ended_at is null` 로 끝난다. 같은 규칙을 DB 마다 자연스러운 방식으로 적은 것이고,
   버전 번호(V11)를 맞춘 것은 어느 DB 로 가든 이력의 자리가 같아야 하기 때문이다.

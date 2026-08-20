@@ -45,7 +45,7 @@ class PostgresMigrationTest {
 
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
-                .locations("classpath:db/migration", "classpath:db/migration/postgresql")
+                .locations("classpath:db/migration", "classpath:db/vendor/postgresql")
                 // 서비스 컨테이너는 테스트마다 새로 뜨지 않으므로 직접 비우고 시작한다
                 .cleanDisabled(false)
                 .load();

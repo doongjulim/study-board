@@ -86,7 +86,7 @@ docker compose up --build
 ```
 
 마이그레이션 중 DB 문법이 갈리는 것은 V11(진행 중 세션 유니크) 하나뿐이며,
-`db/migration/h2` 와 `db/migration/postgresql` 로 나뉘어 있다.
+`db/vendor/h2` 와 `db/vendor/postgresql` 로 나뉘어 있다(공통은 `db/migration`).
 PostgreSQL 쪽이 실제로 도는지는 CI 가 매번 확인한다(`PostgresMigrationTest`).
 
 ## 실행 방법

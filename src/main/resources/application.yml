@@ -15,9 +15,11 @@ spring:
     show-sql: false
   flyway:
     # 공통 마이그레이션 + 현재 DB 전용 마이그레이션을 함께 읽는다.
-    # 부분 인덱스처럼 DB 마다 문법이 갈리는 것만 {vendor} 쪽에 두고, 나머지는 공통에 둔다
-    # (H2 는 db/migration/h2, PostgreSQL 은 db/migration/postgresql).
-    locations: classpath:db/migration,classpath:db/migration/{vendor}
+    # 부분 인덱스처럼 DB 마다 문법이 갈리는 것만 벤더 쪽에 두고, 나머지는 공통에 둔다.
+    #
+    # 벤더 폴더를 db/migration 밖에 두는 것이 중요하다 - Flyway 는 location 을 재귀로 훑으므로,
+    # db/migration/h2 처럼 안에 두면 공통 위치만으로도 두 벤더의 V11 이 함께 잡혀 버전이 중복된다.
+    locations: classpath:db/migration,classpath:db/vendor/{vendor}
 
   h2:
     console:
