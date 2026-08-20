@@ -17,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -61,7 +63,8 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRequestHandler(eagerCsrfTokenHandler()))
                 // 프레임 차단은 기본값(DENY)을 그대로 둔다 - 클릭재킹 방어를 h2 때문에 풀어 줄 이유가 없다
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -88,6 +91,25 @@ public class SecurityConfig {
                 .logout(AbstractHttpConfigurer::disable)      // 쿠키 삭제 방식 로그아웃도 AuthController 가 담당
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /**
+     * CSRF 토큰을 필터에서 곧바로 확정한다.
+     *
+     * <p>기본값은 <b>미루기</b>다 - 화면이 토큰을 읽는 순간에야 만들어 쿠키로 내려보낸다.
+     * 세션에 담아 두는 구성에서는 그래도 되지만, 여기처럼 쿠키가 유일한 보관소면 조용히 어긋난다.
+     * 토큰을 읽지 않고 지나간 응답에는 쿠키가 실리지 않고, 그다음 POST 에서 서버가 새 토큰을 만들어
+     * 비교하므로 폼에 이미 박혀 있던 값과 맞을 수가 없다. 실제로 온보딩 '건너뛰고 둘러보기' 가
+     * 403 으로 막혔고, 브라우저에는 XSRF-TOKEN 쿠키가 아예 없었다.</p>
+     *
+     * <p>요청 속성 이름을 비우면 핸들러가 그 자리에서 토큰을 확정한다. 그래서 응답이 무엇을 그리든,
+     * 심지어 아무것도 그리지 않아도 쿠키가 먼저 정해진다. BREACH 대비 마스킹(Xor)은 그대로 둔다 -
+     * 문제는 마스킹이 아니라 <b>언제</b> 만드느냐였다.</p>
+     */
+    private static CsrfTokenRequestAttributeHandler eagerCsrfTokenHandler() {
+        XorCsrfTokenRequestAttributeHandler handler = new XorCsrfTokenRequestAttributeHandler();
+        handler.setCsrfRequestAttributeName(null);
+        return handler;
     }
 
     @Bean

@@ -8,6 +8,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.Response;
 import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.options.HttpHeader;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -134,15 +135,19 @@ abstract class E2eSupport {
         return slash < 0 ? url : url.substring(slash);
     }
 
+    /**
+     * 응답이 내려보낸 쿠키 이름들.
+     *
+     * <p>{@code headers()} 로는 보이지 않는다 - Playwright 가 거기서 Set-Cookie 를 빼기 때문이다.
+     * 원본 헤더를 주는 {@code headersArray()} 를 써야 한다. 이걸 몰라 한 번 헛돌았다.</p>
+     */
     private static String setCookieOf(Response response) {
-        String setCookie = response.headers().get("set-cookie");
-        if (setCookie == null) {
-            return "";
-        }
         StringBuilder names = new StringBuilder();
-        for (String line : setCookie.split("\n")) {
-            names.append(names.isEmpty() ? "  ← Set-Cookie: " : ", ")
-                    .append(line.split("=", 2)[0]);
+        for (HttpHeader header : response.headersArray()) {
+            if ("set-cookie".equalsIgnoreCase(header.name)) {
+                names.append(names.isEmpty() ? "  ← Set-Cookie: " : ", ")
+                        .append(header.value.split("=", 2)[0]);
+            }
         }
         return names.toString();
     }
