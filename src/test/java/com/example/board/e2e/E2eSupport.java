@@ -106,8 +106,22 @@ abstract class E2eSupport {
         for (Response response : failedResponses) {
             System.out.println("[E2E] " + response.status() + " "
                     + response.request().method() + " " + response.url());
+            System.out.println("[E2E]   보낸 값: " + response.request().postData());
             System.out.println("[E2E]   본문: " + summarize(response));
         }
+        if (!failedResponses.isEmpty()) {
+            // 403 의 대부분은 CSRF 다. 폼에 토큰이 실렸는지(보낸 값)와 쿠키에 토큰이 있는지를
+            // 나란히 봐야 "안 실렸다" 와 "실렸는데 다르다" 가 갈린다
+            context.cookies().forEach(cookie ->
+                    System.out.println("[E2E]   쿠키: " + cookie.name + "=" + abbreviate(cookie.value)));
+        }
+    }
+
+    private static String abbreviate(String value) {
+        if (value == null || value.length() <= 24) {
+            return value;
+        }
+        return value.substring(0, 24) + "…(" + value.length() + "자)";
     }
 
     /** 오류 페이지에서 사람이 읽을 문장만 남긴다 - HTML 전체를 찍으면 정작 원인이 묻힌다 */

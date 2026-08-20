@@ -68,8 +68,14 @@ tasks.register('e2eTest', Test) {
     useJUnitPlatform {
         includeTags 'e2e'
     }
-    // 브라우저가 뜨는 시간이 있어 단위 테스트보다 오래 걸린다 - 실패를 빨리 보려면 로그가 필요하다
+    // 브라우저가 뜨는 시간이 있어 단위 테스트보다 오래 걸린다 - 실패를 빨리 보려면 로그가 필요하다.
+    //
+    // showStandardStreams 가 꺼져 있으면 E2eSupport 가 남기는 진단(응답 상태·본문·스크립트 오류)과
+    // 앱 로그가 전부 XML 리포트 안에만 쌓여, 터미널에는 "주소가 다르다" 한 줄만 보인다.
+    // 원인을 찾으려고 리포트 파일을 열어 보게 되는데, 그럴 거면 찍어 둔 의미가 없다
     testLogging {
         events 'passed', 'failed', 'skipped'
+        showStandardStreams = true
+        exceptionFormat = 'full'
     }
 }
