@@ -190,7 +190,8 @@ spring:
 
 | 자리 | 내용 |
 |---|---|
-| CSRF | 토큰 보관소가 쿠키(`CookieCsrfTokenRepository`)면 발급을 미루면 안 된다. 기본값은 화면이 토큰을 읽을 때 만드는 지연 방식이라, 읽지 않고 지나간 응답에는 쿠키가 실리지 않고 다음 POST 가 403 이 된다. `XorCsrfTokenRequestAttributeHandler.setCsrfRequestAttributeName(null)` 로 필터에서 확정한다 (`CsrfTokenIssueTest` 가 지킨다) |
+| CSRF | 토큰은 **세션 저장소(기본값)** 에 둔다. 쿠키 저장소로 두면 한 요청 안에서 토큰이 두 번 만들어질 때 두 번째가 첫 번째를 못 보고 새로 만들어, 화면에 박힌 값과 쿠키가 갈린다 → 403. JS 는 `data-csrf-*` 에서 이름·값을 함께 읽으므로 저장소를 바꿔도 따라온다 (`CsrfTokenIssueTest` 가 지킨다) |
+| 테스트 | `with(csrf())` 는 토큰을 손수 만들어 넣으므로 "서버가 내려 준 토큰이 통하는가" 를 못 잡는다. 그 왕복은 `CsrfTokenIssueTest`/E2E 가 본다 |
 | Flyway | location 을 재귀로 훑는다. 벤더별 마이그레이션은 `db/migration` **밖**, `db/vendor/{vendor}` 에 둔다 |
 | E2E | `alert` 이 열리면 Playwright 가 실패가 아니라 **정지**한다. `E2eSupport` 가 대화상자를 자동으로 닫는다 |
 | E2E | 화면을 넘기지 않는 기능(plans.js 의 한 줄 추가 등)은 주소가 아니라 화면에 붙은 결과로 확인한다 |

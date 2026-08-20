@@ -1,11 +1,11 @@
 package com.example.board.config;
 
-import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -15,22 +15,22 @@ import java.util.regex.Pattern;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * CSRF 토큰이 <b>제때</b> 발급되는지 본다.
+ * 화면에 박아 준 CSRF 토큰이 그다음 요청에서 <b>실제로 통하는지</b> 본다.
  *
- * <p>다른 테스트들은 {@code with(csrf())} 로 토큰을 손수 만들어 넣는다. 그래서 "서버가 토큰을
- * 내려 주기는 하는가" 는 어디서도 확인되지 않았고, 실제로 온보딩 '건너뛰고 둘러보기' 가 브라우저에서
- * 403 으로 막혔다 - 폼에는 토큰이 박혔는데 쿠키에는 아무것도 없었다.</p>
+ * <p>다른 컨트롤러 테스트는 전부 {@code with(csrf())} 로 토큰을 손수 만들어 넣는다. 편하지만,
+ * 그래서 "서버가 내려 준 토큰과 서버가 검사하는 토큰이 같은가" 는 어디서도 확인되지 않았다.
+ * 실제로 이 틈으로 온보딩 '건너뛰고 둘러보기' 가 브라우저에서 403 으로 막혔다 -
+ * 폼에는 토큰이 박혀 있었는데 서버에 남은 것은 다른 토큰이었다.</p>
  *
- * <p>브라우저(E2E)로도 잡히지만 그 쪽은 느리고 무겁다. 원인이 보안 설정 한 줄이므로
- * 그 한 줄을 지키는 테스트를 여기에 둔다.</p>
+ * <p>여기서는 <b>손으로 만들지 않는다.</b> 화면을 열어 거기 박힌 값을 그대로 꺼내 쓴다.
+ * 토큰을 어디에 보관하든(세션이든 쿠키든) 이 왕복이 되면 사용자에게도 된다.</p>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@DisplayName("CSRF 토큰 발급")
+@DisplayName("CSRF 토큰 왕복")
 class CsrfTokenIssueTest {
 
     private static final Pattern HIDDEN_CSRF =
@@ -40,26 +40,26 @@ class CsrfTokenIssueTest {
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("화면을 한 번 열면 XSRF-TOKEN 쿠키가 함께 내려온다 - 이게 없으면 다음 POST 가 403 이 된다")
-    void issuesCookieOnPageLoad() throws Exception {
-        mockMvc.perform(get("/login"))
-                .andExpect(status().isOk())
-                .andExpect(cookie().exists("XSRF-TOKEN"));
+    @DisplayName("서버가 그린 폼에는 CSRF 토큰이 들어 있다 - 없으면 어떤 폼도 제출되지 않는다")
+    void rendersCsrfTokenInForm() throws Exception {
+        MvcResult page = mockMvc.perform(get("/login")).andReturn();
+
+        assertThat(HIDDEN_CSRF.matcher(page.getResponse().getContentAsString()).find())
+                .as("폼에 _csrf 숨은 필드가 박혀 있어야 한다").isTrue();
     }
 
     @Test
-    @DisplayName("화면에서 받은 토큰과 쿠키로 그다음 POST 가 통과한다 - 둘이 어긋나면 사용자는 403 을 본다")
+    @DisplayName("그 화면에서 꺼낸 토큰으로 바로 다음 POST 가 통과한다 - 온보딩 건너뛰기가 403 이던 회귀")
     void acceptsTokenTakenFromRenderedForm() throws Exception {
         MvcResult page = mockMvc.perform(get("/login")).andReturn();
 
-        Cookie csrfCookie = page.getResponse().getCookie("XSRF-TOKEN");
-        assertThat(csrfCookie).as("화면 응답에 XSRF-TOKEN 쿠키가 있어야 한다").isNotNull();
-
+        // 브라우저가 하는 일과 같게 - 화면을 받은 그 연결을 이어서 쓴다
+        MockHttpSession session = (MockHttpSession) page.getRequest().getSession(false);
         Matcher hidden = HIDDEN_CSRF.matcher(page.getResponse().getContentAsString());
         assertThat(hidden.find()).as("폼에 _csrf 숨은 필드가 박혀 있어야 한다").isTrue();
 
         mockMvc.perform(post("/logout")
-                        .cookie(csrfCookie)
+                        .session(session != null ? session : new MockHttpSession())
                         .param("_csrf", hidden.group(1)))
                 .andExpect(status().is3xxRedirection());
     }
