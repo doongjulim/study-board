@@ -190,6 +190,8 @@ spring:
 
 | 자리 | 내용 |
 |---|---|
+| 세션 ID | `server.servlet.session.tracking-modes: cookie` 는 지우면 안 된다. 빼면 첫 요청의 링크에 `;jsessionid=` 가 붙고, Spring Security 요청 방화벽이 경로의 `;` 를 거부해 그 주소의 요청이 전부 400 이 된다 (`sessionManagement` 를 끄면서 드러난 기본값) |
+| 테스트 설정 | `src/test/resources/application.yml` 은 main 을 **가린다**(덮어쓰기가 아님). 운영과 같아야 하는 값은 양쪽에 적어야 한다 |
 | 세션 관리 | `sessionManagement` 를 켜 두면 안 된다(STATELESS 로도). `SessionManagementFilter` 가 "저장소에 SecurityContext 가 없는데 인증은 있다" 를 *방금 로그인* 으로 보는데, JWT 는 요청마다 인증을 새로 채우므로 늘 참이 된다 → `CsrfAuthenticationStrategy` 가 매 요청 CSRF 토큰을 교체 → 화면의 토큰이 클릭 전에 죽는다 (`CsrfTokenIssueTest` 가 지킨다) |
 | CSRF | 토큰은 **세션 저장소(기본값)** 에 둔다. 쿠키 저장소로 두면 한 요청 안에서 토큰이 두 번 만들어질 때 두 번째가 첫 번째를 못 보고 새로 만들어, 화면에 박힌 값과 쿠키가 갈린다 → 403. JS 는 `data-csrf-*` 에서 이름·값을 함께 읽으므로 저장소를 바꿔도 따라온다 (`CsrfTokenIssueTest` 가 지킨다) |
 | 테스트 | `with(csrf())` 는 토큰을 손수 만들어 넣으므로 "서버가 내려 준 토큰이 통하는가" 를 못 잡는다. 그 왕복은 `CsrfTokenIssueTest`/E2E 가 본다 |

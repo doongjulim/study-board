@@ -33,6 +33,19 @@ spring:
       max-file-size: 10MB
       max-request-size: 50MB
 
+server:
+  servlet:
+    session:
+      # 세션 식별자는 쿠키로만 주고받는다.
+      #
+      # 기본값은 쿠키가 아직 없는 첫 요청에 한해 주소 뒤에 ;jsessionid=... 를 붙이는 것도 허용한다.
+      # 그러면 주소를 공유하거나 로그가 남는 순간 세션이 함께 넘어가고, Spring Security 의 요청
+      # 방화벽은 경로 안의 ';' 를 거부하므로 그 주소로 온 요청이 전부 400 이 된다.
+      #
+      # 예전에는 Spring Security 의 세션 관리 설정이 이 재작성을 막아 주고 있었다.
+      # 그 설정을 끄면서 가려져 있던 기본값이 드러났으므로, 여기서 명시적으로 끈다.
+      tracking-modes: cookie
+
 file:
   # 컨테이너에서는 볼륨 경로로 바꾼다. 환경변수 이름을 명시하는 이유는
   # 완화 바인딩 규칙상 file.upload-dir 의 자동 대응이 FILE_UPLOADDIR 이라 헷갈리기 때문이다
