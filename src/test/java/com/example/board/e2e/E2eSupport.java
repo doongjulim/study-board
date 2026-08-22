@@ -145,11 +145,19 @@ abstract class E2eSupport {
         StringBuilder names = new StringBuilder();
         for (HttpHeader header : response.headersArray()) {
             if ("set-cookie".equalsIgnoreCase(header.name)) {
+                // 이름만으로는 "같은 값을 다시 내려 준 것" 과 "새 값으로 갈아 끼운 것" 이 구분되지 않는다
+                String[] pair = header.value.split("=", 2);
                 names.append(names.isEmpty() ? "  ← Set-Cookie: " : ", ")
-                        .append(header.value.split("=", 2)[0]);
+                        .append(pair[0]).append('=')
+                        .append(pair.length > 1 ? head(pair[1]) : "");
             }
         }
         return names.toString();
+    }
+
+    private static String head(String cookieValue) {
+        String value = cookieValue.split(";", 2)[0];
+        return value.length() <= 10 ? value : value.substring(0, 10) + "…";
     }
 
     private static String abbreviate(String value) {
