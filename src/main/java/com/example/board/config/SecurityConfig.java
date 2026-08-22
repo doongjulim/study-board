@@ -11,7 +11,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -72,8 +71,25 @@ public class SecurityConfig {
                 //
                 // 서버가 그리는 폼이 주 사용처이고, JS 는 헤더 프래그먼트의 data-csrf-* 에서 이름과 값을
                 // 함께 읽으므로 저장소가 무엇이든 따라온다 - 쿠키로 둘 이유가 애초에 없었다.
-                // 프레임 차단은 기본값(DENY)을 그대로 둔다 - 클릭재킹 방어를 h2 때문에 풀어 줄 이유가 없다
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                //
+                // 프레임 차단은 기본값(DENY)을 그대로 둔다 - 클릭재킹 방어를 h2 때문에 풀어 줄 이유가 없다.
+                //
+                // 세션 관리 기능은 통째로 끈다. 무상태라서 필요 없다는 소극적인 이유가 아니라,
+                // 켜 두면 CSRF 가 망가지기 때문이다.
+                //
+                // SessionManagementFilter 는 "저장소에서 SecurityContext 를 읽어 오지 못했는데 인증은 있다" 를
+                // '방금 로그인했다' 로 해석한다. 세션 기반이라면 맞는 추론이다. 그런데 우리는 요청마다
+                // JwtAuthenticationFilter 가 토큰을 읽어 인증을 새로 채우고, 저장소는 무상태라 늘 비어 있다.
+                // 그래서 이 조건이 로그인한 사람의 <b>모든</b> 요청에서 참이 되고, 그때마다 세션 고정 공격을
+                // 막으려고 붙어 있는 CsrfAuthenticationStrategy 가 CSRF 토큰을 갈아 끼운다.
+                //
+                // 결과는 조용했다 - 화면에 박아 준 토큰이, 그 화면이 부르는 js/css 요청들 때문에
+                // 사용자가 버튼을 누르기도 전에 죽어 있었다. 온보딩 '건너뛰고 둘러보기' 가 403 이던 이유다.
+                // (로그: CsrfAuthenticationStrategy "Replaced CSRF Token" → CsrfFilter "Invalid CSRF token found")
+                //
+                // 이 설정을 지우면 SessionManagementFilter 가 사라지고, CsrfConfigurer 도 붙일 곳이 없어
+                // 그 전략을 등록하지 않는다. 인증은 그대로 무상태다 - 로그인 상태는 여전히 토큰이 들고 다닌다.
+                .sessionManagement(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // 회원 기능·정적 리소스는 공개 (로그아웃은 쿠키 삭제뿐이라 익명도 무해)
                         // 비밀번호 찾기는 로그인할 수 없는 상태에서 쓰는 기능이라 공개다

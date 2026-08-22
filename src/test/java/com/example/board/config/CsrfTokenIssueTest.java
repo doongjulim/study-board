@@ -1,14 +1,18 @@
 package com.example.board.config;
 
+import jakarta.servlet.Filter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.web.FilterChainProxy;
+import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,6 +42,24 @@ class CsrfTokenIssueTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private FilterChainProxy springSecurityFilterChain;
+
+    @Test
+    @DisplayName("세션 관리 필터가 체인에 없다 - 있으면 요청마다 CSRF 토큰이 갈아 끼워진다")
+    void hasNoSessionManagementFilter() {
+        List<Filter> filters = springSecurityFilterChain.getFilterChains().stream()
+                .flatMap(chain -> chain.getFilters().stream())
+                .toList();
+
+        assertThat(filters)
+                .as("""
+                        SessionManagementFilter 는 '저장소에서 SecurityContext 를 못 읽었는데 인증은 있다' 를
+                        방금 로그인한 것으로 본다. JWT 는 요청마다 인증을 새로 채우므로 이 조건이 늘 참이 되고,
+                        CsrfAuthenticationStrategy 가 매 요청 토큰을 바꿔 화면의 토큰이 즉시 죽는다.""")
+                .noneMatch(SessionManagementFilter.class::isInstance);
+    }
 
     @Test
     @DisplayName("서버가 그린 폼에는 CSRF 토큰이 들어 있다 - 없으면 어떤 폼도 제출되지 않는다")

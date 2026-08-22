@@ -79,11 +79,8 @@ tasks.register('e2eTest', Test) {
         exceptionFormat = 'full'
     }
 
-    // 막히는 자리가 컨트롤러가 아니라 보안 필터 안이다. 거기서 무엇을 보고 거절했는지는
-    // 프레임워크만 알고 있으므로 그 판단을 말하게 한다.
-    // 두 갈래만 켠다 - 필터 체인이 요청마다 몇 번 도는지(FilterChainProxy)와 CSRF 의 판정(csrf).
-    // org.springframework.security 전체를 켜면 수천 줄이 되어 정작 볼 것이 묻힌다.
-    // 단위 테스트에는 걸지 않는다: 여기서만 필요한 소음이다
-    systemProperty 'logging.level.org.springframework.security.web.FilterChainProxy', 'DEBUG'
-    systemProperty 'logging.level.org.springframework.security.web.csrf', 'DEBUG'
+    // 보안 필터가 왜 거절했는지 볼 일이 생기면 이 두 줄을 켠다. 지난번 403 의 원인
+    // (요청마다 CSRF 토큰이 갈아 끼워지던 것)도 이걸로 잡았다. 평소에는 출력이 너무 길어 꺼 둔다.
+    // systemProperty 'logging.level.org.springframework.security.web.FilterChainProxy', 'DEBUG'
+    // systemProperty 'logging.level.org.springframework.security.web.csrf', 'DEBUG'
 }
