@@ -299,6 +299,20 @@ class PlanServiceTest {
         then(eventPublisher).shouldHaveNoInteractions();
     }
 
+    @Test
+    @DisplayName("changeShareScope - 껐다 다시 켜도 두 번째 알림은 없다 (전체 공개 알림은 회원 수만큼 퍼진다)")
+    void changeShareScope_reSharingDoesNotPublishAgain() {
+        Plan plan = plan();
+        plan.changeShareScope(ShareScope.PUBLIC);   // 첫 공유 - 이때 이미 알렸다
+        plan.changeShareScope(ShareScope.PRIVATE);
+        given(planRepository.findById(1L)).willReturn(Optional.of(plan));
+
+        planService.changeShareScope(1L, ShareScope.PUBLIC, 1L);
+
+        assertThat(plan.isShared()).as("알리지 않을 뿐, 공유 자체는 되어야 한다").isTrue();
+        then(eventPublisher).shouldHaveNoInteractions();
+    }
+
     // ── 공유 목록 / 열람 자격 ─────────────────────────────────
 
     @Test

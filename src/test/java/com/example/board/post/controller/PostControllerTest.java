@@ -30,6 +30,8 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasProperty;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -267,6 +269,19 @@ class PostControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("posts/edit"))
                 .andExpect(model().attributeExists("postForm", "post"));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{id}/edit - 원래 분류가 폼에 실린다 - 안 실으면 오타만 고쳐도 '자유' 로 바뀐다")
+    void editForm_carriesCurrentCategory() throws Exception {
+        Post question = new Post("제목", "내용",
+                new Member("tester1", "encoded-password", "작성자"), PostCategory.QUESTION);
+        given(postService.findOwned(1L, 1L)).willReturn(question);
+
+        mockMvc.perform(get("/posts/1/edit").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("postForm",
+                        hasProperty("category", equalTo(PostCategory.QUESTION))));
     }
 
     // ── POST /posts/{id}/edit ─────────────────────────────────

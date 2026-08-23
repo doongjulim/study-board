@@ -28,14 +28,14 @@ import static org.assertj.core.api.Assertions.*;
  * 마이그레이션에만 있는 것(계산 컬럼·유니크 인덱스·{@code on delete set null})은 아예 검증되지 않는다.</p>
  *
  * <p>Spring 컨텍스트를 띄우지 않고 Flyway 를 직접 실행한다.
- * 공용 테스트 설정({@code src/test/resources/application.yml})의 영향을 받지 않아 결과가 흔들리지 않고,
+ * 공용 테스트 설정({@code src/test/resources/application-test.yml})의 영향을 받지 않아 결과가 흔들리지 않고,
  * 테스트마다 새 인메모리 DB 를 쓰므로 서로 간섭하지도 않는다.</p>
  */
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V21 post category·like·view */
-    private static final int EXPECTED_MIGRATIONS = 21;
+    /** V1 init ~ V22 plan share_notified */
+    private static final int EXPECTED_MIGRATIONS = 22;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -229,6 +229,20 @@ class SchemaMigrationTest {
     }
 
     @Test
+    @DisplayName("V22: 새로 만든 플랜은 공유 소식을 아직 알리지 않은 상태다")
+    void planStartsUnannounced() {
+        Long ownerId = createMember("fresh");
+        jdbc.update("""
+                insert into plan (title, author_id, category, plan_date, completed, reminder_sent)
+                values ('새 계획', ?, 'ETC', ?, false, false)
+                """, ownerId, LocalDate.of(2026, 8, 14));
+
+        Boolean notified = jdbc.queryForObject(
+                "select share_notified from plan where author_id = ?", Boolean.class, ownerId);
+        assertThat(notified).isFalse();
+    }
+
+    @Test
     @DisplayName("V19: 같은 날짜에 같은 주기의 회고를 두 개 쓸 수 없다 (고쳐 쓰기의 최종 방어선)")
     void rejectsDuplicateRetrospective() {
         Long ownerId = createMember("writer");
@@ -344,7 +358,7 @@ class SchemaMigrationTest {
     }
 
     @Test
-    @DisplayName("V1~V21 이 H2 에서 모두 실행된다")
+    @DisplayName("V1~V22 가 H2 에서 모두 실행된다")
     void allMigrationsApply() {
         // SQL 이 깨져 있으면 migrate() 단계에서 FlywayException 이 터지므로, 여기 왔다면 전부 성공한 것이다
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);

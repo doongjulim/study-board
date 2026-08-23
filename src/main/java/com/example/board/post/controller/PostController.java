@@ -144,6 +144,9 @@ public class PostController {
         PostForm form = new PostForm();
         form.setTitle(post.getTitle());
         form.setContent(post.getContent());
+        // 분류도 채워야 한다. 빠뜨리면 폼 기본값(자유)이 선택된 채 화면이 뜨고,
+        // 오타 하나를 고쳐 저장한 사람이 글의 분류까지 바꾼다 - 본인은 바꾼 줄도 모른다
+        form.setCategory(post.getCategory());
         model.addAttribute("postForm", form);
         model.addAttribute("post", post);
         return "posts/edit";

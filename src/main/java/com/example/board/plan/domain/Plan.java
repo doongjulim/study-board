@@ -52,6 +52,10 @@ public class Plan {
     @Column(nullable = false, length = 10)
     private ShareScope shareScope = ShareScope.PRIVATE;
 
+    /** 공유 소식을 이미 알렸는지. 공유는 몇 번이든 껐다 켤 수 있지만 소식은 한 번뿐이다 */
+    @Column(nullable = false)
+    private boolean shareNotified;
+
     @Column(nullable = false)
     private boolean reminderSent;
 
@@ -144,16 +148,24 @@ public class Plan {
     }
 
     /**
-     * 공유 범위를 바꾸고, <b>새로 공유된</b> 경우에만 true 를 반환한다 (알림 발행 조건).
+     * 공유 범위를 바꾸고, 이 플랜을 <b>처음 공유하는</b> 경우에만 true 를 반환한다 (알림 발행 조건).
      *
      * <p>이미 공유된 플랜의 범위 조정(GROUP↔PUBLIC)은 알리지 않는다 —
      * 그룹에 알림이 간 플랜을 전체 공개로 넓혔다고 같은 사람들에게 또 알리면 소음이다.</p>
+     *
+     * <p>"처음" 이었는지를 플랜에 남겨 두는 이유는, 직전 상태만 보고 판단하면 공개↔비공개를
+     * 오갈 때마다 새 공유로 읽히기 때문이다. 전체 공개 알림은 회원 수만큼 퍼지므로,
+     * 버튼을 껐다 켜는 것만으로 알림을 무한히 찍어낼 수 있게 된다.
+     * 공유는 몇 번이든 껐다 켜도 되지만 <b>소식은 한 번</b>이다.</p>
      */
     public boolean changeShareScope(ShareScope newScope) {
         ShareScope target = (newScope != null) ? newScope : ShareScope.PRIVATE;
-        boolean newlyShared = !this.shareScope.isShared() && target.isShared();
+        boolean firstShare = !shareNotified && !this.shareScope.isShared() && target.isShared();
         this.shareScope = target;
-        return newlyShared;
+        if (firstShare) {
+            this.shareNotified = true;
+        }
+        return firstShare;
     }
 
     public void markReminderSent() {

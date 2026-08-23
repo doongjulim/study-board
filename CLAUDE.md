@@ -198,6 +198,8 @@ spring:
 
 | 자리 | 내용 |
 |---|---|
+| 공유 알림 | 알림 조건을 "직전 상태" 로 판단하면 안 된다. 전체 공개 알림은 회원 수만큼 퍼지므로, 공개↔비공개를 오갈 때마다 새 공유로 읽히면 버튼 하나로 알림을 무한히 찍어낼 수 있다. 그래서 `plan.share_notified` 에 **알린 적이 있는가** 를 남긴다 |
+| 폼 되채우기 | 수정 폼을 만들 때 화면에 있는 **모든** 필드를 채워야 한다. 빠뜨린 필드는 DTO 기본값으로 조용히 덮어써진다 (게시글 분류가 '자유' 로 초기화되던 버그) |
 | 세션 ID | `server.servlet.session.tracking-modes: cookie` 는 지우면 안 된다. 빼면 첫 요청의 링크에 `;jsessionid=` 가 붙고, Spring Security 요청 방화벽이 경로의 `;` 를 거부해 그 주소의 요청이 전부 400 이 된다 (`sessionManagement` 를 끄면서 드러난 기본값) |
 | 테스트 설정 | 테스트는 `test` 프로파일로 돌고(`src/test/resources/application.properties`), 차이만 `application-test.yml` 에 적는다. **`src/test/resources/application.yml` 을 다시 만들면 안 된다** — 이름이 같으면 운영 설정을 덮어쓰는 게 아니라 통째로 가려서, 테스트가 운영과 다른 앱을 검증하게 된다 |
 | 세션 관리 | `sessionManagement` 를 켜 두면 안 된다(STATELESS 로도). `SessionManagementFilter` 가 "저장소에 SecurityContext 가 없는데 인증은 있다" 를 *방금 로그인* 으로 보는데, JWT 는 요청마다 인증을 새로 채우므로 늘 참이 된다 → `CsrfAuthenticationStrategy` 가 매 요청 CSRF 토큰을 교체 → 화면의 토큰이 클릭 전에 죽는다 (`CsrfTokenIssueTest` 가 지킨다) |

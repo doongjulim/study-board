@@ -130,6 +130,20 @@ class PlanTest {
     }
 
     @Test
+    @DisplayName("비공개로 되돌렸다 다시 공유해도 두 번째 알림은 없다 - 껐다 켜기로 알림을 찍어낼 수 없어야 한다")
+    void changeShareScope_announcesOnlyOnce() {
+        Plan plan = plan();
+
+        assertThat(plan.changeShareScope(ShareScope.PUBLIC)).isTrue();
+        plan.changeShareScope(ShareScope.PRIVATE);
+
+        // 전체 공개 알림은 회원 수만큼 퍼진다. 이 줄이 false 가 아니면
+        // 버튼을 껐다 켜는 것만으로 알림을 얼마든지 찍어낼 수 있다
+        assertThat(plan.changeShareScope(ShareScope.PUBLIC)).isFalse();
+        assertThat(plan.isShared()).as("알리지 않을 뿐, 공유 자체는 되어야 한다").isTrue();
+    }
+
+    @Test
     @DisplayName("공유 범위를 비워 보내면 비공개로 다룬다 - 잘못된 요청이 실수로 공개로 이어지지 않게")
     void changeShareScope_nullMeansPrivate() {
         Plan plan = plan();

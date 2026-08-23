@@ -150,7 +150,7 @@ src/main/java/com/example/board
 
 src/main/resources
 ├── application.yml
-├── db/migration/      # Flyway (V1 init ~ V16 member_notification_preference)
+├── db/migration/      # Flyway (V1 init ~ V22 plan_share_notified)
 ├── static/{css,js}
 └── templates/{auth,posts,plans,fragments,error}
 ```
