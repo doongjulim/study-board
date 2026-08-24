@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.*;
+import static org.mockito.Mockito.inOrder;
 
 @ExtendWith(MockitoExtension.class)
 class StudyGroupServiceTest {
@@ -199,7 +201,11 @@ class StudyGroupServiceTest {
 
             studyGroupService.leave(10L, 1L);
 
-            then(groupRepository).should().delete(group);
+            // 소속 행을 먼저 치우고 그룹을 지운다. DB 의 on delete cascade 에 기대면
+            // 그 규칙이 없는 곳(엔티티로 스키마를 만드는 테스트)에서 외래 키 위반으로 막힌다
+            InOrder inOrder = inOrder(groupMemberRepository, groupRepository);
+            inOrder.verify(groupMemberRepository).deleteByStudyGroup_Id(10L);
+            inOrder.verify(groupRepository).delete(group);
         }
     }
 

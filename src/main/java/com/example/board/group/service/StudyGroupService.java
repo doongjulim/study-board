@@ -82,7 +82,7 @@ public class StudyGroupService {
                 .filter(candidate -> !candidate.getMember().getId().equals(memberId))
                 .toList();
         if (successors.isEmpty()) {
-            groupRepository.delete(group); // 소속 행은 on delete cascade 로 함께 정리된다
+            deleteGroupWithMemberships(group);
             return;
         }
         group.transferOwnershipTo(successors.get(0).getMember());
@@ -96,6 +96,22 @@ public class StudyGroupService {
         if (!group.isOwnedBy(memberId)) {
             throw new AccessDeniedException("그룹장만 그룹을 삭제할 수 있습니다.");
         }
+        deleteGroupWithMemberships(group);
+    }
+
+    /**
+     * 그룹과 그 소속 행을 함께 지운다.
+     *
+     * <p>소속 행을 먼저 치우는 이유는, DB 의 {@code on delete cascade} 에 기대면
+     * <b>운영에서만 도는 코드</b>가 되기 때문이다. 그 규칙은 마이그레이션에만 있고,
+     * 엔티티에서 스키마를 만드는 테스트에는 없어 외래 키 위반으로 막힌다.
+     * 실제로 탈퇴 정리 통합 테스트가 이걸 잡았다.</p>
+     *
+     * <p>DB 의 cascade 는 그대로 둔다 - 애플리케이션을 거치지 않고 지워지는 경우의 마지막 방어선이다.
+     * 기대지 않을 뿐 없앨 이유는 없다.</p>
+     */
+    private void deleteGroupWithMemberships(StudyGroup group) {
+        groupMemberRepository.deleteByStudyGroup_Id(group.getId());
         groupRepository.delete(group);
     }
 

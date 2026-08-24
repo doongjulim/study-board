@@ -25,6 +25,16 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
 
     Optional<GroupMember> findByStudyGroup_IdAndMember_Id(Long groupId, Long memberId);
 
+    /**
+     * 그룹을 지우기 전에 소속 행을 먼저 치운다.
+     *
+     * <p>DB 에도 {@code on delete cascade} 가 걸려 있지만 거기에 기대지 않는다.
+     * ORM 은 그 정리를 모르므로 같은 트랜잭션 안에서 이미 사라진 행을 계속 들고 있고,
+     * 무엇보다 <b>그 규칙은 마이그레이션에만 있다</b> - 엔티티에서 스키마를 만드는 테스트에는
+     * 없어서, 운영에서만 되는 코드가 된다.</p>
+     */
+    void deleteByStudyGroup_Id(Long groupId);
+
     boolean existsByStudyGroup_IdAndMember_Id(Long groupId, Long memberId);
 
     long countByMember_Id(Long memberId);
