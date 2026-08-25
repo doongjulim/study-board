@@ -3,7 +3,6 @@ package com.example.board.plan.controller;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.plan.domain.DailyProgress;
 import com.example.board.plan.domain.Plan;
-import com.example.board.plan.dto.DailyProgressResponse;
 import com.example.board.plan.dto.PlanRowResponse;
 import com.example.board.plan.dto.QuickPlanForm;
 import com.example.board.plan.service.PlanService;
@@ -67,9 +66,8 @@ public class PlanApiController {
         return new RolloverResponse(moved, progressOf(to, principal.id()));
     }
 
-    private DailyProgressResponse progressOf(LocalDate date, Long memberId) {
-        List<Plan> plans = planService.findDaily(date, memberId);
-        return DailyProgressResponse.from(DailyProgress.of(plans));
+    private DailyProgress progressOf(LocalDate date, Long memberId) {
+        return DailyProgress.of(planService.findDaily(date, memberId));
     }
 
     // ── 예외 처리 ────────────────────────────────────────────
@@ -104,12 +102,12 @@ public class PlanApiController {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
     }
 
-    public record QuickAddResponse(PlanRowResponse plan, DailyProgressResponse progress) {
+    public record QuickAddResponse(PlanRowResponse plan, DailyProgress progress) {
     }
 
-    public record ToggleResponse(Long id, boolean completed, DailyProgressResponse progress) {
+    public record ToggleResponse(Long id, boolean completed, DailyProgress progress) {
     }
 
-    public record RolloverResponse(int movedCount, DailyProgressResponse progress) {
+    public record RolloverResponse(int movedCount, DailyProgress progress) {
     }
 }

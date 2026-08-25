@@ -1,5 +1,6 @@
 package com.example.board.plan.domain;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
@@ -15,15 +16,18 @@ public record DailyProgress(int totalCount, int completedCount) {
                 (int) plans.stream().filter(Plan::isCompleted).count());
     }
 
+    @JsonProperty
     public int remainingCount() {
         return totalCount - completedCount;
     }
 
+    @JsonProperty
     public int completionRate() {
         return totalCount == 0 ? 0 : (int) Math.round(completedCount * 100.0 / totalCount);
     }
 
     /** 계획을 세웠고 남김없이 끝낸 상태 */
+    @JsonProperty
     public boolean allDone() {
         return totalCount > 0 && completedCount == totalCount;
     }
