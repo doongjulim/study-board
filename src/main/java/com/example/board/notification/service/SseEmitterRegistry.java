@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,7 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Component
 public class SseEmitterRegistry {
 
-    private static final long TIMEOUT_MILLIS = 30 * 60 * 1000L;
+    private static final long TIMEOUT_MILLIS = Duration.ofMinutes(30).toMillis();
 
     /** memberId → (emitterId → emitter). 같은 회원이 여러 탭으로 접속할 수 있다 */
     private final Map<Long, Map<Long, SseEmitter>> emittersByMember = new ConcurrentHashMap<>();

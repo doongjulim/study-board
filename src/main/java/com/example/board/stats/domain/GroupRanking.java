@@ -71,12 +71,7 @@ public record GroupRanking(List<Row> rows, long topMinutes) {
 
         /** "3시간 20분" 처럼 읽히게 - 분 단위 숫자는 한눈에 안 들어온다 */
         public String readableTime() {
-            if (minutes < 60) {
-                return minutes + "분";
-            }
-            long hours = minutes / 60;
-            long rest = minutes % 60;
-            return (rest == 0) ? hours + "시간" : hours + "시간 " + rest + "분";
+            return MemberStudyTime.readableMinutes(minutes);
         }
     }
 }

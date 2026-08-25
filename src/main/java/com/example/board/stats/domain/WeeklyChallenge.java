@@ -41,11 +41,6 @@ public record WeeklyChallenge(LocalDate weekStart, long totalMinutes,
 
     /** 그룹 전체 합계를 "12시간 30분" 처럼 읽히게 */
     public String readableTotal() {
-        if (totalMinutes < 60) {
-            return totalMinutes + "분";
-        }
-        long hours = totalMinutes / 60;
-        long rest = totalMinutes % 60;
-        return (rest == 0) ? hours + "시간" : hours + "시간 " + rest + "분";
+        return MemberStudyTime.readableMinutes(totalMinutes);
     }
 }

@@ -18,4 +18,14 @@ public record MemberStudyTime(Long memberId, String nickname, long minutes, int 
     public boolean metGoalOver(int days) {
         return hasGoal() && minutes >= (long) goalMinutes * days;
     }
+
+    /** 분 합계를 "3시간 20분" 처럼 읽히게 한다. 패키지 안에서 공용 */
+    static String readableMinutes(long minutes) {
+        if (minutes < 60) {
+            return minutes + "분";
+        }
+        long hours = minutes / 60;
+        long rest = minutes % 60;
+        return (rest == 0) ? hours + "시간" : hours + "시간 " + rest + "분";
+    }
 }

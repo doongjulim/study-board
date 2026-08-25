@@ -22,7 +22,7 @@ public final class TokenHasher {
 
     /** 추측할 수 없는 토큰 원문을 만든다 */
     public static String newToken() {
-        return UUID.randomUUID() + "-" + UUID.randomUUID();
+        return UUID.randomUUID().toString();
     }
 
     public static String hash(String rawToken) {
