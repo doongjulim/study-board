@@ -3,7 +3,7 @@ package com.example.board.auth.service;
 import com.example.board.auth.TokenHasher;
 import com.example.board.auth.domain.PasswordResetToken;
 import com.example.board.auth.repository.PasswordResetTokenRepository;
-import com.example.board.mail.MailSender;
+import com.example.board.mail.LoggingMailSender;
 import com.example.board.member.domain.Member;
 import com.example.board.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ public class PasswordResetService {
 
     private final PasswordResetTokenRepository tokenRepository;
     private final MemberService memberService;
-    private final MailSender mailSender;
+    private final LoggingMailSender mailSender;
     private final Clock clock;
 
     /** 메일에 담을 링크의 앞부분 - 배포 주소에 맞춰 바꾼다 */

@@ -3,7 +3,7 @@ package com.example.board.auth.service;
 import com.example.board.auth.TokenHasher;
 import com.example.board.auth.domain.PasswordResetToken;
 import com.example.board.auth.repository.PasswordResetTokenRepository;
-import com.example.board.mail.MailSender;
+import com.example.board.mail.LoggingMailSender;
 import com.example.board.member.domain.Member;
 import com.example.board.member.service.MemberService;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +37,7 @@ class PasswordResetServiceTest {
 
     @Mock PasswordResetTokenRepository tokenRepository;
     @Mock MemberService memberService;
-    @Mock MailSender mailSender;
+    @Mock LoggingMailSender mailSender;
 
     private PasswordResetService passwordResetService;
 
