@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -74,28 +73,6 @@ public class StudySessionController {
                                        @AuthenticationPrincipal MemberPrincipal principal) {
         studySessionService.delete(id, principal.id());
         return ResponseEntity.noContent().build();
-    }
-
-    // ── 예외 처리 ────────────────────────────────────────────
-    // GlobalExceptionHandler 는 HTML 오류 페이지를 반환하므로 JSON API 에는 맞지 않는다.
-    // 컨트롤러 지역 핸들러가 우선하므로 여기서 상태 코드만 담아 닫는다.
-
-    /** 이미 진행 중인데 또 시작한 경우 - 화면이 "먼저 종료하세요" 를 띄울 수 있도록 409 로 구분한다 */
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<String> handleAlreadyRunning(IllegalStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
-    }
-
-    /** 남의 세션·남의 계획에 손댄 경우 */
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<String> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
-    }
-
-    /** 없는 세션·계획을 가리킨 경우 */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleNotFound(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
     }
 
     private LocalDateTime now() {

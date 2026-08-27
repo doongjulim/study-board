@@ -11,14 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * 화면을 옮기지 않는 플래너 조작.
@@ -68,38 +64,6 @@ public class PlanApiController {
 
     private DailyProgress progressOf(LocalDate date, Long memberId) {
         return DailyProgress.of(planService.findDaily(date, memberId));
-    }
-
-    // ── 예외 처리 ────────────────────────────────────────────
-    // GlobalExceptionHandler 는 HTML 오류 페이지를 반환하므로 JSON API 에는 맞지 않는다.
-
-    /**
-     * 입력값 오류. 이 핸들러가 없으면 GlobalExceptionHandler 의 포괄 처리에 걸려
-     * 500 HTML 페이지가 내려간다 (JSON 을 기대하는 화면에서는 원인을 알 수 없다).
-     */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<String> handleInvalid(MethodArgumentNotValidException ex) {
-        String message = ex.getBindingResult().getFieldErrors().stream()
-                .findFirst()
-                .map(FieldError::getDefaultMessage)
-                .orElse("입력값을 확인해 주세요.");
-        return ResponseEntity.badRequest().body(message);
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<String> handleAccessDenied(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleNotFound(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
-    }
-
-    /** 완료한 일정을 옮기려 한 경우 등 */
-    @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<String> handleConflict(IllegalStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
     }
 
     public record QuickAddResponse(PlanRowResponse plan, DailyProgress progress) {
