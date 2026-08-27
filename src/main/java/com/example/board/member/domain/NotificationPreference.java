@@ -63,11 +63,15 @@ public class NotificationPreference {
             throw new IllegalArgumentException(
                     "알림 시점은 0분 이상 %d분 이하여야 합니다.".formatted(MAX_LEAD_MINUTES));
         }
-        NotificationPreference changed = new NotificationPreference();
-        changed.reminderEnabled = reminderEnabled;
-        changed.reminderLeadMinutes = reminderLeadMinutes;
-        changed.planSharedEnabled = planSharedEnabled;
-        changed.commentEnabled = commentEnabled;
-        return changed;
+        return new NotificationPreference(reminderEnabled, reminderLeadMinutes,
+                planSharedEnabled, commentEnabled);
+    }
+
+    private NotificationPreference(boolean reminderEnabled, int reminderLeadMinutes,
+                                   boolean planSharedEnabled, boolean commentEnabled) {
+        this.reminderEnabled = reminderEnabled;
+        this.reminderLeadMinutes = reminderLeadMinutes;
+        this.planSharedEnabled = planSharedEnabled;
+        this.commentEnabled = commentEnabled;
     }
 }

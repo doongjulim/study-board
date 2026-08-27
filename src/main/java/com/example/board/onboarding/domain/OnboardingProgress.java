@@ -30,14 +30,7 @@ public record OnboardingProgress(boolean ddayCreated, boolean planCreated) {
 
     /** 앞 단계를 마쳤는지 - 화면의 체크 표시에 쓴다 */
     public int completedSteps() {
-        int completed = 0;
-        if (ddayCreated) {
-            completed++;
-        }
-        if (planCreated) {
-            completed++;
-        }
-        return completed;
+        return (ddayCreated ? 1 : 0) + (planCreated ? 1 : 0);
     }
 
     /** 마지막 단계(타이머 체험)까지 왔는지 */

@@ -2,6 +2,7 @@ package com.example.board.onboarding.controller;
 
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.dday.dto.DdayForm;
+import com.example.board.dday.service.DdayService;
 import com.example.board.onboarding.domain.OnboardingProgress;
 import com.example.board.onboarding.service.OnboardingService;
 import com.example.board.plan.domain.PlanCategory;
@@ -33,6 +34,7 @@ import java.time.LocalDate;
 public class OnboardingController {
 
     private final OnboardingService onboardingService;
+    private final DdayService ddayService;
     private final PlanService planService;
     private final Clock clock;
 
@@ -49,7 +51,7 @@ public class OnboardingController {
         if (bindingResult.hasErrors()) {
             return render(principal, model);
         }
-        onboardingService.createFirstDday(principal.id(), ddayForm);
+        ddayService.create(ddayForm, principal.id());
         return "redirect:/onboarding";
     }
 
@@ -61,7 +63,7 @@ public class OnboardingController {
         if (bindingResult.hasErrors()) {
             return render(principal, model);
         }
-        onboardingService.createFirstPlan(principal.id(), planForm);
+        planService.create(planForm, principal.id());
         return "redirect:/onboarding";
     }
 

@@ -14,6 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import org.springframework.data.domain.PageRequest;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -47,12 +49,12 @@ class DdayServiceTest {
     @Test
     @DisplayName("다가오는 D-Day 는 가까운 순으로 최대 3개까지만 보여준다")
     void findUpcomingLimitsToThree() {
-        given(ddayRepository.findByOwner_IdAndTargetDateGreaterThanEqualOrderByTargetDateAsc(OWNER_ID, TODAY))
+        given(ddayRepository.findByOwner_IdAndTargetDateGreaterThanEqualOrderByTargetDateAsc(
+                OWNER_ID, TODAY, PageRequest.ofSize(3)))
                 .willReturn(List.of(
                         dday(OWNER_ID, "1", TODAY),
                         dday(OWNER_ID, "2", TODAY.plusDays(1)),
-                        dday(OWNER_ID, "3", TODAY.plusDays(2)),
-                        dday(OWNER_ID, "4", TODAY.plusDays(3))));
+                        dday(OWNER_ID, "3", TODAY.plusDays(2))));
 
         List<Dday> upcoming = ddayService.findUpcoming(OWNER_ID, TODAY);
 

@@ -1,10 +1,8 @@
 package com.example.board.onboarding.service;
 
-import com.example.board.dday.dto.DdayForm;
 import com.example.board.dday.service.DdayService;
 import com.example.board.member.service.MemberService;
 import com.example.board.onboarding.domain.OnboardingProgress;
-import com.example.board.plan.dto.PlanForm;
 import com.example.board.plan.service.PlanService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,16 +31,6 @@ public class OnboardingService {
         return new OnboardingProgress(
                 !ddayService.findMine(memberId).isEmpty(),
                 !planService.findDaily(today, memberId).isEmpty());
-    }
-
-    @Transactional
-    public void createFirstDday(Long memberId, DdayForm form) {
-        ddayService.create(form, memberId);
-    }
-
-    @Transactional
-    public void createFirstPlan(Long memberId, PlanForm form) {
-        planService.create(form, memberId);
     }
 
     @Transactional

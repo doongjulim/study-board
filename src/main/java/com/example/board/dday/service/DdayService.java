@@ -5,6 +5,7 @@ import com.example.board.dday.dto.DdayForm;
 import com.example.board.dday.repository.DdayRepository;
 import com.example.board.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,11 +30,8 @@ public class DdayService {
 
     /** 아직 지나지 않은 가까운 D-Day 몇 개 - 플래너 요약용 */
     public List<Dday> findUpcoming(Long memberId, LocalDate today) {
-        return ddayRepository
-                .findByOwner_IdAndTargetDateGreaterThanEqualOrderByTargetDateAsc(memberId, today)
-                .stream()
-                .limit(UPCOMING_LIMIT)
-                .toList();
+        return ddayRepository.findByOwner_IdAndTargetDateGreaterThanEqualOrderByTargetDateAsc(
+                memberId, today, PageRequest.ofSize(UPCOMING_LIMIT));
     }
 
     public Dday findOwned(Long id, Long memberId) {

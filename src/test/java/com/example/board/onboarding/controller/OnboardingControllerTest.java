@@ -7,6 +7,7 @@ import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
 import com.example.board.dday.dto.DdayForm;
+import com.example.board.dday.service.DdayService;
 import com.example.board.onboarding.domain.OnboardingProgress;
 import com.example.board.onboarding.service.OnboardingService;
 import com.example.board.plan.dto.PlanForm;
@@ -59,6 +60,7 @@ class OnboardingControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean OnboardingService onboardingService;
+    @MockBean DdayService ddayService;
     @MockBean PlanService planService;
     @MockBean TokenService tokenService;
 
@@ -69,7 +71,7 @@ class OnboardingControllerTest {
      */
     @BeforeEach
     void resetMocks() {
-        Mockito.reset(onboardingService, planService);
+        Mockito.reset(onboardingService, ddayService, planService);
     }
 
     private static RequestPostProcessor memberAuth() {
@@ -143,7 +145,7 @@ class OnboardingControllerTest {
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/onboarding"));
 
-            then(onboardingService).should().createFirstDday(eq(MEMBER_ID), any(DdayForm.class));
+            then(ddayService).should().create(any(DdayForm.class), eq(MEMBER_ID));
         }
 
         @Test
@@ -159,7 +161,7 @@ class OnboardingControllerTest {
                     .andExpect(view().name("onboarding/onboarding"))
                     .andExpect(model().attributeHasFieldErrors("ddayForm", "title"));
 
-            then(onboardingService).should(never()).createFirstDday(any(), any());
+            then(ddayService).should(never()).create(any(), any());
         }
 
         @Test
@@ -174,7 +176,7 @@ class OnboardingControllerTest {
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/onboarding"));
 
-            then(onboardingService).should().createFirstPlan(eq(MEMBER_ID), any(PlanForm.class));
+            then(planService).should().create(any(PlanForm.class), eq(MEMBER_ID));
         }
 
         @Test
