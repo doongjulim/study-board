@@ -1,6 +1,7 @@
 package com.example.board.post.service;
 
 import com.example.board.file.store.FileStore;
+import com.example.board.file.store.TransactionalFileRemover;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.post.domain.AttachedFile;
@@ -39,6 +40,7 @@ class PostServiceTest {
     @Mock AttachedFileRepository fileRepository;
     @Mock MemberRepository memberRepository;
     @Mock FileStore fileStore;
+    @Mock TransactionalFileRemover fileRemover;
 
     @InjectMocks PostService postService;
 
@@ -199,7 +201,7 @@ class PostServiceTest {
     // ── delete ────────────────────────────────────────────────
 
     @Test
-    @DisplayName("게시글 삭제 시 첨부파일도 디스크에서 삭제되고 Repository.delete 가 호출된다")
+    @DisplayName("게시글 삭제 시 첨부파일 삭제를 커밋 이후로 예약하고 Repository.delete 가 호출된다")
     void delete() {
         Post post = post();
         AttachedFile file = new AttachedFile("a.txt", "uuid.txt", "text/plain", 10L);
@@ -208,7 +210,10 @@ class PostServiceTest {
 
         postService.delete(1L, 1L);
 
-        then(fileStore).should().deleteFile("uuid.txt");
+        // 디스크에서 곧바로 지우면, 뒤이어 트랜잭션이 되돌아갔을 때 DB 행만 살아남는다.
+        // 그래서 삭제는 예약만 하고 실제 수행은 커밋 뒤로 미룬다.
+        then(fileRemover).should().removeAfterCommit("uuid.txt");
+        then(fileStore).should(never()).deleteFile(anyString());
         then(postRepository).should().delete(post);
     }
 
@@ -225,7 +230,7 @@ class PostServiceTest {
     // ── deleteFile ────────────────────────────────────────────
 
     @Test
-    @DisplayName("게시글의 첨부파일을 삭제하면 디스크 파일이 삭제되고 컬렉션에서 제거된다")
+    @DisplayName("첨부파일을 삭제하면 파일 삭제가 커밋 이후로 예약되고 컬렉션에서 제거된다")
     void deleteFile() {
         Post post = post();
         AttachedFile file = new AttachedFile("a.txt", "uuid.txt", "text/plain", 10L);
@@ -238,7 +243,8 @@ class PostServiceTest {
 
         postService.deleteFile(1L, 10L, 1L);
 
-        then(fileStore).should().deleteFile("uuid.txt");
+        then(fileRemover).should().removeAfterCommit("uuid.txt");
+        then(fileStore).should(never()).deleteFile(anyString());
         assertThat(post.getFiles()).doesNotContain(file);
     }
 

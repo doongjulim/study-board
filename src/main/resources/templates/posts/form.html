@@ -5,8 +5,20 @@
 <main class="container">
     <h1 class="post-title">글쓰기</h1>
 
-    <form class="form-card" th:action="@{/posts}" th:object="${postForm}"
-          method="post" enctype="multipart/form-data">
+    <!--
+      임시 저장 안내. 처음에는 감춰 두고, 쓰다 만 글이 있을 때만 JS 가 보여 준다.
+      자동으로 되살리지 않고 물어보는 이유는, 사용자가 일부러 지운 글을 되돌려 놓으면
+      그게 더 놀라운 일이기 때문이다.
+    -->
+    <div id="draft-banner" class="flash draft-banner" hidden>
+        <span>쓰다 만 글이 있습니다 (<span class="draft-time">방금</span> 저장).</span>
+        <button type="button" class="btn btn-sm draft-restore">불러오기</button>
+        <button type="button" class="btn btn-sm draft-discard">지우기</button>
+    </div>
+
+
+    <form id="post-form" class="form-card" th:action="@{/posts}" th:object="${postForm}"
+          method="post" enctype="multipart/form-data" data-draft-key="post-draft:new">
         <div class="form-group">
             <label for="title">제목</label>
             <input type="text" id="title" th:field="*{title}" placeholder="제목을 입력하세요">
@@ -27,18 +39,26 @@
                 마크다운을 쓸 수 있어요 — <code>**굵게**</code>, <code># 제목</code>,
                 <code>- 목록</code>, <code>[링크](주소)</code>, <code>```코드```</code>
             </p>
+            <div class="editor-toolbar">
+                <button type="button" id="preview-toggle" class="btn btn-sm"
+                        aria-controls="preview-box" aria-expanded="false">미리보기</button>
+            </div>
+            <!-- 서버가 살균해 돌려준 HTML 이 들어온다 (본문 화면과 같은 렌더러) -->
+            <div id="preview-box" class="post-body markdown preview-box" hidden></div>
             <p class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
         </div>
         <div class="form-group">
             <label for="files">첨부파일</label>
             <input type="file" id="files" name="files" multiple>
-            <p class="hint">이미지·문서 등 여러 파일을 선택할 수 있습니다. (파일당 최대 10MB)</p>
+            <p class="hint">이미지·문서 등을 올릴 수 있습니다. 글 하나에 최대 10개, 파일당 10MB 까지입니다.</p>
         </div>
         <div class="actions">
             <button type="submit" class="btn btn-primary">등록</button>
             <a th:href="@{/posts}" class="btn">취소</a>
         </div>
     </form>
+
+    <script th:src="@{/js/post-form.js}" defer></script>
 </main>
 </body>
 </html>

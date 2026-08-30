@@ -17,8 +17,30 @@
     <div class="form-card invite-card">
         <h3 class="stat-title">초대 코드</h3>
         <p class="hint">이 코드를 아는 사람은 그룹에 가입할 수 있어요.</p>
-        <p class="invite-code" th:text="${group.inviteCode}">ABCD2345</p>
+        <!--
+          코드는 눈으로 읽어 손으로 옮기는 값이었다. 헷갈리는 글자(0/O·1/I/L)를 뺀 것도 그래서인데,
+          복사 버튼이 있으면 그 수고 자체가 없어진다.
+        -->
+        <div class="copy-row">
+            <p class="invite-code" id="invite-code" th:text="${group.inviteCode}">ABCD2345</p>
+            <button type="button" class="btn btn-sm copy-btn"
+                    data-copy-target="#invite-code" data-copy-message="초대 코드를 복사했습니다.">복사</button>
+        </div>
+        <div class="actions" th:if="${isOwner}">
+            <!-- 코드가 새어 나갔을 때 대응할 수단. 캘린더 구독 주소와 같은 성격의 값인데
+                 그쪽에만 재발급이 있어 정책이 갈려 있었다 -->
+            <form th:action="@{/groups/{id}/invite-code(id=${group.id})}" method="post"
+                  data-confirm="새 초대 코드를 발급할까요?&#10;지금 코드로는 더 이상 가입할 수 없습니다."
+                  data-confirm-label="재발급">
+                <button type="submit" class="btn btn-sm">초대 코드 재발급</button>
+            </form>
+        </div>
     </div>
+
+    <!-- 그룹 공개로 올라온 계획을 보러 가는 길. 그룹 공유의 결과물이 전체 공개와 섞여서만 보였다 -->
+    <p class="hint">
+        <a th:href="@{/plans/shared}">우리 그룹에 공유된 계획 보기 →</a>
+    </p>
 
     <!-- 이번 주 우리 그룹: 순위표가 그룹을 매일 열어 볼 이유가 된다 -->
     <div class="form-card challenge-card">
@@ -74,16 +96,25 @@
             <span class="member-joined"
                   th:if="${membership.joinedAt != null}"
                   th:text="${#temporals.format(membership.joinedAt, 'yyyy-MM-dd')} + ' 가입'">가입일</span>
+            <!-- 그룹장 자신은 '그룹 나가기' 로만 빠진다 (승계·삭제 규칙이 그쪽 한 곳에 있다) -->
+            <form th:if="${isOwner and !group.isOwnedBy(membership.member.id)}"
+                  th:action="@{/groups/{id}/members/{memberId}/remove(id=${group.id}, memberId=${membership.member.id})}"
+                  method="post" class="inline-form member-remove"
+                  th:attr="data-confirm=${membership.member.nickname + '님을 그룹에서 내보낼까요?'}"
+                  data-confirm-label="내보내기">
+                <button type="submit" class="btn btn-sm btn-danger">내보내기</button>
+            </form>
         </li>
     </ul>
 
     <div class="actions group-actions">
+        <a th:if="${isOwner}" class="btn btn-sm" th:href="@{/groups/{id}/edit(id=${group.id})}">정보 수정</a>
         <form th:action="@{/groups/{id}/leave(id=${group.id})}" method="post"
-              onsubmit="return confirm('그룹에서 나갈까요? 그룹장이라면 가장 오래된 멤버가 이어받습니다.');">
+              data-confirm="그룹에서 나갈까요?&#10;그룹장이라면 가장 오래된 멤버가 이어받습니다." data-confirm-label="나가기">
             <button type="submit" class="btn btn-sm">그룹 나가기</button>
         </form>
         <form th:if="${isOwner}" th:action="@{/groups/{id}/delete(id=${group.id})}" method="post"
-              onsubmit="return confirm('그룹을 삭제할까요? 되돌릴 수 없습니다.');">
+              data-confirm="그룹을 삭제할까요?&#10;멤버 정보와 초대 코드가 함께 사라지며 되돌릴 수 없습니다." data-confirm-label="그룹 삭제">
             <button type="submit" class="btn btn-sm btn-danger">그룹 삭제</button>
         </form>
     </div>

@@ -8,10 +8,14 @@ import com.example.board.notification.dto.NotificationResponse;
 import com.example.board.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -90,6 +94,11 @@ public class NotificationService {
         return notificationRepository.findTop10ByRecipient_IdOrderByIdDesc(memberId);
     }
 
+    /** 전체 보기 화면용. 벨 패널의 최근 10건에서 잘려 나가던 알림을 여기서 다 볼 수 있다 */
+    public Page<Notification> findPage(Long memberId, Pageable pageable) {
+        return notificationRepository.findByRecipient_IdOrderByIdDesc(memberId, pageable);
+    }
+
     public long countUnread(Long memberId) {
         return notificationRepository.countByRecipient_IdAndReadFlagFalse(memberId);
     }
@@ -98,6 +107,38 @@ public class NotificationService {
     public void markAllAsRead(Long memberId) {
         notificationRepository.findByRecipient_IdAndReadFlagFalse(memberId)
                 .forEach(Notification::markRead);
+    }
+
+    /**
+     * 알림 하나만 읽음으로.
+     *
+     * <p>예전에는 벨을 여는 순간 전부 읽음이 되어, "이건 나중에 보자" 를 남길 수 없었다.
+     * 읽음 여부는 사용자가 정하는 것이지 패널을 열었다는 사실이 정하는 게 아니다.</p>
+     */
+    @Transactional
+    public void markAsRead(Long memberId, Long notificationId) {
+        findOwned(memberId, notificationId).markRead();
+    }
+
+    /** 알림 하나 삭제 */
+    @Transactional
+    public void delete(Long memberId, Long notificationId) {
+        notificationRepository.delete(findOwned(memberId, notificationId));
+    }
+
+    /**
+     * 오래된 알림 정리. 지우는 기준은 스케줄러가 정하고, 여기서는 그대로 넘긴다
+     * (기준을 서비스에 숨겨 두면 "언제부터 사라지는가" 를 코드에서 찾기 어려워진다).
+     */
+    @Transactional
+    public int deleteOld(LocalDateTime readBefore, LocalDateTime anyBefore) {
+        return notificationRepository.deleteOld(readBefore, anyBefore);
+    }
+
+    /** 수신자까지 함께 걸어 찾는다 - 남의 알림은 '없는 것' 과 같아야 한다 */
+    private Notification findOwned(Long memberId, Long notificationId) {
+        return notificationRepository.findByIdAndRecipient_Id(notificationId, memberId)
+                .orElseThrow(() -> new AccessDeniedException("본인의 알림만 다룰 수 있습니다."));
     }
 
     private void replayMissed(Long memberId, String lastEventId, SseEmitter emitter) {

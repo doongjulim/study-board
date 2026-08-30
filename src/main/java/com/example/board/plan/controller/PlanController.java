@@ -82,6 +82,23 @@ public class PlanController {
         return "plans/daily"; // 분류 선택지(categories)는 @ModelAttribute 가 이미 채운다
     }
 
+    /**
+     * 일정 한 줄의 HTML 조각.
+     *
+     * <p>한 줄 입력으로 일정을 추가했을 때 화면에 끼워 넣을 마크업을 돌려준다.
+     * JS 가 직접 조립하지 않는 이유는, 그렇게 두었더니 템플릿과 어긋나
+     * 방금 추가한 일정에만 공유·삭제 버튼이 없었기 때문이다(새로고침해야 생겼다).
+     * 생김새의 출처를 {@code plans/row.html} 하나로 유지하기 위한 왕복이다.</p>
+     */
+    @GetMapping("/{id}/row")
+    public String row(@PathVariable Long id,
+                      @AuthenticationPrincipal MemberPrincipal principal,
+                      Model model) {
+        model.addAttribute("plan", planService.findOwned(id, principal.id()));
+        model.addAttribute("shareScopes", ShareScope.values());
+        return "plans/row :: planRow";
+    }
+
     /** 주간 뷰 */
     @GetMapping("/weekly")
     public String weekly(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,

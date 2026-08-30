@@ -116,7 +116,7 @@ class PostControllerTest {
     @Test
     @DisplayName("존재하지 않는 게시글 조회 시 404 페이지를 반환한다")
     void view_notFound() throws Exception {
-        given(postService.read(eq(999L), any()))
+        given(postService.read(eq(999L), any(), anyBoolean()))
                 .willThrow(new IllegalArgumentException("게시글이 존재하지 않습니다. id=999"));
 
         mockMvc.perform(get("/posts/999"))
@@ -164,7 +164,7 @@ class PostControllerTest {
     @Test
     @DisplayName("GET /posts/{id} - 상세 페이지가 200 을 반환한다")
     void viewDetail() throws Exception {
-        given(postService.read(eq(1L), any())).willReturn(postFixture());
+        given(postService.read(eq(1L), any(), anyBoolean())).willReturn(postFixture());
 
         mockMvc.perform(get("/posts/1"))
                 .andExpect(status().isOk())
@@ -176,7 +176,7 @@ class PostControllerTest {
     @DisplayName("GET /posts/{id} - 본문의 마크다운은 살균된 HTML 로 모델에 담긴다")
     void detailSanitizesMarkdown() throws Exception {
         Post dangerous = new Post("제목", "**굵게**<script>alert(1)</script>", postFixture().getAuthor());
-        given(postService.read(eq(2L), any())).willReturn(dangerous);
+        given(postService.read(eq(2L), any(), anyBoolean())).willReturn(dangerous);
 
         mockMvc.perform(get("/posts/2"))
                 .andExpect(status().isOk())

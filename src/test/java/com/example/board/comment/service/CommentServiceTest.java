@@ -140,4 +140,40 @@ class CommentServiceTest {
                 .isInstanceOf(AccessDeniedException.class);
         then(commentRepository).should(never()).delete(any(Comment.class));
     }
+
+    // ── update ────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("본인 댓글은 내용을 고칠 수 있다")
+    void update_owner() {
+        Comment comment = Comment.forPost(post(), member(COMMENTER_ID, "댓글러"), "오타가 있는 댓글");
+        given(commentRepository.findById(5L)).willReturn(Optional.of(comment));
+
+        Comment updated = commentService.update(5L, COMMENTER_ID, "고친 댓글");
+
+        assertThat(updated.getContent()).isEqualTo("고친 댓글");
+    }
+
+    @Test
+    @DisplayName("타인의 댓글을 고치려 하면 AccessDeniedException 이 발생한다")
+    void update_notOwner_denied() {
+        Comment comment = Comment.forPost(post(), member(COMMENTER_ID, "댓글러"), "남의 댓글");
+        given(commentRepository.findById(5L)).willReturn(Optional.of(comment));
+
+        assertThatThrownBy(() -> commentService.update(5L, 999L, "가로채기"))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThat(comment.getContent()).isEqualTo("남의 댓글");
+    }
+
+    @Test
+    @DisplayName("댓글 수정은 알림을 다시 보내지 않는다 - 오타를 고칠 때마다 알리면 그게 소음이다")
+    void update_doesNotNotify() {
+        Comment comment = Comment.forPost(post(), member(COMMENTER_ID, "댓글러"), "처음 쓴 댓글");
+        given(commentRepository.findById(5L)).willReturn(Optional.of(comment));
+
+        commentService.update(5L, COMMENTER_ID, "고친 댓글");
+
+        then(eventPublisher).should(never()).publishEvent(any(CommentAddedEvent.class));
+    }
+
 }

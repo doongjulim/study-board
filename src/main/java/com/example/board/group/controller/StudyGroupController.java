@@ -104,4 +104,60 @@ public class StudyGroupController {
         redirectAttributes.addFlashAttribute("message", "그룹을 삭제했습니다.");
         return "redirect:/groups";
     }
+
+    // ── 그룹장 전용 관리 ──────────────────────────────────────
+    // 권한 검사는 전부 서비스에 있다. 화면에서 버튼을 감추는 것은 안내이지 방어가 아니다.
+
+    /** 이름·소개 수정 폼 */
+    @GetMapping("/{id}/edit")
+    public String editForm(@PathVariable Long id,
+                           @AuthenticationPrincipal MemberPrincipal principal,
+                           Model model) {
+        StudyGroup group = studyGroupService.findGroupForMember(id, principal.id());
+        GroupForm form = new GroupForm();
+        // 수정 폼은 화면에 있는 모든 필드를 채워야 한다 - 빠뜨린 필드는 DTO 기본값으로 조용히 덮어써진다
+        form.setName(group.getName());
+        form.setDescription(group.getDescription());
+        model.addAttribute("groupForm", form);
+        model.addAttribute("group", group);
+        return "groups/edit";
+    }
+
+    @PostMapping("/{id}/edit")
+    public String edit(@PathVariable Long id,
+                       @Valid @ModelAttribute GroupForm groupForm,
+                       BindingResult bindingResult,
+                       @AuthenticationPrincipal MemberPrincipal principal,
+                       Model model,
+                       RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("group", studyGroupService.findGroupForMember(id, principal.id()));
+            return "groups/edit";
+        }
+        studyGroupService.update(id, groupForm, principal.id());
+        redirectAttributes.addFlashAttribute("message", "그룹 정보를 수정했습니다.");
+        return "redirect:/groups/" + id;
+    }
+
+    /** 초대 코드 재발급 - 코드가 새어 나갔을 때의 대응 수단 */
+    @PostMapping("/{id}/invite-code")
+    public String renewInviteCode(@PathVariable Long id,
+                                  @AuthenticationPrincipal MemberPrincipal principal,
+                                  RedirectAttributes redirectAttributes) {
+        String code = studyGroupService.renewInviteCode(id, principal.id());
+        redirectAttributes.addFlashAttribute("message",
+                "새 초대 코드를 발급했습니다: " + code);
+        return "redirect:/groups/" + id;
+    }
+
+    /** 멤버 내보내기 */
+    @PostMapping("/{id}/members/{memberId}/remove")
+    public String removeMember(@PathVariable Long id,
+                               @PathVariable Long memberId,
+                               @AuthenticationPrincipal MemberPrincipal principal,
+                               RedirectAttributes redirectAttributes) {
+        studyGroupService.removeMember(id, memberId, principal.id());
+        redirectAttributes.addFlashAttribute("message", "멤버를 내보냈습니다.");
+        return "redirect:/groups/" + id;
+    }
 }

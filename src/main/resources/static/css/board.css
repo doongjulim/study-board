@@ -1,3 +1,19 @@
+/*
+  board.css - 단일 스타일시트.
+
+  구역 순서 (검색용 표지: "── 이름 ──" 로 시작한다)
+    1. 토큰(:root) · 리셋 · 기본 타이포
+    2. 공통 컴포넌트: 버튼 / 표 / 페이지네이션 / 폼 / 플래시
+    3. 헤더 · 내비게이션 · 알림 · 토스트
+    4. 화면별: 플래너 / 통계 / D-Day / 마이페이지 / 랜딩 / 온보딩 / 대시보드 / 그룹 / 게시판 / 회고
+    5. 반응형 (720px · 480px)
+    6. 다크모드
+    7. 접근성
+
+  색은 반드시 토큰으로 쓴다. 특히 accent·ok·danger 를 배경으로 깔 때 그 위의 글자는
+  --on-accent / --on-ok / --on-danger 를 쓴다 - 테마마다 배경 밝기가 뒤집히므로
+  #fff 를 직접 적으면 다크에서 읽히지 않는다.
+*/
 :root {
   --ink: #1f2a24;
   --ink-soft: #5c6b62;
@@ -9,6 +25,19 @@
   --danger: #b0453b;
   /* 달성·성공 표시. accent 와 구분되어야 "우리 색"과 "해냈다"가 섞이지 않는다 */
   --ok: #2e7d32;
+  /*
+    accent·ok 를 배경으로 깔았을 때 그 위에 얹는 글자색.
+
+    테마마다 accent 의 밝기가 뒤집힌다(라이트는 짙은 녹색, 다크는 밝은 녹색). 글자색을
+    컴포넌트마다 하드코딩하면 accent 위에 글자를 얹는 컴포넌트가 늘 때마다 테마별 보정
+    규칙이 한 줄씩 따라 붙고, 언젠가 한쪽을 빠뜨린다. 실제로 .tag-owner 가 수동 다크모드에서
+    밝은 녹색 위 흰 글자로 남아 대비 2:1 로 읽히지 않았다. 색을 토큰으로 승격시켜 갈래를 없앤다.
+  */
+  --on-accent: #ffffff;
+  --on-ok: #ffffff;
+  --on-danger: #ffffff;
+  /* accent 의 '한 단계 더 진한' 상태 (버튼 hover). 다크에서는 반대로 한 단계 더 밝아진다 */
+  --accent-strong: #275a42;
 }
 
 * { box-sizing: border-box; }
@@ -59,13 +88,13 @@ header.site span { color: var(--ink-soft); font-size: .85rem; }
   cursor: pointer;
 }
 .btn:hover { border-color: var(--accent); color: var(--accent); }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-primary:hover { background: #275a42; color: #fff; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); }
 .btn-danger { border-color: var(--danger); color: var(--danger); }
-.btn-danger:hover { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: var(--danger); color: var(--on-danger); }
 .btn-sm { padding: 4px 10px; font-size: .8rem; }
 
-table.board { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+table.board { width: 100%; min-width: 480px; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 table.board th, table.board td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: .92rem; }
 table.board th { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 table.board tr:last-child td { border-bottom: none; }
@@ -82,7 +111,7 @@ table.board a:hover { color: var(--accent); text-decoration: underline; }
   padding: 6px 12px; border-radius: 6px; text-decoration: none;
   border: 1px solid var(--line); color: var(--ink); font-size: .85rem; background: var(--card);
 }
-.pagination .current { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pagination .current { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .pagination a:hover { border-color: var(--accent); color: var(--accent); }
 
 .post-title { margin: 0 0 8px; font-size: 1.5rem; }
@@ -130,7 +159,7 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
 .bell { background: none; border: none; font-size: 1.15rem; cursor: pointer; position: relative; padding: 4px 6px; }
 .badge {
   position: absolute; top: -4px; right: -6px;
-  background: var(--danger); color: #fff; border-radius: 10px;
+  background: var(--danger); color: var(--on-danger); border-radius: 10px;
   font-size: .65rem; font-weight: 700; padding: 1px 5px; line-height: 1.4;
 }
 .notif-panel {
@@ -138,7 +167,17 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
   background: var(--card); border: 1px solid var(--line); border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, .12); z-index: 50;
 }
-.notif-head { padding: 10px 14px; font-weight: 700; font-size: .9rem; border-bottom: 1px solid var(--line); }
+.notif-head { padding: 10px 14px; font-weight: 700; font-size: .9rem;
+  border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+.notif-more { margin-left: auto; font-weight: 500; font-size: .78rem;
+  color: var(--accent); text-decoration: none; }
+.notif-more:hover { text-decoration: underline; }
+/* 패널 안에서 알림 하나를 읽음/삭제하는 작은 버튼들 */
+.notif-item { position: relative; }
+.notif-actions { display: flex; gap: 6px; margin-top: 2px; }
+.notif-actions button { background: none; border: none; padding: 0; cursor: pointer;
+  font-size: .72rem; color: var(--ink-soft); text-decoration: underline; }
+.notif-actions button:hover { color: var(--accent); }
 .notif-panel ul { list-style: none; margin: 0; padding: 0; }
 .notif-item { padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: .85rem; display: flex; flex-direction: column; gap: 2px; }
 .notif-item:last-child { border-bottom: none; }
@@ -169,7 +208,7 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
   background: var(--card); color: var(--ink-soft); text-decoration: none; font-size: .85rem;
 }
 .view-tabs a:hover { border-color: var(--accent); color: var(--accent); }
-.view-tabs a.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.view-tabs a.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 /* 일간 뷰 */
 .plan-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -212,7 +251,7 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
 .calendar td { border: 1px solid var(--line); vertical-align: top; height: 96px; padding: 6px; font-size: .78rem; }
 .calendar td.muted { background: var(--paper); opacity: .55; }
 .calendar td.today { background: var(--accent-soft); }
-.calendar td.today .day-num { background: var(--accent); color: #fff; border-radius: 50%; }
+.calendar td.today .day-num { background: var(--accent); color: var(--on-accent); border-radius: 50%; }
 .day-num {
   display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center;
   text-decoration: none; color: inherit; font-weight: 600; margin-bottom: 4px;
@@ -261,7 +300,32 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
   .container, .container-wide { padding-bottom: 76px; }
 }
 
-/* ── 다크모드 (시스템 설정) ──────────────────────────────── */
+/* ── 다크모드 ────────────────────────────────────────────
+   토큰은 한 벌만 적고 그 한 벌을 두 선택자가 함께 쓴다.
+
+   - :root[data-theme="dark"]                                  → 사용자가 토글로 켠 다크
+   - @media (prefers-color-scheme: dark) :root:not([="light"]) → 시스템이 다크이고 수동 라이트가 아닐 때
+
+   값을 두 곳에 적어 두면 언젠가 한쪽만 고쳐진다. 실제로 --ok 와 accent 위 글자색 보정이
+   시스템 쪽에만 있고 토글 쪽에는 없어서, 토글로 켠 다크에서 '그룹장' 배지가 읽히지 않았다.
+   컴포넌트별 보정은 --on-accent / --on-ok 가 대신하므로 여기에는 값만 남는다. */
+:root[data-theme="dark"] {
+  --ink: #e6ebe7;
+  --ink-soft: #98a69d;
+  --paper: #141917;
+  --card: #1d2320;
+  --line: #313a34;
+  --accent: #69b48d;
+  --accent-soft: #25352c;
+  --danger: #e08379;
+  --ok: #62c17d;
+  /* 다크의 accent·ok 는 밝은 녹색이라 흰 글자로는 읽히지 않는다 */
+  --on-accent: #10150f;
+  --on-ok: #10150f;
+  --on-danger: #10150f;
+  --accent-strong: #8ac9a8;
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --ink: #e6ebe7;
@@ -273,33 +337,18 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
     --accent-soft: #25352c;
     --danger: #e08379;
     --ok: #62c17d;
+    --on-accent: #10150f;
+    --on-ok: #10150f;
+    --on-danger: #10150f;
+    --accent-strong: #8ac9a8;
   }
-  :root:not([data-theme="light"]) .btn-primary { color: #10150f; }
-  /* 다크모드의 accent·ok 는 밝은 녹색이라 흰 글자로는 읽히지 않는다 */
-  :root:not([data-theme="light"]) .tag-owner,
-  :root:not([data-theme="light"]) .tag-goal { color: #10150f; }
-  :root:not([data-theme="light"]) .view-tabs a.on { color: #10150f; }
-  :root:not([data-theme="light"]) .pagination .current { color: #10150f; }
-  :root:not([data-theme="light"]) .calendar td.today .day-num { color: #10150f; }
-  :root:not([data-theme="light"]) .notif-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
 }
 
-/* ── 다크모드 (수동 토글) ────────────────────────────────── */
-[data-theme="dark"] {
-  --ink: #e6ebe7;
-  --ink-soft: #98a69d;
-  --paper: #141917;
-  --card: #1d2320;
-  --line: #313a34;
-  --accent: #69b48d;
-  --accent-soft: #25352c;
-  --danger: #e08379;
+/* 그림자는 색 토큰으로 표현되지 않아 테마별 규칙이 남는 유일한 자리다 */
+:root[data-theme="dark"] .notif-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .notif-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
 }
-[data-theme="dark"] .btn-primary { color: #10150f; }
-[data-theme="dark"] .view-tabs a.on { color: #10150f; }
-[data-theme="dark"] .pagination .current { color: #10150f; }
-[data-theme="dark"] .calendar td.today .day-num { color: #10150f; }
-[data-theme="dark"] .notif-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
 
 /* ── 헤더 sticky + 추가 컴포넌트 ────────────────────────── */
 header.site {
@@ -335,9 +384,8 @@ header.site {
 }
 .theme-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
 
-/* 테이블 가로 스크롤 래퍼 */
+/* 테이블 가로 스크롤 래퍼 (min-width 는 table.board 정의 쪽에 있다) */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-table.board { min-width: 480px; }
 
 /* 주간·월간 가로 스크롤 래퍼 */
 .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -385,7 +433,7 @@ table.board { min-width: 480px; }
 
 /* ── 헤더 로그인 메뉴 ───────────────────────────── */
 .auth-menu { display: flex; align-items: center; gap: 8px; }
-.auth-menu .nickname { font-size: 14px; color: var(--text); white-space: nowrap; }
+.auth-menu .nickname { font-size: 14px; white-space: nowrap; }
 .inline-form { display: inline; margin: 0; }
 
 /* ── 댓글 ───────────────────────────────────────── */
@@ -394,9 +442,8 @@ table.board { min-width: 480px; }
 .comment-list { list-style: none; padding: 0; margin: 0 0 16px; }
 .comment-item { padding: 12px 0; border-bottom: 1px solid var(--line); }
 .comment-head { display: flex; align-items: center; gap: 10px; }
-.comment-head form { margin-left: auto; }
 .comment-author { font-weight: 600; font-size: 14px; }
-.comment-time { color: var(--muted, #888); font-size: 12px; }
+.comment-time { color: var(--ink-soft); font-size: 12px; }
 .comment-content { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; }
 .comment-empty { padding: 16px 0; }
 .comment-form { display: flex; gap: 8px; align-items: flex-start; }
@@ -414,9 +461,9 @@ table.board { min-width: 480px; }
   gap: 12px; margin: 20px 0 28px; }
 .stat-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
   padding: 16px; display: flex; flex-direction: column; gap: 4px; }
-.stat-label { font-size: .78rem; color: var(--muted, #888); }
+.stat-label { font-size: .78rem; color: var(--ink-soft); }
 .stat-value { font-size: 1.6rem; line-height: 1.2; }
-.stat-sub { font-size: .72rem; color: var(--muted, #888); }
+.stat-sub { font-size: .72rem; color: var(--ink-soft); }
 
 .stat-section { margin-bottom: 32px; }
 .stat-title { margin-bottom: 12px; font-size: 1rem; }
@@ -427,14 +474,14 @@ table.board { min-width: 480px; }
 .trend-bar-wrap { width: 100%; height: 120px; display: flex; align-items: flex-end;
   background: var(--line); border-radius: 6px; overflow: hidden; }
 .trend-bar { width: 100%; background: var(--accent); border-radius: 6px 6px 0 0; transition: height .2s; }
-.trend-bar.pending { background: var(--muted, #bbb); opacity: .55; }
-.trend-label { font-size: .68rem; color: var(--muted, #888); white-space: nowrap; }
+.trend-bar.pending { background: var(--line); opacity: .55; }
+.trend-label { font-size: .68rem; color: var(--ink-soft); white-space: nowrap; }
 
 .category-list { list-style: none; padding: 0; margin: 0; }
 .category-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
 .category-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .category-time { font-weight: 600; font-size: .9rem; }
-.category-count { margin-left: auto; font-size: .78rem; color: var(--muted, #888); }
+.category-count { margin-left: auto; font-size: .78rem; color: var(--ink-soft); }
 .category-bar-wrap { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
 .category-bar { height: 100%; background: var(--accent); border-radius: 4px; }
 .tag-repeat { background: var(--accent-soft); color: var(--accent); border-radius: 6px;
@@ -451,10 +498,10 @@ table.board { min-width: 480px; }
 .dday-item { display: flex; align-items: center; gap: 14px; padding: 14px 0;
   border-bottom: 1px solid var(--line); }
 .dday-item.past { opacity: .55; }
-.dday-item.past .dday-badge { color: var(--muted, #888); }
+.dday-item.past .dday-badge { color: var(--ink-soft); }
 .dday-main { display: flex; flex-direction: column; gap: 2px; }
 .dday-title { font-weight: 600; }
-.dday-date { font-size: .76rem; color: var(--muted, #888); }
+.dday-date { font-size: .76rem; color: var(--ink-soft); }
 .dday-item .actions { margin-left: auto; }
 
 /* ── 마이페이지 ────────────────────────────────── */
@@ -517,7 +564,7 @@ header.site .nickname:hover { color: var(--accent); }
 .step-bar li.done { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .step-num { display: inline-grid; place-items: center; width: 20px; height: 20px;
   border-radius: 50%; background: var(--line); color: var(--ink); font-size: .72rem; font-weight: 700; }
-.step-bar li.on .step-num, .step-bar li.done .step-num { background: var(--accent); color: #fff; }
+.step-bar li.on .step-num, .step-bar li.done .step-num { background: var(--accent); color: var(--on-accent); }
 .skip-form { margin-top: 18px; text-align: center; }
 
 /* ── 대시보드 ──────────────────────────────────── */
@@ -574,7 +621,7 @@ header.site .nickname:hover { color: var(--accent); }
 .calendar td:hover .cal-add, .cal-add:focus { opacity: 1; }
 .cal-plan { display: block; text-decoration: none; color: inherit;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cal-more { display: block; text-decoration: none; color: var(--muted, #888); }
+.cal-more { display: block; text-decoration: none; color: var(--ink-soft); }
 .cal-more:hover { color: var(--accent); }
 
 /* ── 스터디 그룹 ───────────────────────────────── */
@@ -594,7 +641,7 @@ header.site .nickname:hover { color: var(--accent); }
 .member-item { display: flex; align-items: center; gap: 8px; padding: 10px 0;
   border-bottom: 1px solid var(--line); }
 .member-joined { margin-left: auto; color: var(--ink-soft); font-size: .8rem; }
-.tag-owner { background: var(--accent); color: #fff; border-radius: 999px;
+.tag-owner { background: var(--accent); color: var(--on-accent); border-radius: 999px;
   padding: 1px 8px; font-size: .72rem; font-weight: 700; }
 .group-actions { gap: 8px; }
 .crumb { margin-bottom: 10px; font-size: .88rem; }
@@ -678,7 +725,7 @@ header.site .nickname:hover { color: var(--accent); }
 .rank-time { margin-left: auto; font-size: .85rem; color: var(--ink-soft); flex-shrink: 0; }
 .rank-bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
 .rank-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
-.tag-goal { background: var(--ok); color: #fff; border-radius: 999px;
+.tag-goal { background: var(--ok); color: var(--on-ok); border-radius: 999px;
   padding: 1px 7px; font-size: .68rem; font-weight: 700; flex-shrink: 0; }
 
 /* ── 공유 범위 선택 ─────────────────────────────── */
@@ -710,12 +757,185 @@ header.site .nickname:hover { color: var(--accent); }
 .timer-clock { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
 .timer-stop { border: none; background: none; cursor: pointer; font-size: .9rem;
   line-height: 1; padding: 0; color: var(--danger); }
-.btn-timer.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-timer.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
 /* ── 에러 페이지 ───────────────────────────────── */
 /* 색상을 하드코딩하지 않고 토큰을 쓰므로 다크모드에서도 대비가 유지된다 */
 .error-page { text-align: center; padding: 80px 20px; }
 .error-code { font-size: 64px; margin: 0; }
 .error-desc { font-size: 1.05rem; color: var(--ink-soft); }
-.error-detail { font-size: .85rem; color: var(--muted, #888); }
+.error-detail { font-size: .85rem; color: var(--ink-soft); }
 .error-page .btn { margin-top: 20px; display: inline-block; }
+
+
+/* ── 접근성 ──────────────────────────────────────────────
+   여기 모인 규칙은 "보기 좋게" 가 아니라 "쓸 수 있게" 를 위한 것이다.
+   화면을 보지 않거나 마우스를 쓰지 않는 사람에게는 이것이 곧 기능이다. */
+
+/*
+  키보드 포커스 표시.
+
+  :focus 가 아니라 :focus-visible 을 쓴다 - 마우스로 누른 버튼에까지 테두리가 남으면
+  사람들이 "고장 났다" 로 읽고, 그러면 결국 outline:none 으로 지우게 된다.
+  브라우저가 "키보드로 왔다" 고 판단할 때만 그린다.
+*/
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/*
+  헤더가 sticky 라, 앵커나 탭 이동으로 화면 위쪽에 닿은 요소는 헤더 뒤에 숨는다.
+  포커스가 보이지 않는 포커스 표시는 없는 것과 같으므로 헤더 높이만큼 여백을 예약한다.
+*/
+:target,
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible { scroll-margin-top: 5rem; }
+
+/*
+  본문 바로가기.
+
+  헤더에 링크가 열 개 가까이 있어, 키보드 사용자는 페이지를 옮길 때마다 그것을 전부 지나야
+  본문에 닿는다. 평소에는 화면 밖에 두고 탭으로 포커스가 오는 순간에만 나타난다.
+*/
+.skip-link {
+  position: absolute; left: 12px; top: -100px; z-index: 200;
+  background: var(--accent); color: var(--on-accent);
+  padding: 10px 16px; border-radius: 0 0 8px 8px; font-size: .9rem; font-weight: 600;
+  text-decoration: none; transition: top .15s;
+}
+.skip-link:focus { top: 0; }
+
+/*
+  움직임을 줄여 달라고 설정한 사람에게는 전환 효과를 없앤다.
+  전정기관 질환이 있는 사람에게 애니메이션은 불편이 아니라 증상을 부른다.
+  개별 컴포넌트마다 끄는 대신 여기서 한 번에 처리해, 앞으로 추가되는 것도 자동으로 따른다.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* 토스트는 전환으로만 보이므로, 효과를 끄되 최종 상태는 유지한다 */
+  .toast { opacity: 1; transform: none; }
+}
+
+
+/* ── 확인 대화상자 ────────────────────────────────────────
+   네이티브 confirm() 을 대신한다 (ui.js). <dialog> 를 쓰므로 포커스 가둠과 Esc 는 브라우저가 맡고,
+   여기서는 모양만 정한다. ::backdrop 도 테마 토큰을 따라간다. */
+.confirm-dialog {
+  border: 1px solid var(--line); border-radius: 12px; padding: 0;
+  background: var(--card); color: var(--ink);
+  max-width: min(26rem, calc(100vw - 32px));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .18);
+}
+.confirm-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.confirm-dialog form { padding: 22px 24px 18px; margin: 0; }
+.confirm-message { margin: 0 0 18px; font-size: .95rem; line-height: 1.6; white-space: pre-line; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── 토스트 종류 ──────────────────────────────────────────
+   오류는 성공과 같은 모양이면 지나친다. 색으로만 구분하지 않도록 왼쪽에 굵은 띠를 준다
+   (색각 이상이 있어도 구분되고, 흑백 화면에서도 남는다). */
+.toast-error { border-left: 4px solid var(--danger); }
+.toast-success { border-left: 4px solid var(--ok); }
+
+/* ── 복사 버튼 ────────────────────────────────────────────
+   초대 코드·구독 주소처럼 '옮겨 적는' 값 옆에 둔다. 눈으로 읽어 손으로 옮기는 일을 없앤다. */
+.copy-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.copy-row .feed-url { flex: 1; min-width: 12rem; }
+.copy-btn { white-space: nowrap; }
+
+
+/* ── 알림 전체 보기 ───────────────────────────────────────
+   벨 패널(.notif-panel)은 좁고 임시적인 자리라, 목록 화면은 같은 모양을 쓰지 않는다.
+   여기서는 한 건이 한 줄을 온전히 차지하고 조작 버튼이 오른쪽 끝에 붙는다. */
+.notif-page-list { list-style: none; padding: 0; margin: 0; }
+.notif-page-item { display: flex; align-items: center; gap: 12px;
+  padding: 14px 12px; border-bottom: 1px solid var(--line); border-radius: 8px; }
+/* 안 읽은 것은 배경으로만 구분하지 않는다 - 왼쪽 굵은 선이 색과 무관하게 남는다 */
+.notif-page-item.unread { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.notif-page-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.notif-page-main a { color: var(--ink); text-decoration: none; }
+.notif-page-main a:hover { color: var(--accent); text-decoration: underline; }
+.notif-page-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .notif-page-item { flex-wrap: wrap; }
+  .notif-page-actions { width: 100%; justify-content: flex-end; }
+}
+
+/* ── 일간 플래너: 줄 안의 '더 보기' ──────────────────────
+   버튼 여섯 개를 한 줄에 늘어놓으면 좁은 화면에서 카드가 두 줄이 된다.
+   <details> 라서 열고 닫기·키보드·스크린리더를 브라우저가 맡는다. */
+.row-more { position: relative; }
+.row-more > summary { list-style: none; display: inline-block; user-select: none; }
+.row-more > summary::-webkit-details-marker { display: none; }
+.row-more-panel {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
+  display: flex; flex-direction: column; gap: 8px; align-items: stretch;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px; min-width: 12rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+}
+.row-more-panel form { margin: 0; }
+.row-more-panel .btn { width: 100%; text-align: center; }
+.row-more-panel .share-form { gap: 6px; }
+.row-more-panel .share-select { flex: 1; }
+:root[data-theme="dark"] .row-more-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .row-more-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+}
+/* 화면이 좁으면 띄우지 않고 그 자리에서 펼친다 - 떠 있는 패널이 화면 밖으로 나가기 쉽다 */
+@media (max-width: 480px) {
+  .row-more { width: 100%; }
+  .row-more-panel { position: static; box-shadow: none; margin-top: 8px; }
+}
+
+/* 멤버 줄의 '내보내기' 는 가입일 뒤에 붙는다 (member-joined 가 margin-left:auto 로 밀어낸 다음) */
+.member-remove { margin-left: 10px; }
+
+/* ── 댓글: 수정 흔적과 조작 버튼 ─────────────────────────── */
+.comment-edited { color: var(--ink-soft); font-size: 12px; }
+.comment-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px;
+  align-items: flex-start; flex-wrap: wrap; }
+.comment-edit { flex: 0 0 auto; }
+.comment-edit > summary { list-style: none; display: inline-block; user-select: none; }
+.comment-edit > summary::-webkit-details-marker { display: none; }
+/* 열면 폼이 댓글 아래 한 줄을 온전히 차지한다 (떠 있는 패널은 textarea 에 어울리지 않는다) */
+.comment-edit[open] { flex: 1 1 100%; }
+.comment-edit-form { margin-top: 8px; }
+
+/* ── 게시판: 모아보기 · 미리보기 · 임시 저장 ─────────────── */
+.toolbar-actions { display: flex; gap: 8px; align-items: center; }
+
+.editor-toolbar { display: flex; gap: 8px; margin-top: 10px; }
+/* 미리보기는 실제 본문과 같은 모양이어야 '이렇게 나온다' 가 참이 된다 (.post-body.markdown 을 함께 쓴다) */
+.preview-box { margin-top: 12px; min-height: 0; }
+
+.draft-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.draft-banner .btn { margin-left: 0; }
+.draft-banner span:first-child { flex: 1; min-width: 12rem; }
+
+/* ── 마이페이지 구역 이동 ────────────────────────────────
+   폼 다섯 개가 세로로 이어져 있어 탈퇴 영역까지 한참 스크롤해야 했다.
+   앵커 목록이라 JS 없이 동작하고, 각 구역은 sticky 헤더에 가리지 않도록 여백을 예약한다. */
+.section-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.section-nav a {
+  padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--card); color: var(--ink-soft); text-decoration: none; font-size: .85rem;
+}
+.section-nav a:hover { border-color: var(--accent); color: var(--accent); }
+.me-section { scroll-margin-top: 5rem; }

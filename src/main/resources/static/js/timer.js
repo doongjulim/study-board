@@ -17,13 +17,6 @@
     let elapsed = 0;      // 화면에 표시 중인 경과 초
     let ticker = null;
 
-    // 헤더 프래그먼트의 data-csrf-* 속성에서 CSRF 토큰을 읽는다 (notification.js 와 동일)
-    function csrfHeaders() {
-        const site = document.querySelector('header.site');
-        if (!site || !site.dataset.csrfToken) return {};
-        return { [site.dataset.csrfHeader]: site.dataset.csrfToken };
-    }
-
     function formatClock(totalSeconds) {
         const s = Math.max(0, Math.floor(totalSeconds));
         const hh = String(Math.floor(s / 3600)).padStart(2, '0');
@@ -75,52 +68,40 @@
         apply(await res.json());
     }
 
-    async function startSession(params) {
-        const res = await fetch('/sessions/start?' + new URLSearchParams(params), {
-            method: 'POST',
-            headers: csrfHeaders()
+    function startSession(params, trigger) {
+        return UI.withBusy(trigger, async () => {
+            const res = await fetch('/sessions/start?' + new URLSearchParams(params), {
+                method: 'POST',
+                headers: UI.csrfHeaders()
+            });
+            // 409 는 '이미 진행 중인 세션이 있다' 이고, 서버가 사람이 읽을 문장을 준다
+            if (!res.ok) {
+                UI.toast(await UI.readError(res, '학습을 시작하지 못했습니다.'), 'error');
+                return;
+            }
+            apply(await res.json());
+            markPlanButtons();
         });
-        if (res.status === 409) {
-            alert(await res.text());
-            return;
-        }
-        if (!res.ok) {
-            alert('학습을 시작하지 못했습니다.');
-            return;
-        }
-        apply(await res.json());
-        markPlanButtons();
     }
 
-    async function stopSession() {
-        if (!running) return;
-        const res = await fetch(`/sessions/${running.id}/stop`, {
-            method: 'POST',
-            headers: csrfHeaders()
+    function stopSession(trigger) {
+        if (!running) return Promise.resolve();
+        const id = running.id;
+        return UI.withBusy(trigger, async () => {
+            const res = await fetch(`/sessions/${id}/stop`, {
+                method: 'POST',
+                headers: UI.csrfHeaders()
+            });
+            if (!res.ok) {
+                UI.toast(await UI.readError(res, '학습을 종료하지 못했습니다.'), 'error');
+                return;
+            }
+            const result = await res.json();
+            apply(null);
+            markPlanButtons();
+            // 종료 직후 "몇 분 했는지" 를 바로 보여 준다 - 기록이 남았다는 확인이 있어야 다시 켠다
+            UI.toast(`⏱ ${result.minutes}분 기록했습니다.`, 'success');
         });
-        if (!res.ok) {
-            alert('학습을 종료하지 못했습니다.');
-            return;
-        }
-        const result = await res.json();
-        apply(null);
-        markPlanButtons();
-        showResult(result.minutes);
-    }
-
-    /** 종료 직후 "몇 분 했는지" 를 바로 보여 준다 - 기록이 남았다는 확인이 있어야 다시 켠다 */
-    function showResult(minutes) {
-        const toastBox = document.getElementById('toast-box');
-        if (!toastBox) return;
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.textContent = `⏱ ${minutes}분 기록했습니다.`;
-        toastBox.appendChild(toast);
-        setTimeout(() => toast.classList.add('show'), 10);
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
     }
 
     /** 진행 중인 계획의 버튼만 '진행 중' 으로 바꾼다 */
@@ -139,19 +120,20 @@
             const planId = startBtn.dataset.timerStart;
             // 이미 이 계획으로 진행 중이면 같은 버튼이 종료 버튼이 된다
             if (running && String(running.planId) === planId) {
-                stopSession();
+                stopSession(startBtn);
             } else {
-                startSession({ planId });
+                startSession({ planId }, startBtn);
             }
             return;
         }
-        if (e.target.closest('[data-timer-stop]')) {
+        const stopAnywhere = e.target.closest('[data-timer-stop]');
+        if (stopAnywhere) {
             e.preventDefault();
-            stopSession();
+            stopSession(stopAnywhere);
         }
     });
 
-    if (stopBtn) stopBtn.addEventListener('click', stopSession);
+    if (stopBtn) stopBtn.addEventListener('click', () => stopSession(stopBtn));
 
     // 다른 탭에서 시작·종료했을 수 있으므로 탭이 다시 보이면 서버 값으로 맞춘다
     document.addEventListener('visibilitychange', () => {

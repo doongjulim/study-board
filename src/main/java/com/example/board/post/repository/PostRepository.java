@@ -49,4 +49,28 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Page<PostSummary> findSummariesByAuthorNickname(@Param("keyword") String keyword,
                                                      @Param("category") PostCategory category,
                                                      Pageable pageable);
+
+    // ── 모아보기 ──────────────────────────────────────────────
+    // 내가 쓴 글과 내가 좋아요한 글은 게시판 전체에서 검색으로 찾아내는 것이 아니라
+    // 바로 가는 길이 있어야 한다 (닉네임 검색은 동명이인·닉네임 변경에 흔들린다).
+
+    /** 내가 쓴 글 (최신순 - 정렬을 쿼리에 두므로 Pageable 은 정렬 없이 넘긴다) */
+    @Query(SUMMARY_SELECT + " where p.author.id = :authorId order by p.id desc")
+    Page<PostSummary> findSummariesByAuthorId(@Param("authorId") Long authorId, Pageable pageable);
+
+    /**
+     * 내가 좋아요한 글.
+     *
+     * <p>PostLike 를 기준으로 조인한다 - Post 에서 시작해 exists 로 거르는 것보다
+     * "내가 누른 표" 라는 사실에 가깝고, 표가 적은 쪽에서 출발해 훑는 범위도 작다.</p>
+     */
+    @Query("""
+            select new com.example.board.post.dto.PostSummary(
+                p.id, p.title, p.author.nickname, p.category, p.createdAt, size(p.files),
+                p.viewCount, p.likeCount)
+            from PostLike liked join liked.post p
+            where liked.member.id = :memberId
+            order by liked.id desc
+            """)
+    Page<PostSummary> findLikedSummaries(@Param("memberId") Long memberId, Pageable pageable);
 }

@@ -52,14 +52,35 @@ public class CommentController {
         return "redirect:/plans/shared/" + planId;
     }
 
+    /** 댓글 수정 (본인만) - 수정 후 원래 화면으로 돌아간다 */
+    @PostMapping("/comments/{id}/edit")
+    public String edit(@PathVariable Long id,
+                       @Valid @ModelAttribute CommentForm commentForm,
+                       BindingResult bindingResult,
+                       @AuthenticationPrincipal MemberPrincipal principal,
+                       RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            // 댓글 폼은 화면 한구석에 얹혀 있어 되돌려 보낼 폼 화면이 따로 없다.
+            // 그래서 등록 실패와 같은 방식으로 flash 에 문구만 싣고 원래 화면으로 보낸다.
+            redirectAttributes.addFlashAttribute("commentError",
+                    bindingResult.getFieldError("content").getDefaultMessage());
+            return redirectToTarget(commentService.findById(id));
+        }
+        return redirectToTarget(commentService.update(id, principal.id(), commentForm.getContent()));
+    }
+
     /** 댓글 삭제 (본인만) - 삭제 후 원래 화면으로 돌아간다 */
     @PostMapping("/comments/{id}/delete")
     public String delete(@PathVariable Long id,
                          @AuthenticationPrincipal MemberPrincipal principal) {
-        Comment deleted = commentService.delete(id, principal.id());
-        if (deleted.isForPost()) {
-            return "redirect:/posts/" + deleted.getPost().getId();
+        return redirectToTarget(commentService.delete(id, principal.id()));
+    }
+
+    /** 댓글이 달려 있던 화면으로 돌아간다 (글이냐 공유 플랜이냐) */
+    private String redirectToTarget(Comment comment) {
+        if (comment.isForPost()) {
+            return "redirect:/posts/" + comment.getPost().getId();
         }
-        return "redirect:/plans/shared/" + deleted.getPlan().getId();
+        return "redirect:/plans/shared/" + comment.getPlan().getId();
     }
 }

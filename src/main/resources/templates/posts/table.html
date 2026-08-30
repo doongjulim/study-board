@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  게시글 목록 표.
+
+  목록 화면과 모아보기 화면이 같은 표를 쓴다 - 열을 하나 더하거나 표시를 바꿀 때
+  두 곳을 고쳐야 하는 상황을 만들지 않기 위해서다.
+
+  필요한 컨텍스트 변수: posts (Page<PostSummary>), likedPostIds
+-->
+<div th:fragment="postTable" class="table-wrap">
+    <table class="board">
+        <thead>
+        <tr>
+            <th>분류</th>
+            <th>제목</th>
+            <th>작성자</th>
+            <th>작성일</th>
+            <th class="num-col">조회</th>
+            <th class="num-col">좋아요</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:if="${posts.isEmpty()}">
+            <td colspan="6" class="empty" th:text="${emptyMessage} ?: '등록된 게시글이 없습니다.'">
+                등록된 게시글이 없습니다.</td>
+        </tr>
+        <tr th:each="post : ${posts.content}">
+            <td><span class="tag-category" th:text="${post.category.label}">분류</span></td>
+            <td>
+                <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">제목</a>
+                <span class="clip" th:if="${post.fileCount > 0}"
+                      th:text="'📎 ' + ${post.fileCount}"></span>
+            </td>
+            <td th:text="${post.authorNickname}">작성자</td>
+            <td class="date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">날짜</td>
+            <td class="num" th:text="${post.viewCount}">0</td>
+            <!-- 내가 누른 글은 채워진 하트로 구분한다 -->
+            <td class="num" th:classappend="${likedPostIds.contains(post.id)} ? 'liked'"
+                th:text="(${likedPostIds.contains(post.id)} ? '♥ ' : '♡ ') + ${post.likeCount}">♡ 0</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

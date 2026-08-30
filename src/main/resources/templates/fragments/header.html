@@ -2,12 +2,12 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
 <!-- 모든 페이지 공통 헤더: 내비게이션 + 다크모드 + 실시간 알림 벨 -->
-<!-- data-csrf-*: JS fetch 가 POST 시 사용할 CSRF 토큰 (notification.js 참고) -->
+<!-- data-csrf-*: JS fetch 가 POST 시 사용할 CSRF 토큰 (ui.js 의 csrfHeaders 가 읽는다) -->
 <header class="site" th:fragment="siteHeader(active)"
         th:attr="data-csrf-token=${_csrf != null ? _csrf.token : ''},data-csrf-header=${_csrf != null ? _csrf.headerName : ''}">
     <div class="container">
         <a th:href="@{/}" class="brand">🎯 스터디플랜</a>
-        <nav class="gnb">
+        <nav class="gnb" aria-label="주요 메뉴">
             <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">홈</a>
             <a th:href="@{/plans/daily}" th:classappend="${active == 'plans'} ? 'on'">플래너</a>
             <a th:href="@{/ddays}" th:classappend="${active == 'ddays'} ? 'on'">D-Day</a>
@@ -35,39 +35,73 @@
             </div>
             <button id="theme-toggle" type="button" class="theme-btn" aria-label="다크 모드로 전환">🌙</button>
             <div class="notif" th:if="${currentMember != null}">
-                <button id="notif-bell" type="button" class="bell" aria-label="알림">
-                    🔔<span id="notif-badge" class="badge" hidden></span>
+                <!-- aria-expanded 로 열림 상태를 알린다 (notification.js 가 갱신한다).
+                     화면으로는 패널이 보이지만, 그것만으로는 눌러도 되는지 알 수 없다 -->
+                <button id="notif-bell" type="button" class="bell"
+                        aria-label="알림" aria-haspopup="true"
+                        aria-controls="notif-panel" aria-expanded="false">
+                    🔔<span id="notif-badge" class="badge" aria-hidden="true" hidden></span>
                 </button>
                 <div id="notif-panel" class="notif-panel" hidden>
-                    <div class="notif-head">알림</div>
+                    <div class="notif-head">
+                        <span>알림</span>
+                        <a class="notif-more" th:href="@{/notifications/all}">전체 보기</a>
+                    </div>
                     <ul id="notif-list"></ul>
                 </div>
             </div>
         </div>
     </div>
-    <div id="toast-box" class="toast-box"></div>
+
+    <!--
+      토스트가 들어오는 자리.
+
+      role/aria-live 를 미리 붙여 둔다 - aria-live 영역은 화면에 먼저 있어야 스크린리더가
+      나중에 추가되는 내용을 읽어 준다. 토스트를 띄울 때 상자째 만들면 읽히지 않고,
+      그러면 실시간 알림이 화면을 보는 사람에게만 도착하는 기능이 된다.
+    -->
+    <div id="toast-box" class="toast-box" role="status" aria-live="polite"></div>
 
     <!--
       좁은 화면 전용 하단 탭바. 헤더의 메뉴는 모바일에서 숨기고 이걸로 대신한다.
-      엄지가 닿는 자리에 자주 쓰는 다섯 곳만 둔다 (로그인한 사람에게만 보인다).
+
+      비로그인에게도 반드시 보여야 한다 - 예전에는 로그인한 사람에게만 그려서,
+      좁은 화면의 손님에게는 헤더 메뉴도 탭바도 없이 로고만 남았다.
+      대신 항목은 손님이 실제로 갈 수 있는 곳(홈·게시판·로그인)으로 줄인다.
     -->
-    <nav class="tabbar" th:if="${currentMember != null}" aria-label="주요 메뉴">
-        <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">
-            <span class="tab-icon" aria-hidden="true">🏠</span><span>홈</span>
-        </a>
-        <a th:href="@{/plans/daily}" th:classappend="${active == 'plans'} ? 'on'">
-            <span class="tab-icon" aria-hidden="true">📅</span><span>플래너</span>
-        </a>
-        <a th:href="@{/stats}" th:classappend="${active == 'stats'} ? 'on'">
-            <span class="tab-icon" aria-hidden="true">📊</span><span>통계</span>
-        </a>
-        <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">
-            <span class="tab-icon" aria-hidden="true">📋</span><span>게시판</span>
-        </a>
-        <a th:href="@{/me}" th:classappend="${active == 'me'} ? 'on'">
-            <span class="tab-icon" aria-hidden="true">👤</span><span>내 정보</span>
-        </a>
+    <nav class="tabbar" aria-label="주요 메뉴">
+        <th:block th:if="${currentMember != null}">
+            <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">
+                <span class="tab-icon" aria-hidden="true">🏠</span><span>홈</span>
+            </a>
+            <a th:href="@{/plans/daily}" th:classappend="${active == 'plans'} ? 'on'">
+                <span class="tab-icon" aria-hidden="true">📅</span><span>플래너</span>
+            </a>
+            <a th:href="@{/stats}" th:classappend="${active == 'stats'} ? 'on'">
+                <span class="tab-icon" aria-hidden="true">📊</span><span>통계</span>
+            </a>
+            <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">
+                <span class="tab-icon" aria-hidden="true">📋</span><span>게시판</span>
+            </a>
+            <a th:href="@{/me}" th:classappend="${active == 'me'} ? 'on'">
+                <span class="tab-icon" aria-hidden="true">👤</span><span>내 정보</span>
+            </a>
+        </th:block>
+        <th:block th:if="${currentMember == null}">
+            <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">
+                <span class="tab-icon" aria-hidden="true">🏠</span><span>홈</span>
+            </a>
+            <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">
+                <span class="tab-icon" aria-hidden="true">📋</span><span>게시판</span>
+            </a>
+            <a th:href="@{/login}" th:classappend="${active == 'login'} ? 'on'">
+                <span class="tab-icon" aria-hidden="true">🔑</span><span>로그인</span>
+            </a>
+        </th:block>
     </nav>
+
+    <!-- ui.js 가 먼저다 - 나머지 스크립트가 window.UI 를 쓴다 (defer 는 문서 순서를 지킨다) -->
+    <script th:src="@{/js/ui.js}" defer></script>
     <script th:src="@{/js/theme.js}" defer></script>
     <script th:src="@{/js/notification.js}" defer></script>
     <script th:src="@{/js/timer.js}" defer></script>

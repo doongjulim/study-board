@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+  일간 플래너의 한 줄.
+
+  왜 프래그먼트로 뺐나 - 같은 줄을 만드는 코드가 daily.html 과 plans.js 두 곳에 있었다.
+  JS 쪽이 뒤처져서, 한 줄 입력으로 방금 추가한 일정에는 공유·삭제 버튼이 없었다(새로고침해야 생겼다).
+  이제 마크업은 여기 하나뿐이고, JS 는 이 프래그먼트를 서버에서 받아 끼워 넣기만 한다
+  (PlanController 의 GET /plans/{id}/row).
+
+  필요한 컨텍스트 변수: plan, shareScopes
+
+  data-start 는 JS 가 삽입 위치를 정할 때 쓴다. 서버 정렬(종일 먼저, 그다음 시각순)과
+  같은 규칙을 화면에서도 지키기 위한 값이라, 빈 문자열이 곧 '종일' 이다.
+-->
+<li th:fragment="planRow" class="plan-card"
+    th:classappend="${plan.completed} ? 'done'"
+    th:with="startText=${plan.startTime != null ? #temporals.format(plan.startTime, 'HH:mm') : ''}"
+    th:attr="data-plan-id=${plan.id},data-start=${startText}">
+
+    <!-- JS 가 가로채고, 없으면 이 폼이 제출된다 -->
+    <form th:action="@{/plans/{id}/toggle(id=${plan.id})}" method="post" class="inline-form">
+        <button type="submit" class="check"
+                th:with="checkLabel=${(plan.completed ? '완료 취소: ' : '완료로 표시: ') + plan.title}"
+                th:attr="data-toggle=${plan.id},aria-label=${checkLabel}"
+                th:text="${plan.completed} ? '✅' : '⬜'"></button>
+    </form>
+
+    <div class="plan-main">
+        <div class="plan-time" th:if="${plan.startTime == null}">종일</div>
+        <div class="plan-time" th:if="${plan.startTime != null}"
+             th:text="${plan.endTime != null} ? |${startText} ~ ${#temporals.format(plan.endTime, 'HH:mm')}| : ${startText}"></div>
+        <div class="plan-title" th:text="${plan.title}">제목</div>
+        <div class="plan-content" th:if="${plan.content != null && !plan.content.isBlank()}"
+             th:text="${plan.content}"></div>
+        <div class="plan-meta">
+            <span class="tag-category" th:text="${plan.category.label}">분류</span>
+            <span class="tag-repeat" th:if="${plan.partOfSeries}">🔁 반복</span>
+            <span class="tag-shared" th:if="${plan.shared}"
+                  th:text="${plan.shareScope.label}">공유 범위</span>
+        </div>
+    </div>
+
+    <!--
+      자주 쓰는 것만 밖에 두고 나머지는 접는다.
+      버튼 여섯 개가 나란히 있으면 좁은 화면에서 카드가 두 줄로 늘어나 목록을 훑기 어렵다.
+      <details> 를 쓰는 이유는 열고 닫기·키보드·스크린리더를 브라우저가 이미 처리해 주기 때문이다.
+    -->
+    <div class="actions">
+        <button type="button" class="btn btn-sm btn-timer"
+                th:attr="data-timer-start=${plan.id}">▶ 시작</button>
+
+        <details class="row-more">
+            <summary class="btn btn-sm" th:attr="aria-label=${'더 보기: ' + plan.title}">⋯</summary>
+            <div class="row-more-panel">
+                <!-- 3단계라 토글로는 표현할 수 없다. JS 가 없으면 '변경' 버튼으로 제출된다 -->
+                <form class="share-form" th:action="@{/plans/{id}/share(id=${plan.id})}" method="post">
+                    <label class="sr-only" th:for="'scope-' + ${plan.id}">공유 범위</label>
+                    <select class="share-select" name="scope" th:id="'scope-' + ${plan.id}">
+                        <option th:each="scope : ${shareScopes}"
+                                th:value="${scope}" th:text="${scope.label}"
+                                th:selected="${scope == plan.shareScope}"></option>
+                    </select>
+                    <button type="submit" class="btn btn-sm">변경</button>
+                </form>
+                <a class="btn btn-sm" th:href="@{/plans/{id}/edit(id=${plan.id})}">수정</a>
+                <form th:action="@{/plans/{id}/delete(id=${plan.id})}" method="post"
+                      data-confirm="일정을 삭제할까요?" data-confirm-label="삭제">
+                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+                </form>
+                <form th:if="${plan.partOfSeries}" th:action="@{/plans/{id}/delete-series(id=${plan.id})}"
+                      method="post"
+                      data-confirm="이 반복 일정 전체를 삭제할까요?&#10;되돌릴 수 없습니다."
+                      data-confirm-label="전체 삭제">
+                    <button type="submit" class="btn btn-sm btn-danger">반복 전체 삭제</button>
+                </form>
+            </div>
+        </details>
+    </div>
+</li>
+</body>
+</html>

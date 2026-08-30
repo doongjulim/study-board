@@ -38,7 +38,7 @@
             <div class="actions">
                 <a class="btn btn-sm" th:href="@{/ddays/{id}/edit(id=${dday.id})}">수정</a>
                 <form th:action="@{/ddays/{id}/delete(id=${dday.id})}" method="post"
-                      onsubmit="return confirm('삭제할까요?');">
+                      data-confirm="D-Day 를 삭제할까요?" data-confirm-label="삭제">
                     <button type="submit" class="btn btn-sm btn-danger">삭제</button>
                 </form>
             </div>

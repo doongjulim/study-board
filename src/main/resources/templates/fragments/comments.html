@@ -14,19 +14,44 @@
                 <span class="comment-author" th:text="${comment.author.nickname}">닉네임</span>
                 <span class="comment-time"
                       th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">시각</span>
-                <form th:if="${currentMember != null and currentMember.id == comment.author.id}"
-                      th:action="@{/comments/{id}/delete(id=${comment.id})}" method="post"
-                      class="inline-form" onsubmit="return confirm('댓글을 삭제할까요?');">
+                <!--
+                  고칠 수 있게만 하고 흔적을 남기지 않으면 대화 기록으로서 믿을 수 없다.
+                  남이 읽은 뒤에 내용이 바뀔 수 있다면 "언제 바뀌었는가" 는 읽는 사람의 정보다.
+                -->
+                <span class="comment-edited" th:if="${comment.isEdited()}"
+                      th:title="${#temporals.format(comment.updatedAt, 'yyyy-MM-dd HH:mm')} + ' 수정'">(수정됨)</span>
+            </div>
+            <p class="comment-content" th:text="${comment.content}">내용</p>
+
+            <div class="comment-actions"
+                 th:if="${currentMember != null and currentMember.id == comment.author.id}">
+                <!--
+                  수정 폼은 접어 둔다. 댓글 열 개마다 textarea 가 펼쳐져 있으면 목록을 읽을 수 없다.
+                  <details> 라서 JS 없이도 열리고 닫힌다 - 댓글은 JS 가 없어도 온전히 쓸 수 있어야 한다.
+                -->
+                <details class="comment-edit">
+                    <summary class="btn btn-sm">수정</summary>
+                    <form th:action="@{/comments/{id}/edit(id=${comment.id})}" method="post"
+                          class="comment-form comment-edit-form">
+                        <label class="sr-only" th:for="'comment-edit-' + ${comment.id}">댓글 수정</label>
+                        <textarea th:id="'comment-edit-' + ${comment.id}" name="content" rows="2"
+                                  maxlength="500" th:text="${comment.content}"></textarea>
+                        <button type="submit" class="btn btn-primary btn-sm">저장</button>
+                    </form>
+                </details>
+                <form th:action="@{/comments/{id}/delete(id=${comment.id})}" method="post"
+                      class="inline-form"
+                      data-confirm="댓글을 삭제할까요?" data-confirm-label="삭제">
                     <button type="submit" class="btn btn-sm btn-danger">삭제</button>
                 </form>
             </div>
-            <p class="comment-content" th:text="${comment.content}">내용</p>
         </li>
     </ul>
 
     <form th:if="${currentMember != null}" th:action="@{${submitUrl}}" method="post"
           th:object="${commentForm}" class="comment-form">
-        <textarea th:field="*{content}" rows="2" maxlength="500"
+        <label class="sr-only" for="comment-content">댓글</label>
+        <textarea id="comment-content" th:field="*{content}" rows="2" maxlength="500"
                   placeholder="댓글을 입력하세요 (500자 이내)"></textarea>
         <button type="submit" class="btn btn-primary">등록</button>
     </form>

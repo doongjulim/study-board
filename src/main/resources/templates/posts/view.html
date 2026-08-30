@@ -54,7 +54,7 @@
         <th:block th:if="${currentMember != null and currentMember.id == post.author.id}">
             <a th:href="@{/posts/{id}/edit(id=${post.id})}" class="btn">수정</a>
             <form th:action="@{/posts/{id}/delete(id=${post.id})}" method="post"
-                  onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                  data-confirm="게시글을 삭제할까요?&#10;댓글과 첨부파일도 함께 사라집니다." data-confirm-label="삭제">
                 <button type="submit" class="btn btn-danger">삭제</button>
             </form>
         </th:block>

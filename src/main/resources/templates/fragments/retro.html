@@ -40,7 +40,7 @@
     </form>
 
     <form th:if="${retro != null}" th:action="@{/retros/{id}/delete(id=${retro.id})}" method="post"
-          onsubmit="return confirm('회고를 지울까요?');">
+          data-confirm="회고를 지울까요?" data-confirm-label="삭제">
         <input type="hidden" name="type" th:value="${retroType}">
         <input type="hidden" name="date" th:value="${date}">
         <button type="submit" class="btn btn-sm btn-danger">회고 지우기</button>

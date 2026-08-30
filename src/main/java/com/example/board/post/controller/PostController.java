@@ -11,8 +11,11 @@ import com.example.board.post.dto.PostForm;
 import com.example.board.post.dto.PostSummary;
 import com.example.board.post.dto.SearchType;
 import com.example.board.post.service.PostService;
+import com.example.board.post.web.ViewedPosts;
 import com.example.board.stats.domain.WeeklyReport;
 import com.example.board.stats.service.WeeklyReportService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -78,13 +81,64 @@ public class PostController {
         return "posts/list";
     }
 
-    /** 상세 - 여는 김에 조회수를 올린다 (작성자 본인의 조회는 세지 않는다) */
+    /**
+     * 모아보기 - 내가 쓴 글 / 내가 좋아요한 글.
+     *
+     * <p>게시판 목록의 검색 조건에 얹지 않고 화면을 따로 둔다. 닉네임 검색으로 대신하면
+     * 동명이인이 섞이고 닉네임을 바꾼 순간 내 글이 사라진다 - 이건 검색이 아니라 '내 것' 이다.</p>
+     */
+    @GetMapping("/mine")
+    public String mine(@RequestParam(defaultValue = "written") String tab,
+                       @RequestParam(defaultValue = "0") int page,
+                       @AuthenticationPrincipal MemberPrincipal principal,
+                       Model model) {
+        boolean liked = "liked".equals(tab);
+        // 정렬은 쿼리 안에 있으므로 여기서는 페이지만 정한다 (둘을 겹치면 order by 가 두 번 붙는다)
+        Pageable pageable = PageRequest.of(Math.max(page, 0), 10);
+        Page<PostSummary> posts = liked
+                ? postService.findLiked(principal.id(), pageable)
+                : postService.findMine(principal.id(), pageable);
+
+        model.addAttribute("posts", posts);
+        model.addAttribute("pageBlock", PageBlock.of(posts));
+        model.addAttribute("tab", liked ? "liked" : "written");
+        model.addAttribute("likedPostIds", postService.findLikedPostIds(principal.id(), posts.getContent()));
+        return "posts/mine";
+    }
+
+    /**
+     * 마크다운 미리보기.
+     *
+     * <p>브라우저에서 마크다운 라이브러리를 따로 돌리지 않고 서버의 렌더러를 그대로 부른다.
+     * 미리보기와 실제 결과가 다르면 미리보기가 아니기 때문이다 - 살균 규칙까지 같아야
+     * "이렇게 나온다" 가 참이 된다.</p>
+     */
+    @PostMapping(value = "/preview", produces = "text/html; charset=UTF-8")
+    @ResponseBody
+    public String preview(@RequestBody(required = false) String content) {
+        return MarkdownRenderer.toSafeHtml(content);
+    }
+
+    /**
+     * 상세 - 처음 여는 것이면 조회수를 올린다.
+     *
+     * <p>작성자 본인의 조회는 세지 않고(도메인 규칙), 같은 브라우저가 다시 여는 것도 하루 동안은
+     * 세지 않는다. 뒤쪽 판단을 서버에 남기려면 비로그인 방문자를 식별해야 하는데, 조회수를 위해
+     * 그럴 이유가 없어 "이미 봤다" 는 사실을 그 브라우저의 쿠키에 둔다.</p>
+     */
     @GetMapping("/{id}")
     public String view(@PathVariable Long id,
                        @AuthenticationPrincipal MemberPrincipal principal,
+                       HttpServletRequest request,
+                       HttpServletResponse response,
                        Model model) {
         Long viewerId = (principal != null) ? principal.id() : null;
-        Post post = postService.read(id, viewerId);
+        ViewedPosts viewed = ViewedPosts.from(request.getCookies());
+        boolean firstVisit = !viewed.contains(id);
+        Post post = postService.read(id, viewerId, firstVisit);
+        if (firstVisit) {
+            response.addCookie(viewed.plus(id).toCookie());
+        }
 
         model.addAttribute("post", post);
         model.addAttribute("contentHtml", MarkdownRenderer.toSafeHtml(post.getContent()));

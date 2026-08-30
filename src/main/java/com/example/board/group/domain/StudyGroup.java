@@ -57,4 +57,21 @@ public class StudyGroup {
     public void transferOwnershipTo(Member newOwner) {
         this.owner = newOwner;
     }
+
+    /** 이름과 소개를 고친다. 오타 하나 때문에 그룹을 다시 만들 일은 없어야 한다 */
+    public void rename(String name, String description) {
+        this.name = name;
+        this.description = description;
+    }
+
+    /**
+     * 초대 코드를 새로 받는다.
+     *
+     * <p>코드는 "아는 사람은 들어올 수 있는" 값이라, 새어 나가면 막을 방법이 있어야 한다.
+     * 캘린더 구독 주소에는 재발급이 있는데 여기에는 없어 같은 성격의 값이 다른 정책을 갖고 있었다.
+     * 새 코드를 준 순간부터 옛 코드는 아무 데도 닿지 않는다 - 이미 들어온 멤버는 그대로 남는다.</p>
+     */
+    public void renewInviteCode(String inviteCode) {
+        this.inviteCode = inviteCode;
+    }
 }

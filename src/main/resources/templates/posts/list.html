@@ -33,42 +33,13 @@
             </select>
             <button type="submit" class="btn">검색</button>
         </form>
-        <a th:href="@{/posts/new}" class="btn btn-primary">글쓰기</a>
+        <span class="toolbar-actions">
+            <a th:if="${currentMember != null}" th:href="@{/posts/mine}" class="btn">모아보기</a>
+            <a th:href="@{/posts/new}" class="btn btn-primary">글쓰기</a>
+        </span>
     </div>
 
-    <div class="table-wrap">
-    <table class="board">
-        <thead>
-        <tr>
-            <th>분류</th>
-            <th>제목</th>
-            <th>작성자</th>
-            <th>작성일</th>
-            <th class="num-col">조회</th>
-            <th class="num-col">좋아요</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:if="${posts.isEmpty()}">
-            <td colspan="6" class="empty">등록된 게시글이 없습니다.</td>
-        </tr>
-        <tr th:each="post : ${posts.content}">
-            <td><span class="tag-category" th:text="${post.category.label}">분류</span></td>
-            <td>
-                <a th:href="@{/posts/{id}(id=${post.id})}" th:text="${post.title}">제목</a>
-                <span class="clip" th:if="${post.fileCount > 0}"
-                      th:text="'📎 ' + ${post.fileCount}"></span>
-            </td>
-            <td th:text="${post.authorNickname}">작성자</td>
-            <td class="date" th:text="${#temporals.format(post.createdAt, 'yyyy-MM-dd HH:mm')}">날짜</td>
-            <td class="num" th:text="${post.viewCount}">0</td>
-            <!-- 내가 누른 글은 채워진 하트로 구분한다 -->
-            <td class="num" th:classappend="${likedPostIds.contains(post.id)} ? 'liked'"
-                th:text="(${likedPostIds.contains(post.id)} ? '♥ ' : '♡ ') + ${post.likeCount}">♡ 0</td>
-        </tr>
-        </tbody>
-    </table>
-    </div>
+    <div th:replace="~{posts/table :: postTable}"></div>
 
     <!-- 검색·정렬 조건은 페이지를 넘겨도 유지되어야 하므로 기준 URL 에 함께 싣는다 -->
     <th:block th:with="pageUrl=@{/posts(keyword=${keyword}, searchType=${searchType}, sort=${sort}, category=${category})}">

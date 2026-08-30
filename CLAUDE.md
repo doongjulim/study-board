@@ -109,6 +109,9 @@
   댓글 자격도 같은 규칙을 쓰도록 `CommentService` 가 `PlanService.canView()` 를 부른다(규칙을 두 곳에 두지 않는다).
   공유 목록은 그룹이 없으면 `findByShareScope(PUBLIC)`, 있으면 `findSharedVisibleTo(fellowIds)` — 빈 `in ()` 을 피하는 갈래이기도 하다
 - **일간 뷰의 마찰 제거**: 한 줄 입력으로 바로 등록하고, 완료 체크는 그 줄과 진행 표시만 갱신한다(`/api/plans`, `static/js/plans.js`).
+  **한 줄의 생김새는 `templates/plans/row.html` 한 곳에만 있다** — JS 가 직접 조립하던 때는 템플릿과 어긋나
+  방금 추가한 일정에만 공유·삭제 버튼이 없었다(새로고침해야 생겼다). 이제 JS 는 `GET /plans/{id}/row` 로
+  서버가 그린 조각을 받아 **정렬 규칙에 맞는 자리에** 끼워 넣는다(끝에 붙이면 오전 일정이 새로고침 순간 자리를 옮긴다).
   어제 못 끝낸 일정은 배너에서 오늘로 옮긴다(`Plan.moveTo` — 완료한 일정은 지난 기록이 바뀌므로 거부).
   **JSON API 는 기존 폼 경로를 대체하지 않고 위에 얹는다** — JS 가 없어도 플래너를 쓸 수 있어야 하기 때문이다.
   JSON 을 기대하는 화면에 HTML 오류 페이지가 가지 않도록 `PlanApiController` 가 예외를 자체 처리한다
@@ -142,6 +145,9 @@
   탈퇴 시 토큰을 지우고, 조회 단계에서도 탈퇴 회원을 한 번 더 막는다.
   iCal 에서 실제로 깨지는 두 가지 — 이스케이프(쉼표 하나로 일정이 통째로 버려진다)와 75옥텟 줄 접기(한글은 3바이트) — 를 직접 처리한다.
   CSV 는 BOM 을 붙인다(없으면 윈도우 엑셀이 한글을 깨뜨린다)
+- **글쓰기 보조(post)**: 마크다운 미리보기는 브라우저에서 따로 그리지 않고 `POST /posts/preview` 로 **서버의 렌더러를 그대로 부른다** —
+  살균 규칙까지 같아야 "이렇게 나온다" 가 참이 된다. 임시 저장은 localStorage 이고, 자동으로 되살리지 않고 물어본다
+  (사용자가 일부러 지운 글을 되돌려 놓으면 그게 더 놀라운 일이다). 첨부는 글당 10개 — 개수는 크기와 다른 축이라 따로 막는다
 - **게시판 강화(post)**: 분류(자유/공고/후기/질문)·좋아요·조회수·마크다운.
   마크다운은 **commonmark 로 렌더 → jsoup 허용 목록으로 살균** 두 단계다. commonmark 는 규격대로 원본 HTML 을 그대로 통과시키므로,
   살균 없이 화면에 넣으면 본문의 `<script>` 한 줄이 그대로 XSS 가 된다. 결과는 저장하지 않고 읽을 때마다 만든다(정책을 고치면 옛 글에도 적용되도록).
@@ -151,6 +157,11 @@
   **사용자별 알림**: `Notification.recipient` FK + 회원별 `SseEmitterRegistry`(멀티 탭 지원). 리마인더 → 작성자 본인, 댓글 → 대상 작성자(셀프 제외),
   플랜 공유 → **범위가 대상을 정한다**: PUBLIC 은 본인 제외 전체(`notifyAllExcept`), GROUP 은 같은 그룹 사람만(`notifyMembersExcept`).
   그룹에만 공유한 플랜을 전체에 뿌리면 그게 곧 스팸이고 범위 설정도 무의미해진다. 대상이 비면 조회조차 하지 않는다(빈 `in ()` 은 쿼리 오류)
+- **알림 보관(notification)**: 벨 패널은 최근 10건이고 그 뒤는 `/notifications/all` 이 받는다.
+  **읽음은 알림 하나 단위다** — 패널을 열었다는 사실이 읽음을 정하면 "이건 나중에" 를 남길 수 없다.
+  같은 일을 JSON(`NotificationController`, 벨 패널의 fetch)과 폼(`NotificationPageController`, 화면) 둘이 부르지만
+  판단은 `NotificationService` 한 곳에 있고 컨트롤러는 주소와 리다이렉트만 맡는다.
+  아무도 지우지 않던 알림 행은 `NotificationCleanupScheduler` 가 정리한다(읽음 90일 / 그 밖 180일)
 - **댓글(comment)**: 단일 `Comment` 엔티티가 게시글/공유 플랜 중 하나에 달림(DB check 제약, on delete cascade). 댓글 UI 는 `fragments/comments.html` 재사용, 알림은 `CommentAddedEvent` 로 결합 차단
 - **업로드 보안(file)**: `FileStore` 확장자 화이트리스트(무확장자 거부), `/files/{id}/view` 는 이미지만 인라인·그 외 다운로드 리다이렉트
 - **모듈 간 결합 차단**: plan 모듈은 `PlanSharedEvent`(공유 범위를 실어 보낸다)/`PlanReminderEvent`만 발행하고,
@@ -170,7 +181,23 @@
 - **공통 헤더**: `templates/fragments/header.html` 프래그먼트를 모든 페이지에서 `th:replace`로 재사용
 - **모바일**: 720px 이하에서 헤더 메뉴를 감추고 **하단 탭바**(홈/플래너/통계/게시판/내 정보)로 대신한다.
   주간 뷰는 1열로 무너뜨리지 않고 7열을 유지한 채 가로 스크롤한다 — 세로로 쌓으면 "주간" 의 의미가 사라지기 때문
-- **다크모드**: `board.css`의 `prefers-color-scheme: dark` 미디어쿼리로 자동 전환
+- **다크모드**: 시스템 설정(`prefers-color-scheme`)을 따르되 헤더의 토글로 덮어쓸 수 있다(`data-theme`, localStorage).
+  **다크 토큰은 한 벌만 적고 선택자 둘이 그 한 벌을 함께 쓴다** — 값을 두 곳에 두었더니
+  `--ok` 와 accent 위 글자색 보정이 시스템 쪽에만 있고 토글 쪽에는 없어, 토글로 켠 다크에서
+  '그룹장' 배지가 밝은 녹색 위 흰 글자(대비 2:1)로 읽히지 않았다.
+  accent·ok·danger 를 배경으로 깔 때 그 위의 글자는 반드시 `--on-accent`/`--on-ok`/`--on-danger` 를 쓴다 —
+  #fff 를 직접 적으면 테마마다 배경 밝기가 뒤집혀 한쪽에서 사라진다.
+  보조 텍스트는 `--ink-soft` 하나로 통일한다(정의된 적 없는 `--muted` 를 폴백 #888 로 쓰고 있었고, 라이트 대비 3.5:1 로 AA 미달이었다)
+- **접근성**: 토스트 상자는 `aria-live` 를 달고 **화면에 미리 존재해야** 한다 — 띄울 때 상자째 만들면
+  스크린리더가 읽지 않아 실시간 알림이 화면을 보는 사람에게만 도착하는 기능이 된다.
+  `:focus-visible` 로 키보드 포커스만 표시하고(마우스에도 테두리가 남으면 결국 outline:none 으로 지우게 된다),
+  sticky 헤더에 포커스가 가리지 않도록 `scroll-margin-top` 을 예약한다. 본문 바로가기(.skip-link)는 탭 순서 맨 앞
+- **모바일 내비**: 하단 탭바는 **비로그인에게도** 보인다(항목만 홈·게시판·로그인으로 줄인다).
+  720px 이하에서 헤더 메뉴를 감추므로, 로그인한 사람에게만 탭바를 그리면 손님에게는 이동 수단이 로고뿐이 된다
+- **화면 공통 JS(`static/js/ui.js`)**: 토스트·확인창·CSRF 헤더·중복 제출 방지를 한곳에 둔다.
+  `alert`/`confirm` 은 쓰지 않는다 — 브라우저를 멈추고, Playwright 에게는 실패가 아니라 **정지**다.
+  확인은 폼에 `data-confirm="문구"` 를 달면 `<dialog>` 기반 확인창이 가로챈다(포커스 가둠·Esc 는 브라우저가 맡는다).
+  비동기 버튼은 `UI.withBusy(el, fn)` 로 감싼다 — 느린 네트워크에서 Enter 두 번이면 같은 일정이 두 개 생겼다
 
 
 ## 설정
@@ -208,6 +235,11 @@ spring:
 | CSRF | 토큰은 **세션 저장소(기본값)** 에 둔다. 쿠키 저장소로 두면 한 요청 안에서 토큰이 두 번 만들어질 때 두 번째가 첫 번째를 못 보고 새로 만들어, 화면에 박힌 값과 쿠키가 갈린다 → 403. JS 는 `data-csrf-*` 에서 이름·값을 함께 읽으므로 저장소를 바꿔도 따라온다 (`CsrfTokenIssueTest` 가 지킨다) |
 | 테스트 | `with(csrf())` 는 토큰을 손수 만들어 넣으므로 "서버가 내려 준 토큰이 통하는가" 를 못 잡는다. 그 왕복은 `CsrfTokenIssueTest`/E2E 가 본다 |
 | Flyway | location 을 재귀로 훑는다. 벤더별 마이그레이션은 `db/migration` **밖**, `db/vendor/{vendor}` 에 둔다 |
+| NULL 정렬 | `startTime` 처럼 nullable 인 컬럼을 이름 기반 쿼리(`OrderByStartTimeAsc`)로 정렬하면 안 된다. NULL 의 자리는 표준이 정하지 않아 **H2 는 앞, PostgreSQL 은 뒤**다 — 코드 변경 없이 운영 DB 를 바꾸는 순간 화면 순서가 뒤집힌다. `@Query` 에 `nulls first` 를 직접 적는다 (`PlanRepositoryOrderTest` 가 지킨다) |
+| 파일과 트랜잭션 | DB 는 롤백되지만 파일 시스템은 롤백되지 않는다. 삭제는 `TransactionalFileRemover` 로 **커밋 뒤에** 한다 — 먼저 지우면 롤백 시 DB 행만 살아남아 "있는데 없는 첨부파일" 이 된다. 반대로 저장은 DB 보다 먼저라 롤백 시 고아 파일이 남는데, 그건 `OrphanFileCleanupScheduler` 가 24시간 유예를 두고 치운다(유예가 없으면 커밋 전 정상 업로드를 고아로 오해한다) |
+| 업로드 형식 | 확장자와 Content-Type 은 둘 다 **올리는 쪽이 정하는 값**이다. 이미지는 인라인으로 서빙되므로(`/files/{id}/view`) 앞부분 바이트로 실제 형식을 확인하고 **그 결과를** Content-Type 으로 저장한다(`ImageContentType`) |
+| 조회수 | "이미 봤다" 를 서버에 남기려면 비로그인 방문자를 식별해야 한다 — 조회수 때문에 그럴 이유가 없다. 그 브라우저의 쿠키(`ViewedPosts`, 24시간)에 두어 개인을 특정하지 않고 중복만 걷어낸다 |
+| th:attr | 값 안에 쉼표가 들어가는 표현식(`#temporals.format(x, 'HH:mm')`)을 `th:attr` 에 직접 넣지 않는다. 항목 구분자와 헷갈린다 — `th:with` 로 미리 계산해 변수만 넘긴다 |
 | E2E | `alert` 이 열리면 Playwright 가 실패가 아니라 **정지**한다. `E2eSupport` 가 대화상자를 자동으로 닫는다 |
 | E2E | 화면을 넘기지 않는 기능(plans.js 의 한 줄 추가 등)은 주소가 아니라 화면에 붙은 결과로 확인한다 |
 

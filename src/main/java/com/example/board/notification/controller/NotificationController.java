@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,5 +47,22 @@ public class NotificationController {
     @PostMapping("/read-all")
     public void readAll(@AuthenticationPrincipal MemberPrincipal principal) {
         notificationService.markAllAsRead(principal.id());
+    }
+
+    /**
+     * 알림 하나만 읽음 처리.
+     *
+     * <p>패널을 여는 것만으로 전부 읽음이 되면 "이건 나중에" 를 남길 수 없다.
+     * 읽었다는 표시는 사용자가 그 알림을 골랐을 때 붙는다.</p>
+     */
+    @PostMapping("/{id}/read")
+    public void read(@PathVariable Long id, @AuthenticationPrincipal MemberPrincipal principal) {
+        notificationService.markAsRead(principal.id(), id);
+    }
+
+    /** 알림 하나 삭제 */
+    @PostMapping("/{id}/delete")
+    public void delete(@PathVariable Long id, @AuthenticationPrincipal MemberPrincipal principal) {
+        notificationService.delete(principal.id(), id);
     }
 }

@@ -29,6 +29,12 @@ public class CommentService {
     private final MemberRepository memberRepository;
     private final ApplicationEventPublisher eventPublisher;
 
+    /** 댓글 하나. 수정 실패 후 돌아갈 화면을 정할 때처럼 대상만 알면 되는 자리에서 쓴다 */
+    public Comment findById(Long commentId) {
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new IllegalArgumentException("댓글이 존재하지 않습니다. id=" + commentId));
+    }
+
     public List<Comment> findForPost(Long postId) {
         return commentRepository.findByPost_IdOrderByIdAsc(postId);
     }
@@ -69,15 +75,36 @@ public class CommentService {
         return saved.getId();
     }
 
+    /**
+     * 본인 댓글만 고칠 수 있다.
+     *
+     * <p>고친 댓글을 반환하는 것은 삭제와 같은 이유다 - 컨트롤러가 돌아갈 화면(글이냐 플랜이냐)을
+     * 정하려면 대상이 필요하고, 그 판단을 컨트롤러가 다시 조회해서 하게 만들 이유가 없다.</p>
+     *
+     * <p>수정은 알림을 보내지 않는다. 이미 한 번 알린 댓글이고, 오타를 고칠 때마다
+     * 글쓴이에게 알림이 다시 가면 그게 곧 소음이다.</p>
+     */
+    @Transactional
+    public Comment update(Long commentId, Long memberId, String content) {
+        Comment comment = findOwned(commentId, memberId, "수정");
+        comment.updateContent(content);
+        return comment;
+    }
+
     /** 본인 댓글만 삭제할 수 있다. 삭제된 댓글을 반환해 컨트롤러가 돌아갈 화면을 정한다 */
     @Transactional
     public Comment delete(Long commentId, Long memberId) {
+        Comment comment = findOwned(commentId, memberId, "삭제");
+        commentRepository.delete(comment);
+        return comment;
+    }
+
+    private Comment findOwned(Long commentId, Long memberId, String action) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new IllegalArgumentException("댓글이 존재하지 않습니다. id=" + commentId));
         if (!comment.isAuthoredBy(memberId)) {
-            throw new AccessDeniedException("본인의 댓글만 삭제할 수 있습니다.");
+            throw new AccessDeniedException("본인의 댓글만 %s할 수 있습니다.".formatted(action));
         }
-        commentRepository.delete(comment);
         return comment;
     }
 }

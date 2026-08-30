@@ -246,4 +246,102 @@ class StudyGroupServiceTest {
 
         then(groupRepository).should().delete(owned);
     }
+
+    @Nested
+    @DisplayName("그룹장 관리")
+    class Manage {
+
+        @Test
+        @DisplayName("그룹장은 이름과 소개를 고칠 수 있다")
+        void ownerCanRename() {
+            Member owner = member(1L, "leader");
+            StudyGroup group = group(10L, owner);
+            given(groupRepository.findById(10L)).willReturn(Optional.of(group));
+
+            GroupForm form = new GroupForm();
+            form.setName("알고리즘 스터디");
+            form.setDescription("주 3회");
+            studyGroupService.update(10L, form, 1L);
+
+            assertThat(group.getName()).isEqualTo("알고리즘 스터디");
+            assertThat(group.getDescription()).isEqualTo("주 3회");
+        }
+
+        @Test
+        @DisplayName("그룹장이 아니면 정보를 고칠 수 없다")
+        void nonOwnerCannotRename() {
+            StudyGroup group = group(10L, member(1L, "leader"));
+            given(groupRepository.findById(10L)).willReturn(Optional.of(group));
+
+            GroupForm form = new GroupForm();
+            form.setName("가로채기");
+
+            assertThatThrownBy(() -> studyGroupService.update(10L, form, 999L))
+                    .isInstanceOf(AccessDeniedException.class);
+            assertThat(group.getName()).isEqualTo("코테 스터디");
+        }
+
+        @Test
+        @DisplayName("초대 코드를 재발급하면 옛 코드로는 더 이상 가입할 수 없다")
+        void ownerCanRenewInviteCode() {
+            StudyGroup group = group(10L, member(1L, "leader"));
+            given(groupRepository.findById(10L)).willReturn(Optional.of(group));
+            given(groupRepository.existsByInviteCode(anyString())).willReturn(false);
+
+            String issued = studyGroupService.renewInviteCode(10L, 1L);
+
+            assertThat(issued).isNotEqualTo("ABCD2345");
+            assertThat(group.getInviteCode()).isEqualTo(issued);
+        }
+
+        @Test
+        @DisplayName("그룹장이 아니면 초대 코드를 재발급할 수 없다")
+        void nonOwnerCannotRenewInviteCode() {
+            StudyGroup group = group(10L, member(1L, "leader"));
+            given(groupRepository.findById(10L)).willReturn(Optional.of(group));
+
+            assertThatThrownBy(() -> studyGroupService.renewInviteCode(10L, 999L))
+                    .isInstanceOf(AccessDeniedException.class);
+            assertThat(group.getInviteCode()).isEqualTo("ABCD2345");
+        }
+
+        @Test
+        @DisplayName("그룹장은 다른 멤버를 내보낼 수 있다")
+        void ownerCanRemoveMember() {
+            Member owner = member(1L, "leader");
+            Member fellow = member(2L, "fellow");
+            StudyGroup group = group(10L, owner);
+            GroupMember membership = membership(group, fellow);
+            given(groupRepository.findById(10L)).willReturn(Optional.of(group));
+            given(groupMemberRepository.findByStudyGroup_IdAndMember_Id(10L, 2L))
+                    .willReturn(Optional.of(membership));
+
+            studyGroupService.removeMember(10L, 2L, 1L);
+
+            then(groupMemberRepository).should().delete(membership);
+        }
+
+        @Test
+        @DisplayName("그룹장은 자기 자신을 내보낼 수 없다 - 승계 규칙이 걸린 '나가기' 로만 빠진다")
+        void ownerCannotRemoveSelf() {
+            StudyGroup group = group(10L, member(1L, "leader"));
+            given(groupRepository.findById(10L)).willReturn(Optional.of(group));
+
+            assertThatThrownBy(() -> studyGroupService.removeMember(10L, 1L, 1L))
+                    .isInstanceOf(IllegalStateException.class);
+            then(groupMemberRepository).should(never()).delete(any());
+        }
+
+        @Test
+        @DisplayName("일반 멤버는 다른 사람을 내보낼 수 없다")
+        void nonOwnerCannotRemoveMember() {
+            StudyGroup group = group(10L, member(1L, "leader"));
+            given(groupRepository.findById(10L)).willReturn(Optional.of(group));
+
+            assertThatThrownBy(() -> studyGroupService.removeMember(10L, 3L, 2L))
+                    .isInstanceOf(AccessDeniedException.class);
+            then(groupMemberRepository).should(never()).delete(any());
+        }
+    }
+
 }

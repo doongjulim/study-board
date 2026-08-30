@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('알림', '', ~{::main})}">
+<body>
+<main class="container">
+    <h2 class="page-title">알림</h2>
+    <p class="hint" th:text="${unreadCount > 0} ? |읽지 않은 알림 ${unreadCount}건| : '읽지 않은 알림이 없습니다.'">
+        읽지 않은 알림</p>
+
+    <div class="toolbar">
+        <span class="hint">읽은 알림은 90일, 그 밖의 알림은 180일 뒤 자동으로 정리됩니다.</span>
+        <form th:if="${unreadCount > 0}" th:action="@{/notifications/all/read-all}" method="post">
+            <input type="hidden" name="page" th:value="${notifications.number}">
+            <button type="submit" class="btn btn-sm">모두 읽음으로</button>
+        </form>
+    </div>
+
+    <ul class="notif-page-list">
+        <li th:if="${notifications.isEmpty()}" class="empty">아직 받은 알림이 없습니다.</li>
+        <li th:each="item : ${notifications.content}" class="notif-page-item"
+            th:classappend="${!item.readFlag} ? 'unread'">
+            <div class="notif-page-main">
+                <!-- 링크가 없는 알림도 있으므로(대상이 지워진 경우) 링크와 글자를 나눠 둔다 -->
+                <a th:if="${item.url != null}" th:href="${item.url}" th:text="${item.message}">내용</a>
+                <span th:if="${item.url == null}" th:text="${item.message}">내용</span>
+                <span class="notif-time"
+                      th:text="${#temporals.format(item.createdAt, 'yyyy-MM-dd HH:mm')}">시각</span>
+            </div>
+            <div class="notif-page-actions">
+                <form th:if="${!item.readFlag}"
+                      th:action="@{/notifications/all/{id}/read(id=${item.id})}" method="post"
+                      class="inline-form">
+                    <input type="hidden" name="page" th:value="${notifications.number}">
+                    <button type="submit" class="btn btn-sm">읽음</button>
+                </form>
+                <form th:action="@{/notifications/all/{id}/delete(id=${item.id})}" method="post"
+                      class="inline-form"
+                      data-confirm="이 알림을 삭제할까요?" data-confirm-label="삭제">
+                    <input type="hidden" name="page" th:value="${notifications.number}">
+                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+                </form>
+            </div>
+        </li>
+    </ul>
+
+    <th:block th:with="pageUrl=@{/notifications/all}">
+        <nav th:replace="~{fragments/pagination :: pagination(${notifications}, ${pageBlock}, ${pageUrl})}"></nav>
+    </th:block>
+</main>
+</body>
+</html>

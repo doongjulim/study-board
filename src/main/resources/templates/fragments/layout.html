@@ -12,7 +12,7 @@
     </html>
 
   - title  : 브라우저 탭 제목 (문자열 리터럴/표현식 모두 가능)
-  - active : 헤더에서 강조할 메뉴 키 (plans/ddays/stats/shared/posts, 해당 없으면 '')
+  - active : 헤더에서 강조할 메뉴 키 (home/plans/ddays/stats/groups/shared/posts/me/login, 해당 없으면 '')
   - content: 본문 <main> 프래그먼트
 -->
 <html th:fragment="page(title, active, content)" lang="ko" xmlns:th="http://www.thymeleaf.org">
@@ -25,7 +25,19 @@
     <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
 </head>
 <body>
+<!--
+  본문 바로가기. 탭 순서의 맨 처음에 두어야 의미가 있으므로 헤더보다 앞에 있다.
+  평소에는 화면 밖에 있고 포커스가 닿을 때만 나타난다 (.skip-link)
+-->
+<a class="skip-link" href="#main-content">본문 바로가기</a>
 <header th:replace="~{fragments/header :: siteHeader(${active})}"></header>
-<th:block th:replace="${content}"></th:block>
+<!--
+  건너뛰기의 도착점. 각 페이지의 <main> 에 일일이 id 를 다는 대신 여기서 한 번 감싼다.
+  tabindex="-1" 은 링크로 이동했을 때 포커스가 실제로 옮겨 가게 한다
+  (id 만 있으면 화면만 스크롤되고 키보드 포커스는 헤더에 남는다).
+-->
+<div id="main-content" tabindex="-1">
+    <th:block th:replace="${content}"></th:block>
+</div>
 </body>
 </html>

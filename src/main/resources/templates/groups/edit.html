@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('그룹 정보 수정', 'groups', ~{::main})}">
+<body>
+<main class="container">
+    <nav class="crumb">
+        <a th:href="@{/groups/{id}(id=${group.id})}">← <span th:text="${group.name}">그룹</span></a>
+    </nav>
+
+    <h2 class="page-title">그룹 정보 수정</h2>
+
+    <form class="form-card" method="post"
+          th:action="@{/groups/{id}/edit(id=${group.id})}" th:object="${groupForm}">
+        <div class="form-group">
+            <label for="name">그룹 이름</label>
+            <input type="text" id="name" th:field="*{name}" maxlength="30">
+            <p class="error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+        </div>
+        <div class="form-group">
+            <label for="description">소개</label>
+            <textarea id="description" th:field="*{description}" class="textarea-short"
+                      maxlength="200" placeholder="어떤 스터디인지 짧게 적어 주세요"></textarea>
+            <p class="error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></p>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">저장</button>
+            <a class="btn" th:href="@{/groups/{id}(id=${group.id})}">취소</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

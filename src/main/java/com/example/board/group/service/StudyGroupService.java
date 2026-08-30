@@ -92,11 +92,50 @@ public class StudyGroupService {
     /** 그룹 삭제는 그룹장만 할 수 있다 */
     @Transactional
     public void delete(Long groupId, Long memberId) {
+        deleteGroupWithMemberships(findOwnedGroup(groupId, memberId));
+    }
+
+    /** 이름·소개 수정 (그룹장만) */
+    @Transactional
+    public void update(Long groupId, GroupForm form, Long memberId) {
+        findOwnedGroup(groupId, memberId).rename(form.getName(), form.getDescription());
+    }
+
+    /** 초대 코드 재발급 (그룹장만). 새 코드를 돌려주어 화면이 바로 보여 줄 수 있게 한다 */
+    @Transactional
+    public String renewInviteCode(Long groupId, Long memberId) {
+        StudyGroup group = findOwnedGroup(groupId, memberId);
+        String code = newUniqueInviteCode();
+        group.renewInviteCode(code);
+        return code;
+    }
+
+    /**
+     * 그룹장이 멤버를 내보낸다.
+     *
+     * <p>자기 자신은 여기로 나갈 수 없다 - 그룹장이 빠지는 일에는 승계와 그룹 삭제라는
+     * 다른 규칙이 걸려 있고, 그 규칙은 {@link #leave} 한 곳에만 있어야 한다.
+     * 두 곳에 두면 언젠가 주인 없는 그룹이 생긴다.</p>
+     */
+    @Transactional
+    public void removeMember(Long groupId, Long targetMemberId, Long ownerId) {
+        findOwnedGroup(groupId, ownerId);
+        if (targetMemberId.equals(ownerId)) {
+            throw new IllegalStateException("그룹장은 '그룹 나가기' 로만 빠질 수 있습니다.");
+        }
+        GroupMember membership = groupMemberRepository
+                .findByStudyGroup_IdAndMember_Id(groupId, targetMemberId)
+                .orElseThrow(() -> new IllegalArgumentException("그룹에 속한 회원이 아닙니다."));
+        groupMemberRepository.delete(membership);
+    }
+
+    /** 그룹장 전용 작업의 공통 관문 - 권한 문구를 한 곳에 둔다 */
+    private StudyGroup findOwnedGroup(Long groupId, Long memberId) {
         StudyGroup group = findById(groupId);
         if (!group.isOwnedBy(memberId)) {
-            throw new AccessDeniedException("그룹장만 그룹을 삭제할 수 있습니다.");
+            throw new AccessDeniedException("그룹장만 할 수 있습니다.");
         }
-        deleteGroupWithMemberships(group);
+        return group;
     }
 
     /**

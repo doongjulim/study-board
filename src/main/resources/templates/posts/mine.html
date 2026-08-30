@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('내 게시글', 'posts', ~{::main})}">
+<body>
+<main class="container">
+    <h2 class="page-title">모아보기</h2>
+
+    <nav class="view-tabs">
+        <a th:href="@{/posts/mine(tab='written')}" th:classappend="${tab == 'written'} ? 'on'">내가 쓴 글</a>
+        <a th:href="@{/posts/mine(tab='liked')}" th:classappend="${tab == 'liked'} ? 'on'">좋아요한 글</a>
+    </nav>
+
+    <div class="toolbar">
+        <span class="hint" th:text="|모두 ${posts.totalElements}건|">건수</span>
+        <a th:href="@{/posts}" class="btn btn-sm">게시판으로</a>
+    </div>
+
+    <th:block th:with="emptyMessage=${tab == 'liked'}
+                                     ? '아직 좋아요한 글이 없습니다.'
+                                     : '아직 쓴 글이 없습니다.'">
+        <div th:replace="~{posts/table :: postTable}"></div>
+    </th:block>
+
+    <th:block th:with="pageUrl=@{/posts/mine(tab=${tab})}">
+        <nav th:replace="~{fragments/pagination :: pagination(${posts}, ${pageBlock}, ${pageUrl})}"></nav>
+    </th:block>
+</main>
+</body>
+</html>

@@ -6,8 +6,13 @@
  *
  * JS 가 없으면 기존 폼 방식(PlanController)이 그대로 동작하므로,
  * 이 파일은 "있으면 더 편해지는" 층이다.
+ *
+ * 한 줄의 생김새는 여기서 만들지 않는다. 서버의 plans/row.html 프래그먼트를 받아 끼워 넣는다 -
+ * 예전에는 여기서 직접 조립하다 템플릿과 어긋나, 방금 추가한 일정에만 공유·삭제 버튼이 없었다.
  */
 (function () {
+    'use strict';
+
     const board = document.getElementById('plan-board');
     if (!board) return; // 일간 뷰가 아니면 아무것도 하지 않는다
 
@@ -16,20 +21,6 @@
     const counter = document.getElementById('plan-counter');
     const quickForm = document.getElementById('quick-add');
 
-    function csrfHeaders(json) {
-        const site = document.querySelector('header.site');
-        const headers = json ? { 'Content-Type': 'application/json' } : {};
-        if (site && site.dataset.csrfToken) {
-            headers[site.dataset.csrfHeader] = site.dataset.csrfToken;
-        }
-        return headers;
-    }
-
-    async function readError(res, fallback) {
-        const text = await res.text().catch(() => '');
-        return text && text.length < 200 ? text : fallback;
-    }
-
     function renderCounter(progress) {
         if (!counter) return;
         counter.textContent = progress.totalCount === 0
@@ -37,112 +28,130 @@
             : `총 ${progress.totalCount}개 · ${progress.completedCount}개 완료 (${progress.completionRate}%)`;
     }
 
-    /** 서버가 돌려준 값으로 한 줄을 만든다 (템플릿의 구조와 맞춰 둔다) */
-    function buildRow(plan) {
-        const li = document.createElement('li');
-        li.className = 'plan-card';
-        li.dataset.planId = plan.id;
+    /**
+     * 서버 정렬과 같은 규칙으로 끼워 넣을 자리를 찾는다: 종일 먼저, 그다음 시각순, 같으면 id 순.
+     * 목록 끝에 붙이면 오전 일정을 나중에 추가했을 때 새로고침 순간 자리가 튄다.
+     */
+    function sortKey(li) {
+        const start = li.dataset.start || '';
+        // 종일(빈 값)이 앞. 시각이 있는 것끼리는 문자열 비교로 충분하다 (HH:mm 는 자릿수가 고정이다)
+        return [start === '' ? 0 : 1, start, Number(li.dataset.planId) || 0];
+    }
 
-        const check = document.createElement('button');
-        check.type = 'button';
-        check.className = 'check';
-        check.dataset.toggle = plan.id;
-        check.textContent = plan.completed ? '✅' : '⬜';
+    function insertSorted(li) {
+        const key = sortKey(li);
+        const rows = Array.from(list.querySelectorAll('.plan-card'));
+        const next = rows.find((row) => {
+            const other = sortKey(row);
+            for (let i = 0; i < key.length; i += 1) {
+                if (key[i] < other[i]) return true;
+                if (key[i] > other[i]) return false;
+            }
+            return false;
+        });
+        if (next) list.insertBefore(li, next);
+        else list.appendChild(li);
+    }
 
-        const main = document.createElement('div');
-        main.className = 'plan-main';
-        main.innerHTML = '<div class="plan-time"></div><div class="plan-title"></div>'
-            + '<div class="plan-meta"><span class="tag-category"></span></div>';
-        main.querySelector('.plan-time').textContent = plan.time;
-        main.querySelector('.plan-title').textContent = plan.title;
-        main.querySelector('.tag-category').textContent = plan.category;
-
-        const actions = document.createElement('div');
-        actions.className = 'actions';
-        const start = document.createElement('button');
-        start.type = 'button';
-        start.className = 'btn btn-sm btn-timer';
-        start.dataset.timerStart = plan.id;
-        start.textContent = '▶ 시작';
-        const edit = document.createElement('a');
-        edit.className = 'btn btn-sm';
-        edit.href = `/plans/${plan.id}/edit`;
-        edit.textContent = '수정';
-        actions.append(start, edit);
-
-        li.append(check, main, actions);
-        return li;
+    /** 서버가 그린 한 줄을 받아 온다 (마크업의 출처를 한 곳으로 유지하기 위한 왕복) */
+    async function fetchRow(planId) {
+        const res = await fetch(`/plans/${planId}/row`, { headers: { 'Accept': 'text/html' } });
+        if (!res.ok) return null;
+        const template = document.createElement('template');
+        template.innerHTML = (await res.text()).trim();
+        return template.content.querySelector('.plan-card');
     }
 
     // ── 한 줄 추가 ────────────────────────────────────────
     if (quickForm) {
-        quickForm.addEventListener('submit', async (e) => {
+        quickForm.addEventListener('submit', (e) => {
             e.preventDefault();
+            const submitBtn = quickForm.querySelector('button[type="submit"]');
             const titleInput = quickForm.querySelector('[name="title"]');
             const title = titleInput.value.trim();
-            if (!title) return;
-
-            const res = await fetch('/api/plans', {
-                method: 'POST',
-                headers: csrfHeaders(true),
-                body: JSON.stringify({
-                    title,
-                    planDate: date,
-                    category: quickForm.querySelector('[name="category"]').value
-                })
-            });
-            if (!res.ok) {
-                alert(await readError(res, '일정을 추가하지 못했습니다.'));
+            if (!title) {
+                titleInput.focus();
                 return;
             }
 
-            const data = await res.json();
-            const empty = list.querySelector('.plan-empty');
-            if (empty) empty.remove();
-            list.appendChild(buildRow(data.plan));
-            renderCounter(data.progress);
+            UI.withBusy(submitBtn, async () => {
+                const res = await fetch('/api/plans', {
+                    method: 'POST',
+                    headers: UI.csrfHeaders(true),
+                    body: JSON.stringify({
+                        title,
+                        planDate: date,
+                        category: quickForm.querySelector('[name="category"]').value
+                    })
+                });
+                if (!res.ok) {
+                    UI.toast(await UI.readError(res, '일정을 추가하지 못했습니다.'), 'error');
+                    return;
+                }
 
-            titleInput.value = '';
-            titleInput.focus(); // 연달아 적을 수 있게 커서를 남긴다
+                const data = await res.json();
+                const row = await fetchRow(data.plan.id);
+                if (!row) {
+                    // 줄은 만들어졌는데 화면에 못 그린 경우 - 조용히 어긋나느니 다시 그린다
+                    window.location.reload();
+                    return;
+                }
+                const empty = list.querySelector('.plan-empty');
+                if (empty) empty.remove();
+                insertSorted(row);
+                renderCounter(data.progress);
+
+                titleInput.value = '';
+                titleInput.focus(); // 연달아 적을 수 있게 커서를 남긴다
+            });
         });
     }
 
     // ── 완료 토글 ────────────────────────────────────────
-    board.addEventListener('click', async (e) => {
+    board.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-toggle]');
         if (!btn) return;
         e.preventDefault(); // JS 가 없을 때를 위한 폼 제출을 여기서는 막는다
 
-        const res = await fetch(`/api/plans/${btn.dataset.toggle}/toggle`, {
-            method: 'POST',
-            headers: csrfHeaders(false)
-        });
-        if (!res.ok) {
-            alert(await readError(res, '상태를 바꾸지 못했습니다.'));
-            return;
-        }
+        UI.withBusy(btn, async () => {
+            const res = await fetch(`/api/plans/${btn.dataset.toggle}/toggle`, {
+                method: 'POST',
+                headers: UI.csrfHeaders(false)
+            });
+            if (!res.ok) {
+                UI.toast(await UI.readError(res, '상태를 바꾸지 못했습니다.'), 'error');
+                return;
+            }
 
-        const data = await res.json();
-        btn.textContent = data.completed ? '✅' : '⬜';
-        btn.closest('.plan-card').classList.toggle('done', data.completed);
-        renderCounter(data.progress);
+            const data = await res.json();
+            const card = btn.closest('.plan-card');
+            const title = card.querySelector('.plan-title').textContent;
+            btn.textContent = data.completed ? '✅' : '⬜';
+            // 표시가 바뀌면 이름표도 바뀌어야 한다 - 화면을 보지 않는 사람에게는 이것이 곧 상태다
+            btn.setAttribute('aria-label', (data.completed ? '완료 취소: ' : '완료로 표시: ') + title);
+            card.classList.toggle('done', data.completed);
+            renderCounter(data.progress);
+        });
     });
 
     // ── 어제 남은 일정 가져오기 ───────────────────────────
     const rolloverBtn = document.getElementById('rollover');
     if (rolloverBtn) {
-        rolloverBtn.addEventListener('click', async () => {
-            const res = await fetch('/api/plans/rollover?'
-                + new URLSearchParams({ from: rolloverBtn.dataset.from, to: date }), {
-                method: 'POST',
-                headers: csrfHeaders(false)
+        rolloverBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            UI.withBusy(rolloverBtn, async () => {
+                const res = await fetch('/api/plans/rollover?'
+                    + new URLSearchParams({ from: rolloverBtn.dataset.from, to: date }), {
+                    method: 'POST',
+                    headers: UI.csrfHeaders(false)
+                });
+                if (!res.ok) {
+                    UI.toast(await UI.readError(res, '일정을 옮기지 못했습니다.'), 'error');
+                    return;
+                }
+                // 옮겨 온 일정이 목록 순서에 맞게 들어가야 하므로 이번엔 화면을 다시 그린다
+                window.location.reload();
             });
-            if (!res.ok) {
-                alert(await readError(res, '일정을 옮기지 못했습니다.'));
-                return;
-            }
-            // 옮겨 온 일정이 목록 순서에 맞게 들어가야 하므로 이번엔 화면을 다시 그린다
-            window.location.reload();
         });
     }
 })();

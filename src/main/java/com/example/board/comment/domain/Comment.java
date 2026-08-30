@@ -8,6 +8,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
@@ -45,6 +46,10 @@ public class Comment {
     @CreatedDate
     private LocalDateTime createdAt;
 
+    /** null 이면 한 번도 고치지 않았다는 뜻이다 (그래서 화면이 '수정됨' 을 붙일지 판단할 수 있다) */
+    @LastModifiedDate
+    private LocalDateTime updatedAt;
+
     private Comment(Post post, Plan plan, Member author, String content) {
         this.post = post;
         this.plan = plan;
@@ -66,5 +71,21 @@ public class Comment {
 
     public boolean isForPost() {
         return post != null;
+    }
+
+    /** 내용을 고친다. 대상(글/플랜)과 작성자는 바뀌지 않는다 */
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
+    /**
+     * 고친 적이 있는가.
+     *
+     * <p>@LastModifiedDate 는 저장할 때마다 채워지므로, 처음 등록한 순간에도 값이 들어간다.
+     * 그래서 "값이 있는가" 가 아니라 "만든 시각과 다른가" 로 판단한다 -
+     * 그러지 않으면 모든 댓글에 '수정됨' 이 붙는다.</p>
+     */
+    public boolean isEdited() {
+        return updatedAt != null && createdAt != null && updatedAt.isAfter(createdAt);
     }
 }
