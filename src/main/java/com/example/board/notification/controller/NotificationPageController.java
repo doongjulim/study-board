@@ -69,6 +69,13 @@ public class NotificationPageController {
         return redirectToPage(page);
     }
 
+    /** 모두 삭제한 뒤에는 돌아갈 페이지가 없으므로 첫 페이지로 보낸다 */
+    @PostMapping("/delete-all")
+    public String deleteAll(@AuthenticationPrincipal MemberPrincipal principal) {
+        notificationService.deleteAll(principal.id());
+        return redirectToPage(0);
+    }
+
     /** 조작하고 나서 보던 자리로 돌아온다 - 3페이지에서 하나 지웠는데 1페이지로 튀면 다시 찾아 들어가야 한다 */
     private String redirectToPage(int page) {
         return "redirect:/notifications/all?page=" + Math.max(page, 0);

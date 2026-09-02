@@ -80,6 +80,9 @@
     </div>
 
     <section th:replace="~{fragments/retro :: retroBox(${retro}, ${retroType}, ${date})}"></section>
+
+    <!-- 일간 뷰에서만 쓰는 스크립트라 여기서 싣는다 (다른 화면까지 내려받을 이유가 없다) -->
+    <script th:src="@{/js/plans.js}" defer></script>
 </main>
 </body>
 </html>

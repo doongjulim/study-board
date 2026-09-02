@@ -100,12 +100,19 @@
         </th:block>
     </nav>
 
-    <!-- ui.js 가 먼저다 - 나머지 스크립트가 window.UI 를 쓴다 (defer 는 문서 순서를 지킨다) -->
+    <!--
+      모든 화면이 쓰는 것만 여기서 싣는다.
+
+      ui.js 가 먼저다 - 나머지 스크립트가 window.UI 를 쓴다 (defer 는 문서 순서를 지킨다).
+      theme/notification/timer 는 헤더 자체의 기능이라 어느 페이지에서나 필요하다.
+
+      한 화면에서만 쓰는 것(plans.js, post-form.js)은 그 화면의 <main> 안에서 싣는다.
+      defer 는 문서 순서를 지키므로, 그때도 ui.js 가 먼저 실행된다.
+    -->
     <script th:src="@{/js/ui.js}" defer></script>
     <script th:src="@{/js/theme.js}" defer></script>
     <script th:src="@{/js/notification.js}" defer></script>
     <script th:src="@{/js/timer.js}" defer></script>
-    <script th:src="@{/js/plans.js}" defer></script>
 </header>
 </body>
 </html>

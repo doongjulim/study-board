@@ -127,6 +127,17 @@ public class NotificationService {
     }
 
     /**
+     * 내 알림을 전부 지운다.
+     *
+     * <p>'모두 읽음' 과는 다른 요구다 - 읽은 알림이 목록에 계속 남아 있는 것 자체가 방해가 될 때가 있다.
+     * 자동 정리(90일/180일)를 기다리지 않고 지금 비우는 길을 둔다.</p>
+     */
+    @Transactional
+    public void deleteAll(Long memberId) {
+        notificationRepository.deleteByRecipient_Id(memberId);
+    }
+
+    /**
      * 오래된 알림 정리. 지우는 기준은 스케줄러가 정하고, 여기서는 그대로 넘긴다
      * (기준을 서비스에 숨겨 두면 "언제부터 사라지는가" 를 코드에서 찾기 어려워진다).
      */

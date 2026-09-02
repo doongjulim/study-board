@@ -410,4 +410,44 @@ class PlanControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/plans/daily?date=2026-07-09"));
     }
+
+    // ── 한 줄 조각 ────────────────────────────────────────────
+    //
+    // 한 줄의 생김새가 템플릿과 JS 두 곳에 있어 어긋났던 자리다. 이제 서버가 그린 조각을
+    // JS 가 받아 끼우므로, 그 조각이 실제로 그려지는지가 화면의 정확성을 좌우한다.
+
+    @Test
+    @DisplayName("GET /plans/{id}/row - 일정 한 줄 조각을 돌려준다")
+    void row() throws Exception {
+        Plan plan = plan();
+        ReflectionTestUtils.setField(plan, "id", 5L);
+        given(planService.findOwned(5L, MEMBER_ID)).willReturn(plan);
+
+        mockMvc.perform(get("/plans/5/row").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("plan-card")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("자료구조 공부")))
+                // JS 가 삽입 위치를 정할 때 쓰는 값이다 - 없으면 목록 순서가 어긋난다
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("data-start=\"10:00\"")))
+                // 예전에는 이 버튼들이 JS 가 만든 줄에만 빠져 있었다
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("삭제")));
+    }
+
+    @Test
+    @DisplayName("남의 일정 조각은 서비스가 막는다 - 화면 조각도 소유권을 따른다")
+    void row_notOwner() throws Exception {
+        given(planService.findOwned(5L, MEMBER_ID))
+                .willThrow(new org.springframework.security.access.AccessDeniedException("본인 것이 아님"));
+
+        mockMvc.perform(get("/plans/5/row").with(memberAuth()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("비로그인은 조각을 받을 수 없다")
+    void row_requiresLogin() throws Exception {
+        mockMvc.perform(get("/plans/5/row"))
+                .andExpect(status().is3xxRedirection());
+    }
+
 }

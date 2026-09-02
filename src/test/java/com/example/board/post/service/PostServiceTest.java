@@ -22,9 +22,12 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -277,4 +280,105 @@ class PostServiceTest {
             throw new RuntimeException(e);
         }
     }
+
+    // ── 첨부 개수 상한 ────────────────────────────────────────
+    //
+    // 지금까지 상한은 요청 크기(50MB)뿐이었다. 작은 파일이면 수백 개도 올라가는데,
+    // 개수는 크기와 다른 축이라 따로 막아야 한다.
+
+    @Test
+    @DisplayName("첨부가 상한을 넘으면 파일을 저장하기도 전에 거부한다")
+    void create_tooManyFiles() throws IOException {
+        PostForm form = postForm("제목", "내용");
+        form.setFiles(files(11));
+
+        assertThatThrownBy(() -> postService.create(form, 1L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("10개");
+
+        // 넘칠 파일을 디스크에 먼저 쓰고 되돌리면 고아 파일이 남는다 - 세는 일이 먼저다
+        then(fileStore).should(never()).storeFiles(any());
+        then(postRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("상한까지는 그대로 올라간다")
+    void create_atLimit() throws IOException {
+        PostForm form = postForm("제목", "내용");
+        form.setFiles(files(10));
+        given(memberRepository.getReferenceById(1L)).willReturn(author());
+        given(fileStore.storeFiles(any())).willReturn(List.of());
+        given(postRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        postService.create(form, 1L);
+
+        then(postRepository).should().save(any());
+    }
+
+    @Test
+    @DisplayName("수정 시에는 이미 붙어 있는 첨부까지 함께 센다")
+    void update_countsExistingFiles() throws IOException {
+        Post post = new Post("제목", "내용", author());
+        for (int i = 0; i < 8; i++) {
+            post.addFile(new AttachedFile("a" + i + ".txt", "u" + i + ".txt", "text/plain", 1L));
+        }
+        given(postRepository.findById(1L)).willReturn(Optional.of(post));
+
+        PostForm form = postForm("제목", "내용");
+        form.setFiles(files(3)); // 8 + 3 = 11
+
+        assertThatThrownBy(() -> postService.update(1L, form, 1L))
+                .isInstanceOf(IllegalArgumentException.class);
+        then(fileStore).should(never()).storeFiles(any());
+    }
+
+    @Test
+    @DisplayName("빈 파일 칸은 개수에 넣지 않는다 - 파일을 고르지 않아도 input 은 자리를 차지한다")
+    void create_ignoresEmptyFileSlots() throws IOException {
+        PostForm form = postForm("제목", "내용");
+        List<MultipartFile> withEmpties = new ArrayList<>(files(10));
+        withEmpties.add(new MockMultipartFile("files", new byte[0]));
+        withEmpties.add(new MockMultipartFile("files", new byte[0]));
+        form.setFiles(withEmpties);
+        given(memberRepository.getReferenceById(1L)).willReturn(author());
+        given(fileStore.storeFiles(any())).willReturn(List.of());
+        given(postRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        postService.create(form, 1L);
+
+        then(postRepository).should().save(any());
+    }
+
+    // ── 모아보기 ──────────────────────────────────────────────
+
+    @Test
+    @DisplayName("내가 쓴 글은 작성자 id 로 찾는다 - 닉네임 검색이 아니다")
+    void findMine() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<PostSummary> page = new PageImpl<>(List.of());
+        given(postRepository.findSummariesByAuthorId(1L, pageable)).willReturn(page);
+
+        assertThat(postService.findMine(1L, pageable)).isSameAs(page);
+    }
+
+    @Test
+    @DisplayName("좋아요한 글은 내가 누른 표를 기준으로 찾는다")
+    void findLiked() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<PostSummary> page = new PageImpl<>(List.of());
+        given(postRepository.findLikedSummaries(1L, pageable)).willReturn(page);
+
+        assertThat(postService.findLiked(1L, pageable)).isSameAs(page);
+    }
+
+    /** 내용은 상관없다 - 개수만 세는 규칙을 확인하는 자리다 */
+    private static List<MultipartFile> files(int count) {
+        List<MultipartFile> files = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            files.add(new MockMultipartFile("files", "f" + i + ".txt", "text/plain",
+                    ("data" + i).getBytes()));
+        }
+        return files;
+    }
+
 }

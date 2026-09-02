@@ -71,4 +71,44 @@ class NotificationControllerTest {
 
         then(notificationService).should().markAllAsRead(1L);
     }
+
+    // ── 알림 하나 단위 조작 ────────────────────────────────────
+    // 벨 패널이 fetch 로 부르는 자리다. 패널을 열었다는 사실이 읽음을 정하지 않는다.
+
+    @Test
+    @DisplayName("POST /notifications/{id}/read - 그 알림만 읽음 처리한다")
+    void readOne() throws Exception {
+        mockMvc.perform(post("/notifications/7/read").with(memberAuth()).with(csrf()))
+                .andExpect(status().isOk());
+
+        then(notificationService).should().markAsRead(1L, 7L);
+    }
+
+    @Test
+    @DisplayName("POST /notifications/{id}/delete - 그 알림만 지운다")
+    void deleteOne() throws Exception {
+        mockMvc.perform(post("/notifications/7/delete").with(memberAuth()).with(csrf()))
+                .andExpect(status().isOk());
+
+        then(notificationService).should().delete(1L, 7L);
+    }
+
+    @Test
+    @DisplayName("POST /notifications/delete-all - 내 알림을 모두 지운다")
+    void deleteAll() throws Exception {
+        mockMvc.perform(post("/notifications/delete-all").with(memberAuth()).with(csrf()))
+                .andExpect(status().isOk());
+
+        then(notificationService).should().deleteAll(1L);
+    }
+
+    @Test
+    @DisplayName("비로그인은 알림을 건드릴 수 없다")
+    void requiresLogin() throws Exception {
+        mockMvc.perform(post("/notifications/7/delete").with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        then(notificationService).shouldHaveNoInteractions();
+    }
+
 }

@@ -22,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,7 +30,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
+import java.util.Set;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.mockito.ArgumentMatchers.*;
@@ -37,6 +40,7 @@ import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
@@ -334,4 +338,98 @@ class PostControllerTest {
 
         then(postService).should().deleteFile(1L, 5L, 1L);
     }
+
+    // ── 모아보기 ──────────────────────────────────────────────
+    //
+    // 게시판 검색에 얹지 않고 화면을 따로 둔다. 닉네임 검색으로 대신하면 동명이인이 섞이고
+    // 닉네임을 바꾸는 순간 내 글이 사라진다 - 이건 검색이 아니라 '내 것' 이다.
+
+    @Test
+    @DisplayName("GET /posts/mine - 기본은 내가 쓴 글이다")
+    void mine_written() throws Exception {
+        given(postService.findMine(eq(1L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of()));
+        given(postService.findLikedPostIds(eq(1L), any())).willReturn(Set.of());
+
+        mockMvc.perform(get("/posts/mine").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("posts/mine"))
+                .andExpect(model().attribute("tab", "written"));
+
+        then(postService).should().findMine(eq(1L), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("GET /posts/mine?tab=liked - 좋아요한 글로 바뀐다")
+    void mine_liked() throws Exception {
+        given(postService.findLiked(eq(1L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of()));
+        given(postService.findLikedPostIds(eq(1L), any())).willReturn(Set.of());
+
+        mockMvc.perform(get("/posts/mine").param("tab", "liked").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("tab", "liked"));
+
+        then(postService).should().findLiked(eq(1L), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("모르는 tab 값은 '내가 쓴 글' 로 본다")
+    void mine_unknownTab() throws Exception {
+        given(postService.findMine(eq(1L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of()));
+        given(postService.findLikedPostIds(eq(1L), any())).willReturn(Set.of());
+
+        mockMvc.perform(get("/posts/mine").param("tab", "아무거나").with(memberAuth()))
+                .andExpect(model().attribute("tab", "written"));
+    }
+
+    @Test
+    @DisplayName("비로그인은 모아보기를 볼 수 없다 - '내 것' 이라는 개념이 성립하지 않는다")
+    void mine_requiresLogin() throws Exception {
+        mockMvc.perform(get("/posts/mine"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/login*"));
+    }
+
+    // ── 마크다운 미리보기 ──────────────────────────────────────
+
+    @Test
+    @DisplayName("POST /posts/preview - 마크다운을 HTML 로 돌려준다")
+    void preview() throws Exception {
+        mockMvc.perform(post("/posts/preview").with(csrf()).with(memberAuth())
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("**굵게**"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("<strong>굵게</strong>")));
+    }
+
+    @Test
+    @DisplayName("미리보기도 본문과 같은 살균을 거친다 - 여기만 통과시키면 그게 곧 XSS 다")
+    void preview_sanitizes() throws Exception {
+        mockMvc.perform(post("/posts/preview").with(csrf()).with(memberAuth())
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("<script>alert(1)</script>\n\n# 제목"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("<script"))))
+                .andExpect(content().string(containsString("<h1>제목</h1>")));
+    }
+
+    @Test
+    @DisplayName("빈 내용을 미리보면 빈 결과가 온다")
+    void preview_empty() throws Exception {
+        mockMvc.perform(post("/posts/preview").with(csrf()).with(memberAuth())
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content(""))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("비로그인은 미리보기를 쓸 수 없다 - 글쓰기는 로그인이 필요하다")
+    void preview_requiresLogin() throws Exception {
+        mockMvc.perform(post("/posts/preview").with(csrf())
+                        .contentType(MediaType.TEXT_PLAIN).content("**굵게**"))
+                .andExpect(status().is3xxRedirection());
+    }
+
 }

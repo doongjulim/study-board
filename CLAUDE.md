@@ -161,7 +161,9 @@
   **읽음은 알림 하나 단위다** — 패널을 열었다는 사실이 읽음을 정하면 "이건 나중에" 를 남길 수 없다.
   같은 일을 JSON(`NotificationController`, 벨 패널의 fetch)과 폼(`NotificationPageController`, 화면) 둘이 부르지만
   판단은 `NotificationService` 한 곳에 있고 컨트롤러는 주소와 리다이렉트만 맡는다.
-  아무도 지우지 않던 알림 행은 `NotificationCleanupScheduler` 가 정리한다(읽음 90일 / 그 밖 180일)
+  아무도 지우지 않던 알림 행은 `NotificationCleanupScheduler` 가 정리한다(읽음 90일 / 그 밖 180일).
+  '모두 읽음' 과 별개로 '모두 삭제' 를 둔다 — 읽은 알림이 목록에 남아 있는 것 자체가 방해가 될 때가 있고,
+  자동 정리를 석 달 기다릴 이유는 없다
 - **댓글(comment)**: 단일 `Comment` 엔티티가 게시글/공유 플랜 중 하나에 달림(DB check 제약, on delete cascade). 댓글 UI 는 `fragments/comments.html` 재사용, 알림은 `CommentAddedEvent` 로 결합 차단
 - **업로드 보안(file)**: `FileStore` 확장자 화이트리스트(무확장자 거부), `/files/{id}/view` 는 이미지만 인라인·그 외 다운로드 리다이렉트
 - **모듈 간 결합 차단**: plan 모듈은 `PlanSharedEvent`(공유 범위를 실어 보낸다)/`PlanReminderEvent`만 발행하고,
@@ -197,7 +199,10 @@
 - **화면 공통 JS(`static/js/ui.js`)**: 토스트·확인창·CSRF 헤더·중복 제출 방지를 한곳에 둔다.
   `alert`/`confirm` 은 쓰지 않는다 — 브라우저를 멈추고, Playwright 에게는 실패가 아니라 **정지**다.
   확인은 폼에 `data-confirm="문구"` 를 달면 `<dialog>` 기반 확인창이 가로챈다(포커스 가둠·Esc 는 브라우저가 맡는다).
-  비동기 버튼은 `UI.withBusy(el, fn)` 로 감싼다 — 느린 네트워크에서 Enter 두 번이면 같은 일정이 두 개 생겼다
+  비동기 버튼은 `UI.withBusy(el, fn)` 로 감싼다 — 느린 네트워크에서 Enter 두 번이면 같은 일정이 두 개 생겼다.
+  **스크립트 배치**: 모든 화면이 쓰는 것(ui/theme/notification/timer)만 헤더에서 싣고,
+  한 화면에서만 쓰는 것(`plans.js`, `post-form.js`)은 그 화면의 `<main>` 안에서 싣는다.
+  `defer` 가 문서 순서를 지키므로 그때도 `ui.js` 가 먼저 실행된다
 
 
 ## 설정

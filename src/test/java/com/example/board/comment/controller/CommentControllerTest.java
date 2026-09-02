@@ -126,4 +126,47 @@ class CommentControllerTest {
 
         then(commentService).shouldHaveNoInteractions();
     }
+
+    // ── 수정 ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("게시글 댓글을 고치면 그 글로 돌아온다")
+    void edit_onPost() throws Exception {
+        Post targetPost = new Post("글", "내용", member());
+        ReflectionTestUtils.setField(targetPost, "id", 3L);
+        given(commentService.update(5L, MEMBER_ID, "고친 댓글"))
+                .willReturn(Comment.forPost(targetPost, member(), "고친 댓글"));
+
+        mockMvc.perform(post("/comments/5/edit").with(csrf()).with(memberAuth())
+                        .param("content", "고친 댓글"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/posts/3"));
+    }
+
+    @Test
+    @DisplayName("빈 내용으로 고치려 하면 저장하지 않고 원래 화면으로 돌려보낸다")
+    void edit_blankContent() throws Exception {
+        Post targetPost = new Post("글", "내용", member());
+        ReflectionTestUtils.setField(targetPost, "id", 3L);
+        given(commentService.findById(5L))
+                .willReturn(Comment.forPost(targetPost, member(), "원래 댓글"));
+
+        mockMvc.perform(post("/comments/5/edit").with(csrf()).with(memberAuth())
+                        .param("content", "  "))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/posts/3"));
+
+        then(commentService).should(never()).update(anyLong(), anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("비로그인은 댓글을 고칠 수 없다")
+    void edit_requiresLogin() throws Exception {
+        mockMvc.perform(post("/comments/5/edit").with(csrf()).param("content", "가로채기"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrlPattern("/login*"));
+
+        then(commentService).shouldHaveNoInteractions();
+    }
+
 }

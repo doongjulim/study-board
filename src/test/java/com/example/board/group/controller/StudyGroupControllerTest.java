@@ -35,6 +35,7 @@ import java.time.ZoneId;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -201,4 +202,82 @@ class StudyGroupControllerTest {
 
         then(studyGroupService).should().delete(10L, MEMBER_ID);
     }
+
+    // ── 그룹장 관리 ───────────────────────────────────────────
+    //
+    // 권한 검사는 전부 서비스에 있다. 여기서는 주소가 서비스로 제대로 이어지는지,
+    // 실패했을 때 어디로 돌아가는지를 본다.
+
+    @Test
+    @DisplayName("GET /groups/{id}/edit - 수정 폼에 현재 값이 채워진다")
+    void editForm() throws Exception {
+        given(studyGroupService.findGroupForMember(10L, MEMBER_ID)).willReturn(group());
+
+        mockMvc.perform(get("/groups/10/edit").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("groups/edit"))
+                // 폼을 만들 때 화면의 모든 필드를 채워야 한다 -
+                // 빠뜨린 필드는 저장 시 DTO 기본값으로 조용히 덮어써진다
+                .andExpect(model().attribute("groupForm",
+                        org.hamcrest.Matchers.hasProperty("name",
+                                org.hamcrest.Matchers.equalTo("코테 스터디"))))
+                .andExpect(model().attribute("groupForm",
+                        org.hamcrest.Matchers.hasProperty("description",
+                                org.hamcrest.Matchers.equalTo("매일 두 문제"))));
+    }
+
+    @Test
+    @DisplayName("POST /groups/{id}/edit - 저장하고 상세로 돌아간다")
+    void edit() throws Exception {
+        mockMvc.perform(post("/groups/10/edit").with(csrf()).with(memberAuth())
+                        .param("name", "알고리즘 스터디")
+                        .param("description", "주 3회"))
+                .andExpect(redirectedUrl("/groups/10"));
+
+        then(studyGroupService).should().update(eq(10L), any(GroupForm.class), eq(MEMBER_ID));
+    }
+
+    @Test
+    @DisplayName("이름이 비면 저장하지 않고 폼으로 돌아간다")
+    void edit_blankName() throws Exception {
+        given(studyGroupService.findGroupForMember(10L, MEMBER_ID)).willReturn(group());
+
+        mockMvc.perform(post("/groups/10/edit").with(csrf()).with(memberAuth())
+                        .param("name", "")
+                        .param("description", "설명"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("groups/edit"));
+
+        then(studyGroupService).should(never()).update(anyLong(), any(), anyLong());
+    }
+
+    @Test
+    @DisplayName("POST /groups/{id}/invite-code - 새 코드를 발급하고 안내에 실어 보낸다")
+    void renewInviteCode() throws Exception {
+        given(studyGroupService.renewInviteCode(10L, MEMBER_ID)).willReturn("WXYZ7788");
+
+        mockMvc.perform(post("/groups/10/invite-code").with(csrf()).with(memberAuth()))
+                .andExpect(redirectedUrl("/groups/10"))
+                .andExpect(flash().attribute("message",
+                        org.hamcrest.Matchers.containsString("WXYZ7788")));
+    }
+
+    @Test
+    @DisplayName("POST /groups/{id}/members/{memberId}/remove - 멤버를 내보낸다")
+    void removeMember() throws Exception {
+        mockMvc.perform(post("/groups/10/members/2/remove").with(csrf()).with(memberAuth()))
+                .andExpect(redirectedUrl("/groups/10"));
+
+        then(studyGroupService).should().removeMember(10L, 2L, MEMBER_ID);
+    }
+
+    @Test
+    @DisplayName("그룹장 관리 기능은 CSRF 토큰 없이는 통하지 않는다")
+    void managementRejectsWithoutCsrf() throws Exception {
+        mockMvc.perform(post("/groups/10/invite-code").with(memberAuth()))
+                .andExpect(status().isForbidden());
+
+        then(studyGroupService).should(never()).renewInviteCode(anyLong(), anyLong());
+    }
+
 }
