@@ -19,6 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import com.example.board.member.repository.MemberRepository;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -46,6 +47,7 @@ class NotificationOwnershipTest {
     @Mock NotificationRepository notificationRepository;
     @Mock MemberRepository memberRepository;
     @Mock SseEmitterRegistry emitterRegistry;
+    @Mock Clock clock;
 
     @InjectMocks NotificationService notificationService;
 

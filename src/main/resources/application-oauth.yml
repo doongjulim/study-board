@@ -1,0 +1,47 @@
+# 소셜 로그인 설정 (프로필: oauth)
+#
+#   SPRING_PROFILES_ACTIVE=oauth \
+#   GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... \
+#   KAKAO_CLIENT_ID=...  KAKAO_CLIENT_SECRET=... \
+#   ./gradlew bootRun
+#
+# 이 파일을 기본 설정에 합치지 않는 이유: client-id 를 빈 값으로 선언하면 Spring Boot 가
+# 부팅 단계에서 "Client id must not be empty" 로 실패한다. 자격증명이 없는 사람에게
+# 앱이 아예 뜨지 않는 것보다, 쓸 사람만 프로필을 켜는 편이 낫다.
+#
+# 각 콘솔에 등록할 리디렉션 주소
+#   구글   https://console.cloud.google.com  →  {app.base-url}/login/oauth2/code/google
+#   카카오 https://developers.kakao.com      →  {app.base-url}/login/oauth2/code/kakao
+#
+# 둘 중 하나만 쓸 거라면 나머지 registration 블록을 지우면 된다.
+# 로그인 화면은 설정된 것만 그린다.
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            client-name: 구글
+            scope: profile, email
+
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            client-name: 카카오
+            # 카카오는 client_secret 을 헤더가 아니라 본문으로 받는다
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            # 이메일은 동의 항목이다. 사용자가 거부하면 이메일 없는 계정으로 만들어진다
+            scope: profile_nickname, account_email
+
+        provider:
+          # 카카오는 Spring 의 표준 제공자 목록에 없어 주소를 직접 적는다.
+          # user-name-attribute 는 응답에서 고유 id 가 담긴 필드 이름이다
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id

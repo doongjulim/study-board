@@ -8,7 +8,9 @@
     <h2 class="page-title">내 정보</h2>
     <p class="hint">
         <span th:text="'아이디 ' + ${member.loginId}">아이디</span> ·
-        <span th:text="${#temporals.format(member.createdAt, 'yyyy년 M월 d일')} + ' 가입'">가입일</span>
+        <span th:text="${#temporals.format(member.createdAt, 'yyyy년 M월 d일')} + ' 가입'">가입일</span> ·
+        <!-- 내가 쓴 글은 '내 정보' 에서 찾게 된다. 게시판 툴바에만 두면 거기까지 가야 한다 -->
+        <a th:href="@{/posts/mine}">내가 쓴 글 · 좋아요한 글</a>
     </p>
 
     <!--
@@ -23,8 +25,33 @@
         <a href="#withdraw">회원 탈퇴</a>
     </nav>
 
+    <!--
+      프로필 사진은 별도 폼이다. 파일 업로드(multipart)와 일반 필드를 한 폼에 섞으면
+      닉네임만 고치려는 사람도 매번 파일 입력을 통과해야 하고, 유효성 실패 시 되돌리기가 꼬인다.
+    -->
+    <section id="profile" class="form-card me-section">
+        <h3 class="stat-title">프로필 사진</h3>
+        <div class="profile-image-row">
+            <span th:replace="~{fragments/avatar :: avatar(${member}, 'lg')}"></span>
+            <div class="profile-image-actions">
+                <form th:action="@{/me/profile-image}" method="post" enctype="multipart/form-data"
+                      class="profile-image-actions">
+                    <label class="sr-only" for="profile-image">프로필 사진 파일</label>
+                    <input type="file" id="profile-image" name="image" accept="image/*">
+                    <button type="submit" class="btn btn-sm btn-primary">올리기</button>
+                </form>
+                <form th:if="${member.hasProfileImage()}" th:action="@{/me/profile-image/delete}"
+                      method="post"
+                      data-confirm="프로필 사진을 지울까요?" data-confirm-label="지우기">
+                    <button type="submit" class="btn btn-sm btn-danger">사진 지우기</button>
+                </form>
+            </div>
+        </div>
+        <p class="hint">jpg · png · gif · webp, 2MB 이하. 사진이 없으면 닉네임 첫 글자로 표시됩니다.</p>
+    </section>
+
     <!-- 프로필 -->
-    <form id="profile" class="form-card me-section" method="post"
+    <form class="form-card me-section" method="post"
           th:object="${profileForm}" th:action="@{/me/profile}">
         <h3 class="stat-title">프로필</h3>
 
@@ -38,6 +65,17 @@
             <label for="email">이메일</label>
             <input type="email" id="email" th:field="*{email}" placeholder="비워 두어도 됩니다">
             <p class="hint">비밀번호를 잊었을 때 재설정 링크를 받을 주소입니다.</p>
+            <!--
+              인증 상태를 주소 바로 아래에 붙인다. 오타 난 주소는 비밀번호를 잊은 순간에야
+              문제가 되는데, 그때는 고칠 방법이 없다. 지금 확인해 두는 것이 요점이다.
+            -->
+            <p class="hint email-status" th:if="${member.email != null and member.emailVerified}">
+                <span class="tag-verified">인증됨</span> 이 주소로 재설정 링크를 받을 수 있습니다.
+            </p>
+            <p class="hint email-status" th:if="${member.needsEmailVerification()}">
+                <span class="tag-unverified">미인증</span>
+                아직 이 주소로 메일이 닿는지 확인되지 않았습니다.
+            </p>
             <p class="error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
         </div>
 
@@ -51,6 +89,15 @@
         <div class="actions">
             <button type="submit" class="btn btn-primary">저장</button>
         </div>
+    </form>
+
+    <!-- 폼 안에 폼을 넣을 수 없으므로 인증 메일 보내기는 프로필 폼 밖에 둔다 -->
+    <form th:if="${member.needsEmailVerification()}" class="form-card me-section"
+          th:action="@{/me/email/verify-request}" method="post">
+        <p class="hint">
+            주소를 바꾸면 인증이 다시 필요합니다. 메일의 링크를 누르면 끝납니다.
+        </p>
+        <button type="submit" class="btn btn-sm">인증 메일 보내기</button>
     </form>
 
     <!-- 알림 -->

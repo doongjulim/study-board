@@ -1,7 +1,10 @@
 package com.example.board.config;
 
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
+import com.example.board.auth.oauth.CookieOAuth2AuthorizationRequestRepository;
+import com.example.board.auth.oauth.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +15,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -32,6 +36,16 @@ import java.nio.charset.StandardCharsets;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    /**
+     * 소셜 로그인 부품들.
+     *
+     * <p>ObjectProvider 로 받는 이유: 자격증명이 설정되지 않으면 Spring Boot 가
+     * ClientRegistrationRepository 빈을 만들지 않는다. 그때는 oauth2Login 을 <b>아예 붙이지 않아</b>
+     * 설정 없이도 앱이 평소대로 뜬다 - "설정을 잊으면 부팅이 막힌다" 는 구조를 만들지 않는다.</p>
+     */
+    private final ObjectProvider<ClientRegistrationRepository> clientRegistrations;
+    private final ObjectProvider<CookieOAuth2AuthorizationRequestRepository> authorizationRequestRepository;
+    private final ObjectProvider<OAuth2LoginSuccessHandler> oauth2LoginSuccessHandler;
 
     /**
      * H2 콘솔 전용 체인.
@@ -95,8 +109,13 @@ public class SecurityConfig {
                         // 비밀번호 찾기는 로그인할 수 없는 상태에서 쓰는 기능이라 공개다
                         .requestMatchers("/login", "/logout", "/signup", "/password/**",
                                 "/css/**", "/js/**", "/images/**", "/error").permitAll()
+                        // 인증 메일의 링크는 다른 기기에서 열리는 일이 흔하다.
+                        // 링크에 든 토큰이 곧 신원이고, 하는 일은 "이 주소가 닿는다" 표시뿐이다
+                        .requestMatchers(HttpMethod.GET, "/email/verify").permitAll()
                         // 게시판 읽기(목록·상세·첨부파일)는 공개, 쓰기는 인증 필요
                         .requestMatchers(HttpMethod.GET, "/", "/posts", "/posts/{id:\\d+}", "/files/**").permitAll()
+                        // 프로필 사진은 닉네임과 같은 범위로 공개된다 (게시판·댓글에 함께 보인다)
+                        .requestMatchers(HttpMethod.GET, "/members/*/avatar").permitAll()
                         // 캘린더 구독은 구글 캘린더가 로그인 없이 읽어 가야 한다 (주소의 토큰이 곧 열쇠).
                         // .ics 로 끝나는 경로만 열어, 같은 prefix 의 내려받기·발급은 인증 아래 남긴다
                         .requestMatchers(HttpMethod.GET, "/calendar/*.ics").permitAll()
@@ -113,6 +132,31 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)      // 쿠키 삭제 방식 로그아웃도 AuthController 가 담당
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // 소셜 로그인은 설정이 있을 때만 붙는다.
+        //
+        // 인가 요청을 세션이 아니라 쿠키에 두는 것이 핵심이다 - 기본 구현은 HttpSession 을 쓰는데,
+        // 이 애플리케이션은 세션 관리를 꺼 두었고(위 주석 참고) 다시 켜면 CSRF 토큰이 요청마다 갈린다.
+        //
+        // 성공 처리는 우리 방식으로 갈아탄다: 회원을 찾거나 만들고 평소와 같은 JWT 쿠키를 발급한다.
+        // 그래서 로그인 이후의 코드는 이 사람이 어디로 들어왔는지 몰라도 된다.
+        //
+        // 세 부품을 모두 ObjectProvider 로 받는 이유는 하나 더 있다: @WebMvcTest 슬라이스는
+        // 컨트롤러만 올리고 일반 @Component 는 올리지 않는다. 필수 의존으로 두면 이 설정을
+        // import 하는 모든 컨트롤러 테스트가 컨텍스트를 못 만든다.
+        CookieOAuth2AuthorizationRequestRepository requestRepository =
+                authorizationRequestRepository.getIfAvailable();
+        OAuth2LoginSuccessHandler successHandler = oauth2LoginSuccessHandler.getIfAvailable();
+        if (clientRegistrations.getIfAvailable() != null
+                && requestRepository != null && successHandler != null) {
+            http.oauth2Login(oauth2 -> oauth2
+                    .loginPage("/login")
+                    .authorizationEndpoint(endpoint ->
+                            endpoint.authorizationRequestRepository(requestRepository))
+                    .successHandler(successHandler)
+                    // 실패해도 오류 화면이 아니라 로그인 화면으로 돌려보낸다 (동의 취소가 대부분이다)
+                    .failureUrl("/login?error=social"));
+        }
         return http.build();
     }
 

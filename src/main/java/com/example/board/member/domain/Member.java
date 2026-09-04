@@ -23,6 +23,14 @@ public class Member {
 
     /** 탈퇴 후에도 로그인할 수 없도록 넣는 값. BCrypt 형식이 아니라 어떤 비밀번호와도 일치하지 않는다 */
     private static final String UNUSABLE_PASSWORD = "!withdrawn";
+    /**
+     * 소셜 계정의 비밀번호 자리.
+     *
+     * <p>BCrypt 해시가 아니라서 어떤 입력과도 일치하지 않는다. null 을 허용하면
+     * "비밀번호가 없는 회원" 이라는 상태가 하나 더 생기고, 비밀번호를 만지는 모든 코드가
+     * 그 경우를 알아야 한다. 탈퇴 회원의 !withdrawn 과 같은 방식이다.</p>
+     */
+    private static final String SOCIAL_PASSWORD = "!social";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,6 +49,15 @@ public class Member {
     /** 비밀번호 찾기용. 선택 입력이므로 nullable 이다 */
     @Column(unique = true, length = 100)
     private String email;
+
+    /**
+     * 이 주소로 실제로 메일이 닿는 것을 확인했는가.
+     *
+     * <p>이메일은 선택 입력이라 비어 있을 수 있고, 그때는 인증이라는 개념 자체가 없다.
+     * 오타 난 주소를 저장해 두면 비밀번호를 잊은 순간에야 알게 되는데, 그때는 고칠 방법이 없다.</p>
+     */
+    @Column(nullable = false)
+    private boolean emailVerified;
 
     /**
      * 하루 목표 학습 시간(분). 연속 달성일(스트릭) 판정 기준이 된다.
@@ -70,6 +87,18 @@ public class Member {
     @Embedded
     private NotificationPreference notificationPreference = NotificationPreference.createDefault();
 
+    /** 프로필 이미지. 없으면 화면이 닉네임 첫 글자로 대신 그린다 */
+    @Embedded
+    private ProfileImage profileImage;
+
+    /** 소셜 로그인으로 만들어진 계정이면 어디서 왔는지 (google, kakao). 일반 가입이면 null */
+    @Column(length = 20)
+    private String oauthProvider;
+
+    /** 그 제공자가 부여한 고유 id. provider 와 함께여야 사람을 특정한다 */
+    @Column(length = 100)
+    private String oauthProviderId;
+
     @CreatedDate
     private LocalDateTime createdAt;
 
@@ -96,8 +125,18 @@ public class Member {
         this.nickname = nickname;
     }
 
+    /**
+     * 주소를 바꾸면 인증은 처음으로 돌아간다.
+     *
+     * <p>같은 자리에 두는 이유가 여기 있다 - 인증 플래그를 다른 곳에서 관리하면
+     * 주소만 바뀌고 "인증됨" 이 남는 순간이 언젠가 생긴다.</p>
+     */
     public void changeEmail(String email) {
-        this.email = blankToNull(email);
+        String next = blankToNull(email);
+        if (!java.util.Objects.equals(this.email, next)) {
+            this.emailVerified = false;
+        }
+        this.email = next;
     }
 
     public void changePassword(String encodedPassword) {
@@ -130,12 +169,70 @@ public class Member {
         this.nickname = "탈퇴한 회원" + id;
         this.password = UNUSABLE_PASSWORD;
         this.email = null;
+        this.emailVerified = false;
         // 구독 주소는 로그인 없이 열리므로, 끊지 않으면 탈퇴 후에도 계획이 계속 흘러나간다
         this.calendarToken = null;
+        // 얼굴 사진이 남아 있으면 익명화의 의미가 없다. 파일 삭제는 서비스가 이어서 한다
+        this.profileImage = null;
     }
 
     public boolean isWithdrawn() {
         return withdrawnAt != null;
+    }
+
+    /**
+     * 소셜 로그인으로 계정을 만든다.
+     *
+     * <p>이메일은 제공자가 확인해 준 것이라 인증을 다시 요구하지 않는다 -
+     * 제공자에게 로그인했다는 사실 자체가 그 주소의 소유 증명이다.
+     * 주소를 주지 않는 제공자도 있어(카카오의 이메일 동의 거부) null 을 허용한다.</p>
+     */
+    public static Member ofOAuth(String loginId, String nickname, String email,
+                                 String provider, String providerId) {
+        Member member = new Member(loginId, SOCIAL_PASSWORD, nickname, email);
+        member.oauthProvider = provider;
+        member.oauthProviderId = providerId;
+        member.emailVerified = (member.email != null);
+        return member;
+    }
+
+    public boolean isSocialAccount() {
+        return oauthProvider != null;
+    }
+
+    /** 인증이 필요한 상태인가 - 주소가 있는데 아직 확인되지 않았다 */
+    public boolean needsEmailVerification() {
+        return email != null && !emailVerified;
+    }
+
+    public void markEmailVerified() {
+        if (email == null) {
+            throw new IllegalStateException("이메일이 없는 회원은 인증할 수 없습니다.");
+        }
+        this.emailVerified = true;
+    }
+
+    /**
+     * 프로필 이미지를 바꾼다. 이전 이미지의 파일 이름을 돌려주므로,
+     * 부르는 쪽이 그 파일을 (커밋 뒤에) 지울 수 있다 - 바꿀 때마다 파일이 쌓이면 안 된다.
+     */
+    public String changeProfileImage(ProfileImage newImage) {
+        String previous = hasProfileImage() ? profileImage.getStoredName() : null;
+        this.profileImage = newImage;
+        return previous;
+    }
+
+    public String removeProfileImage() {
+        return changeProfileImage(null);
+    }
+
+    public boolean hasProfileImage() {
+        return profileImage != null && profileImage.isPresent();
+    }
+
+    /** 이미지가 없을 때 화면이 대신 그리는 글자 */
+    public String initial() {
+        return (nickname == null || nickname.isBlank()) ? "?" : nickname.substring(0, 1);
     }
 
     /** 첫 사용 안내를 마쳤다고 기록한다 (건너뛰기도 마친 것으로 본다 - 다시 붙잡지 않는다) */

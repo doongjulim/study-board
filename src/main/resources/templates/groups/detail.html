@@ -77,6 +77,7 @@
             <span class="rank-no" th:text="${row.rank}">1</span>
             <div class="rank-main">
                 <div class="rank-head">
+                    <span th:replace="~{fragments/avatar :: avatarOf(${row.memberId}, ${row.nickname}, ${row.hasProfileImage()}, 'sm')}"></span>
                     <span class="rank-nickname" th:text="${row.nickname}">닉네임</span>
                     <span class="tag-goal" th:if="${row.goalMet}" title="주간 목표 달성">목표 달성</span>
                     <span class="rank-time" th:text="${row.readableTime}">0분</span>
@@ -91,6 +92,7 @@
     <h3 class="stat-title">멤버</h3>
     <ul class="member-list">
         <li th:each="membership : ${members}" class="member-item">
+            <span th:replace="~{fragments/avatar :: avatar(${membership.member}, 'sm')}"></span>
             <span class="member-nickname" th:text="${membership.member.nickname}">닉네임</span>
             <span class="tag-owner" th:if="${group.isOwnedBy(membership.member.id)}">그룹장</span>
             <span class="member-joined"

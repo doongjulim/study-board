@@ -9,13 +9,20 @@ import com.example.board.member.dto.ProfileForm;
 import com.example.board.member.dto.SignupForm;
 import com.example.board.member.event.MemberWithdrawnEvent;
 import com.example.board.member.exception.DuplicateMemberException;
+import com.example.board.file.store.FileStore;
+import com.example.board.file.store.TransactionalFileRemover;
+import com.example.board.member.domain.ProfileImage;
 import com.example.board.member.repository.MemberRepository;
+import com.example.board.post.domain.AttachedFile;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -26,10 +33,21 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class MemberService {
 
+    /**
+     * 프로필 사진 상한.
+     *
+     * <p>전역 업로드 제한(10MB)과 별개로 좁게 잡는다 - 아바타는 화면에서 40px 로 그려지므로
+     * 큰 파일을 받아 봐야 디스크와 대역폭만 쓴다. 거절은 저장하기 전에 한다.</p>
+     */
+    static final long MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024;
+
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
     private final ApplicationEventPublisher eventPublisher;
+    private final FileStore fileStore;
+    /** 사진 교체·삭제는 커밋 뒤에 지운다 - 롤백되면 회원 행은 남는데 파일만 사라진다 */
+    private final TransactionalFileRemover fileRemover;
     private final Clock clock;
 
     @Transactional
@@ -107,6 +125,69 @@ public class MemberService {
     }
 
     /** 닉네임·이메일·하루 목표 시간을 한 번에 수정한다 */
+    /**
+     * 소셜 로그인으로 들어온 사람을 찾거나 만든다.
+     *
+     * <p>기준은 <b>제공자 + 제공자가 준 id</b> 다. 이메일로 찾지 않는다 - 이메일은 바뀔 수 있고,
+     * 제공자가 주지 않을 수도 있으며(카카오는 동의 항목이다), 무엇보다
+     * "같은 이메일이면 같은 사람" 으로 이으면 남의 계정을 가져가는 길이 열린다.</p>
+     *
+     * <p>닉네임이 이미 쓰이고 있으면 뒤에 숫자를 붙인다. 소셜 로그인은 사용자가 그 자리에서
+     * 다른 이름을 정할 기회가 없으므로, 막지 않고 통과시켜야 한다.</p>
+     */
+    @Transactional
+    public Member findOrCreateOAuthMember(String provider, String providerId,
+                                          String email, String nickname) {
+        return memberRepository.findByOauthProviderAndOauthProviderId(provider, providerId)
+                .orElseGet(() -> memberRepository.save(Member.ofOAuth(
+                        provider + "_" + providerId,
+                        availableNickname(nickname),
+                        normalize(email),
+                        provider, providerId)));
+    }
+
+    /** 이미 쓰이는 닉네임이면 뒤에 숫자를 붙여 비켜 간다 */
+    private String availableNickname(String desired) {
+        String base = (desired == null || desired.isBlank()) ? "회원" : desired.trim();
+        if (!memberRepository.existsByNickname(base)) {
+            return base;
+        }
+        for (int suffix = 2; suffix < 1000; suffix++) {
+            String candidate = base + suffix;
+            if (!memberRepository.existsByNickname(candidate)) {
+                return candidate;
+            }
+        }
+        // 여기까지 올 일은 사실상 없다. 그래도 조용히 실패하지는 않는다
+        throw new IllegalStateException("사용할 수 있는 닉네임을 찾지 못했습니다.");
+    }
+
+    /**
+     * 프로필 사진을 올린다. 이전 사진은 커밋된 뒤에 지운다.
+     *
+     * <p>이미지 여부는 {@link FileStore#storeImage} 가 확장자와 <b>파일 내용</b>으로 함께 본다 -
+     * 아바타는 인라인으로 내려가므로 "이미지라고 주장하는 파일" 을 받아 두면 안 된다.</p>
+     */
+    @Transactional
+    public void changeProfileImage(Long memberId, MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("사진을 선택해 주세요.");
+        }
+        if (file.getSize() > MAX_PROFILE_IMAGE_BYTES) {
+            throw new IllegalArgumentException("프로필 사진은 2MB 이하만 올릴 수 있습니다.");
+        }
+        AttachedFile stored = fileStore.storeImage(file);
+        Member member = findActive(memberId);
+        String previous = member.changeProfileImage(
+                new ProfileImage(stored.getStoredName(), stored.getContentType()));
+        fileRemover.removeAfterCommit(previous);
+    }
+
+    @Transactional
+    public void removeProfileImage(Long memberId) {
+        fileRemover.removeAfterCommit(findActive(memberId).removeProfileImage());
+    }
+
     @Transactional
     public void updateProfile(Long memberId, ProfileForm form) {
         Member member = findActive(memberId);
@@ -149,7 +230,10 @@ public class MemberService {
 
         eventPublisher.publishEvent(new MemberWithdrawnEvent(memberId));
         refreshTokenService.revokeAll(memberId);
+        // 얼굴 사진이 디스크에 남아 있으면 익명화가 반쪽이다. 엔티티가 참조를 끊고, 파일은 여기서 지운다
+        String profileImage = member.hasProfileImage() ? member.getProfileImage().getStoredName() : null;
         member.withdraw(LocalDateTime.now(clock));
+        fileRemover.removeAfterCommit(profileImage);
     }
 
     private void validateLoginIdAvailable(String loginId) {

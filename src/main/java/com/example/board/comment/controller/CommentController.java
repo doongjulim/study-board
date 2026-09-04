@@ -52,6 +52,23 @@ public class CommentController {
         return "redirect:/plans/shared/" + planId;
     }
 
+    /** 답글 (본인 여부와 무관 - 자격은 원댓글이 달린 대상이 정한다) */
+    @PostMapping("/comments/{id}/reply")
+    public String reply(@PathVariable Long id,
+                        @Valid @ModelAttribute CommentForm commentForm,
+                        BindingResult bindingResult,
+                        @AuthenticationPrincipal MemberPrincipal principal,
+                        RedirectAttributes redirectAttributes) {
+        Comment target = commentService.findById(id);
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("commentError",
+                    bindingResult.getFieldError("content").getDefaultMessage());
+            return redirectToTarget(target);
+        }
+        commentService.reply(id, principal.id(), commentForm.getContent());
+        return redirectToTarget(target);
+    }
+
     /** 댓글 수정 (본인만) - 수정 후 원래 화면으로 돌아간다 */
     @PostMapping("/comments/{id}/edit")
     public String edit(@PathVariable Long id,

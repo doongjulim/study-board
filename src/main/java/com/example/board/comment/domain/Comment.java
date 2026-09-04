@@ -40,6 +40,17 @@ public class Comment {
     @JoinColumn(name = "author_id", nullable = false)
     private Member author;
 
+    /**
+     * 답글이면 원댓글을 가리킨다. 원댓글이면 null.
+     *
+     * <p>깊이는 1단계까지다 - 답글의 답글은 원댓글에 붙는다({@link #rootOf}).
+     * 화면이 오른쪽으로 끝없이 밀리는 것을 막고, 스레드를 "원댓글 + 답글 목록" 이라는
+     * 한 가지 모양으로 유지하기 위해서다.</p>
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Comment parent;
+
     @Column(nullable = false, length = 500)
     private String content;
 
@@ -50,19 +61,38 @@ public class Comment {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    private Comment(Post post, Plan plan, Member author, String content) {
+    private Comment(Post post, Plan plan, Member author, String content, Comment parent) {
         this.post = post;
         this.plan = plan;
         this.author = author;
         this.content = content;
+        this.parent = parent;
     }
 
     public static Comment forPost(Post post, Member author, String content) {
-        return new Comment(post, null, author, content);
+        return new Comment(post, null, author, content, null);
     }
 
     public static Comment forPlan(Plan plan, Member author, String content) {
-        return new Comment(null, plan, author, content);
+        return new Comment(null, plan, author, content, null);
+    }
+
+    /**
+     * 답글을 만든다. 대상이 이미 답글이면 그 원댓글에 붙는다 - 깊이는 1단계까지다.
+     *
+     * <p>대상과 같은 글/플랜에 매달아야 한다. 답글만 다른 글에 붙으면 스레드가 갈라진다.</p>
+     */
+    public static Comment replyTo(Comment target, Member author, String content) {
+        Comment root = rootOf(target);
+        return new Comment(root.post, root.plan, author, content, root);
+    }
+
+    private static Comment rootOf(Comment comment) {
+        return comment.isReply() ? comment.parent : comment;
+    }
+
+    public boolean isReply() {
+        return parent != null;
     }
 
     public boolean isAuthoredBy(Long memberId) {

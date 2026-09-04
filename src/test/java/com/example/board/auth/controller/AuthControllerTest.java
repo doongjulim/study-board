@@ -6,6 +6,7 @@ import com.example.board.auth.exception.LoginFailedException;
 import com.example.board.auth.exception.TooManyLoginAttemptsException;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
+import com.example.board.auth.oauth.SocialLoginProviders;
 import com.example.board.auth.service.LoginAttemptLimiter;
 import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
@@ -42,6 +43,8 @@ class AuthControllerTest {
     @MockBean MemberService memberService;
     @MockBean TokenService tokenService;
     @MockBean LoginAttemptLimiter loginAttemptLimiter;
+    /** 로그인 화면이 "설정된 소셜 제공자" 를 묻는다. 설정이 없으면 빈 목록이다 */
+    @MockBean SocialLoginProviders socialLoginProviders;
 
     private Member member() {
         return new Member("tester1", "encoded-password", "테스터");

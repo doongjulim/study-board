@@ -1,6 +1,7 @@
 package com.example.board.comment.service;
 
 import com.example.board.comment.domain.Comment;
+import com.example.board.comment.dto.CommentThread;
 import com.example.board.comment.event.CommentAddedEvent;
 import com.example.board.comment.repository.CommentRepository;
 import com.example.board.member.domain.Member;
@@ -20,13 +21,19 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -174,6 +181,164 @@ class CommentServiceTest {
         commentService.update(5L, COMMENTER_ID, "고친 댓글");
 
         then(eventPublisher).should(never()).publishEvent(any(CommentAddedEvent.class));
+    }
+
+
+    // ── 답글 ──────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("답글은 원댓글과 같은 글에 매달린다")
+    void reply_attachesToSameTarget() {
+        Post target = post();
+        ReflectionTestUtils.setField(target, "id", 1L);
+        Comment root = Comment.forPost(target, member(POST_AUTHOR_ID, "글쓴이"), "원댓글");
+        ReflectionTestUtils.setField(root, "id", 5L);
+        given(commentRepository.findById(5L)).willReturn(Optional.of(root));
+        given(memberRepository.getReferenceById(COMMENTER_ID)).willReturn(member(COMMENTER_ID, "댓글러"));
+        given(commentRepository.save(any(Comment.class))).willAnswer(inv -> inv.getArgument(0));
+
+        commentService.reply(5L, COMMENTER_ID, "저도 궁금해요");
+
+        ArgumentCaptor<Comment> saved = ArgumentCaptor.forClass(Comment.class);
+        then(commentRepository).should().save(saved.capture());
+        assertThat(saved.getValue().getParent()).isSameAs(root);
+        assertThat(saved.getValue().getPost()).isSameAs(target);
+        assertThat(saved.getValue().isReply()).isTrue();
+    }
+
+    @Test
+    @DisplayName("답글에 답글을 달면 원댓글에 붙는다 - 깊이는 1단계다")
+    void reply_toReply_flattensToRoot() {
+        // 깊이를 열어 두면 화면이 오른쪽으로 계속 밀리고, 스레드 모양이 하나로 유지되지 않는다
+        Post target = post();
+        Comment root = Comment.forPost(target, member(POST_AUTHOR_ID, "글쓴이"), "원댓글");
+        ReflectionTestUtils.setField(root, "id", 5L);
+        Comment firstReply = Comment.replyTo(root, member(COMMENTER_ID, "댓글러"), "답글");
+        ReflectionTestUtils.setField(firstReply, "id", 6L);
+        given(commentRepository.findById(6L)).willReturn(Optional.of(firstReply));
+        given(memberRepository.getReferenceById(30L)).willReturn(member(30L, "제삼자"));
+        given(commentRepository.save(any(Comment.class))).willAnswer(inv -> inv.getArgument(0));
+
+        commentService.reply(6L, 30L, "답글의 답글");
+
+        ArgumentCaptor<Comment> saved = ArgumentCaptor.forClass(Comment.class);
+        then(commentRepository).should().save(saved.capture());
+        assertThat(saved.getValue().getParent()).isSameAs(root);
+    }
+
+    @Test
+    @DisplayName("답글 알림은 원댓글 작성자에게 간다 - 글쓴이는 원댓글 때 이미 받았다")
+    void reply_notifiesRootAuthor() {
+        Post target = post();
+        ReflectionTestUtils.setField(target, "id", 1L);
+        Comment root = Comment.forPost(target, member(COMMENTER_ID, "댓글러"), "원댓글");
+        ReflectionTestUtils.setField(root, "id", 5L);
+        given(commentRepository.findById(5L)).willReturn(Optional.of(root));
+        given(memberRepository.getReferenceById(30L)).willReturn(member(30L, "제삼자"));
+        given(commentRepository.save(any(Comment.class))).willAnswer(inv -> inv.getArgument(0));
+
+        commentService.reply(5L, 30L, "저도요");
+
+        ArgumentCaptor<CommentAddedEvent> event = ArgumentCaptor.forClass(CommentAddedEvent.class);
+        then(eventPublisher).should().publishEvent(event.capture());
+        assertThat(event.getValue().recipientId()).isEqualTo(COMMENTER_ID);
+    }
+
+    @Test
+    @DisplayName("내 댓글에 내가 단 답글은 알리지 않는다")
+    void reply_selfDoesNotNotify() {
+        Post target = post();
+        ReflectionTestUtils.setField(target, "id", 1L);
+        Comment root = Comment.forPost(target, member(COMMENTER_ID, "댓글러"), "원댓글");
+        ReflectionTestUtils.setField(root, "id", 5L);
+        given(commentRepository.findById(5L)).willReturn(Optional.of(root));
+        given(memberRepository.getReferenceById(COMMENTER_ID)).willReturn(member(COMMENTER_ID, "댓글러"));
+        given(commentRepository.save(any(Comment.class))).willAnswer(inv -> inv.getArgument(0));
+
+        commentService.reply(5L, COMMENTER_ID, "덧붙이자면");
+
+        then(eventPublisher).should(never()).publishEvent(any(CommentAddedEvent.class));
+    }
+
+    @Test
+    @DisplayName("볼 수 없는 플랜의 댓글에는 답글을 달 수 없다")
+    void reply_hiddenPlan_denied() {
+        Plan hidden = sharedPlan();
+        Comment root = Comment.forPlan(hidden, member(POST_AUTHOR_ID, "글쓴이"), "원댓글");
+        ReflectionTestUtils.setField(root, "id", 5L);
+        given(commentRepository.findById(5L)).willReturn(Optional.of(root));
+        given(planService.canView(hidden, COMMENTER_ID)).willReturn(false);
+
+        assertThatThrownBy(() -> commentService.reply(5L, COMMENTER_ID, "끼어들기"))
+                .isInstanceOf(AccessDeniedException.class);
+        then(commentRepository).should(never()).save(any(Comment.class));
+    }
+
+    // ── 삭제와 답글 ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("원댓글을 지우면 달려 있던 답글도 함께 지운다")
+    void delete_rootRemovesReplies() {
+        Comment root = Comment.forPost(post(), member(COMMENTER_ID, "댓글러"), "원댓글");
+        ReflectionTestUtils.setField(root, "id", 5L);
+        List<Comment> replies = List.of(Comment.replyTo(root, member(30L, "제삼자"), "답글"));
+        given(commentRepository.findById(5L)).willReturn(Optional.of(root));
+        given(commentRepository.findByParent_IdOrderByIdAsc(5L)).willReturn(replies);
+
+        commentService.delete(5L, COMMENTER_ID);
+
+        // DB 의 on delete cascade 에 기대면 엔티티로 스키마를 만드는 테스트에서는 돌지 않는다
+        then(commentRepository).should().deleteAll(replies);
+        then(commentRepository).should().delete(root);
+    }
+
+    @Test
+    @DisplayName("답글을 지울 때는 자식을 찾지 않는다 - 답글에는 자식이 없다")
+    void delete_replyDoesNotLookForChildren() {
+        Comment root = Comment.forPost(post(), member(POST_AUTHOR_ID, "글쓴이"), "원댓글");
+        ReflectionTestUtils.setField(root, "id", 5L);
+        Comment reply = Comment.replyTo(root, member(COMMENTER_ID, "댓글러"), "답글");
+        ReflectionTestUtils.setField(reply, "id", 6L);
+        given(commentRepository.findById(6L)).willReturn(Optional.of(reply));
+
+        commentService.delete(6L, COMMENTER_ID);
+
+        then(commentRepository).should(never()).findByParent_IdOrderByIdAsc(anyLong());
+        then(commentRepository).should().delete(reply);
+    }
+
+    // ── 스레드 묶기 ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("원댓글과 답글을 스레드로 묶어 준다")
+    void findForPost_groupsReplies() {
+        Comment root = Comment.forPost(post(), member(POST_AUTHOR_ID, "글쓴이"), "원댓글");
+        ReflectionTestUtils.setField(root, "id", 5L);
+        Comment reply = Comment.replyTo(root, member(COMMENTER_ID, "댓글러"), "답글");
+        ReflectionTestUtils.setField(reply, "id", 6L);
+        Pageable pageable = PageRequest.of(0, 20);
+        given(commentRepository.findByPost_IdAndParentIsNullOrderByIdAsc(1L, pageable))
+                .willReturn(new PageImpl<>(List.of(root)));
+        given(commentRepository.findByParent_IdInOrderByIdAsc(List.of(5L)))
+                .willReturn(List.of(reply));
+
+        Page<CommentThread> threads = commentService.findForPost(1L, pageable);
+
+        assertThat(threads.getContent()).hasSize(1);
+        assertThat(threads.getContent().get(0).root()).isSameAs(root);
+        assertThat(threads.getContent().get(0).replies()).containsExactly(reply);
+    }
+
+    @Test
+    @DisplayName("원댓글이 없으면 답글을 조회하지 않는다 - 빈 in 절은 쿼리 오류다")
+    void findForPost_emptyPageSkipsReplyQuery() {
+        Pageable pageable = PageRequest.of(0, 20);
+        given(commentRepository.findByPost_IdAndParentIsNullOrderByIdAsc(1L, pageable))
+                .willReturn(new PageImpl<>(List.of()));
+
+        assertThat(commentService.findForPost(1L, pageable).getContent()).isEmpty();
+
+        then(commentRepository).should(never()).findByParent_IdInOrderByIdAsc(any());
     }
 
 }

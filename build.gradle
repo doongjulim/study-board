@@ -23,6 +23,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    // 소셜 로그인. 자격증명이 설정되지 않으면 ClientRegistrationRepository 빈이 만들어지지 않고,
+    // SecurityConfig 가 그때는 oauth2Login 을 아예 붙이지 않는다 (설정 없이도 앱이 그대로 뜬다)
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation 'org.flywaydb:flyway-core'
     // 마크다운: 렌더링(commonmark)과 살균(jsoup)을 나눠서 쓴다.

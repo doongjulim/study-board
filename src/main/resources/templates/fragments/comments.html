@@ -1,52 +1,68 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- 댓글 섹션 공통 프래그먼트: 게시글 상세·공유 플랜 상세에서 재사용 -->
-<section th:fragment="commentSection(comments, submitUrl)" class="comment-section">
-    <h3 class="comment-title" th:text="|댓글 ${comments.size()}|">댓글</h3>
+<!--
+  댓글 섹션 공통 프래그먼트: 게시글 상세·공유 플랜 상세에서 재사용.
+
+  페이지의 단위는 <b>스레드</b>(원댓글 + 답글)다. 스레드를 통째로 세지 않고 원댓글만 세어
+  나누므로, 페이지 경계에서 스레드가 잘리지 않는다.
+
+  필요한 컨텍스트 변수
+    comments          Page<CommentThread>
+    commentCount      답글까지 포함한 전체 수 (화면의 "댓글 N")
+    commentPageBlock  페이지 번호 블록
+    commentForm       입력 폼
+  프래그먼트 인자
+    submitUrl  원댓글 등록 주소
+    pageUrl    페이지 이동 기준 주소 (cpage 파라미터가 붙는다)
+-->
+<section th:fragment="commentSection(submitUrl, pageUrl)" class="comment-section">
+    <h3 class="comment-title" th:text="|댓글 ${commentCount}|">댓글</h3>
 
     <div th:if="${commentError}" class="flash" th:text="${commentError}"></div>
 
     <ul class="comment-list">
         <li th:if="${comments.isEmpty()}" class="empty comment-empty">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</li>
-        <li th:each="comment : ${comments}" class="comment-item">
-            <div class="comment-head">
-                <span class="comment-author" th:text="${comment.author.nickname}">닉네임</span>
-                <span class="comment-time"
-                      th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">시각</span>
-                <!--
-                  고칠 수 있게만 하고 흔적을 남기지 않으면 대화 기록으로서 믿을 수 없다.
-                  남이 읽은 뒤에 내용이 바뀔 수 있다면 "언제 바뀌었는가" 는 읽는 사람의 정보다.
-                -->
-                <span class="comment-edited" th:if="${comment.isEdited()}"
-                      th:title="${#temporals.format(comment.updatedAt, 'yyyy-MM-dd HH:mm')} + ' 수정'">(수정됨)</span>
-            </div>
-            <p class="comment-content" th:text="${comment.content}">내용</p>
 
-            <div class="comment-actions"
-                 th:if="${currentMember != null and currentMember.id == comment.author.id}">
-                <!--
-                  수정 폼은 접어 둔다. 댓글 열 개마다 textarea 가 펼쳐져 있으면 목록을 읽을 수 없다.
-                  <details> 라서 JS 없이도 열리고 닫힌다 - 댓글은 JS 가 없어도 온전히 쓸 수 있어야 한다.
-                -->
-                <details class="comment-edit">
-                    <summary class="btn btn-sm">수정</summary>
-                    <form th:action="@{/comments/{id}/edit(id=${comment.id})}" method="post"
-                          class="comment-form comment-edit-form">
-                        <label class="sr-only" th:for="'comment-edit-' + ${comment.id}">댓글 수정</label>
-                        <textarea th:id="'comment-edit-' + ${comment.id}" name="content" rows="2"
-                                  maxlength="500" th:text="${comment.content}"></textarea>
-                        <button type="submit" class="btn btn-primary btn-sm">저장</button>
-                    </form>
-                </details>
-                <form th:action="@{/comments/{id}/delete(id=${comment.id})}" method="post"
-                      class="inline-form"
-                      data-confirm="댓글을 삭제할까요?" data-confirm-label="삭제">
-                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+        <li th:each="thread : ${comments.content}" class="comment-thread">
+            <!-- 원댓글 -->
+            <div th:replace="~{fragments/comments :: commentBody(${thread.root}, false)}"></div>
+
+            <!-- 답글 -->
+            <ul class="reply-list" th:if="${thread.hasReplies()}">
+                <li th:each="reply : ${thread.replies}" class="comment-item reply-item">
+                    <div th:replace="~{fragments/comments :: commentBody(${reply}, true)}"></div>
+                </li>
+            </ul>
+
+            <!--
+              답글 폼은 접어 둔다. 원댓글마다 textarea 가 펼쳐져 있으면 목록을 읽을 수 없다.
+              <details> 라서 JS 없이도 열린다.
+            -->
+            <details class="reply-form-box" th:if="${currentMember != null}">
+                <summary class="btn btn-sm">답글</summary>
+                <form th:action="@{/comments/{id}/reply(id=${thread.root.id})}" method="post"
+                      class="comment-form">
+                    <label class="sr-only" th:for="'reply-' + ${thread.root.id}">답글</label>
+                    <textarea th:id="'reply-' + ${thread.root.id}" name="content" rows="2"
+                              maxlength="500" placeholder="답글을 입력하세요 (500자 이내)"></textarea>
+                    <button type="submit" class="btn btn-primary btn-sm">등록</button>
                 </form>
-            </div>
+            </details>
         </li>
     </ul>
+
+    <!-- 댓글 페이지는 cpage 로 옮긴다 - 게시글 목록의 page 와 섞이지 않게 -->
+    <nav class="pagination comment-pagination" th:if="${comments.totalPages > 1}">
+        <a th:if="${comments.hasPrevious()}"
+           th:href="@{${pageUrl}(cpage=${comments.number - 1})}">이전</a>
+        <th:block th:each="i : ${#numbers.sequence(commentPageBlock.start, commentPageBlock.end)}">
+            <span th:if="${i == comments.number}" class="current" th:text="${i + 1}" aria-current="page"></span>
+            <a th:unless="${i == comments.number}" th:href="@{${pageUrl}(cpage=${i})}" th:text="${i + 1}"></a>
+        </th:block>
+        <a th:if="${comments.hasNext()}"
+           th:href="@{${pageUrl}(cpage=${comments.number + 1})}">다음</a>
+    </nav>
 
     <form th:if="${currentMember != null}" th:action="@{${submitUrl}}" method="post"
           th:object="${commentForm}" class="comment-form">
@@ -59,5 +75,47 @@
         댓글을 남기려면 <a th:href="@{/login}">로그인</a>이 필요합니다.
     </p>
 </section>
+
+<!--
+  댓글 한 줄. 원댓글과 답글이 같은 모양을 쓴다 - 다르게 그리면 수정·삭제 규칙이 두 곳에 생긴다.
+  isReply 는 삭제 안내 문구만 가른다(원댓글을 지우면 답글도 함께 사라지므로).
+-->
+<div th:fragment="commentBody(comment, isReply)" class="comment-item">
+    <div class="comment-head">
+        <span th:replace="~{fragments/avatar :: avatar(${comment.author}, 'sm')}"></span>
+        <span class="comment-author" th:text="${comment.author.nickname}">닉네임</span>
+        <span class="comment-time"
+              th:text="${#temporals.format(comment.createdAt, 'yyyy-MM-dd HH:mm')}">시각</span>
+        <!--
+          고칠 수 있게만 하고 흔적을 남기지 않으면 대화 기록으로서 믿을 수 없다.
+          남이 읽은 뒤에 내용이 바뀔 수 있다면 "언제 바뀌었는가" 는 읽는 사람의 정보다.
+        -->
+        <span class="comment-edited" th:if="${comment.isEdited()}"
+              th:title="${#temporals.format(comment.updatedAt, 'yyyy-MM-dd HH:mm')} + ' 수정'">(수정됨)</span>
+    </div>
+    <p class="comment-content" th:text="${comment.content}">내용</p>
+
+    <div class="comment-actions"
+         th:if="${currentMember != null and currentMember.id == comment.author.id}">
+        <details class="comment-edit">
+            <summary class="btn btn-sm">수정</summary>
+            <form th:action="@{/comments/{id}/edit(id=${comment.id})}" method="post"
+                  class="comment-form comment-edit-form">
+                <label class="sr-only" th:for="'comment-edit-' + ${comment.id}">댓글 수정</label>
+                <textarea th:id="'comment-edit-' + ${comment.id}" name="content" rows="2"
+                          maxlength="500" th:text="${comment.content}"></textarea>
+                <button type="submit" class="btn btn-primary btn-sm">저장</button>
+            </form>
+        </details>
+        <form th:action="@{/comments/{id}/delete(id=${comment.id})}" method="post"
+              class="inline-form"
+              th:attr="data-confirm=${isReply}
+                                    ? '답글을 삭제할까요?'
+                                    : '댓글을 삭제할까요?&#10;달려 있는 답글도 함께 사라집니다.'"
+              data-confirm-label="삭제">
+            <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+        </form>
+    </div>
+</div>
 </body>
 </html>

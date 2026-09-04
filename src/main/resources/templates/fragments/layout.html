@@ -20,7 +20,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${title}">스터디플랜</title>
-    <link rel="stylesheet" th:href="@{/css/board.css}">
+    <!--
+      스타일시트는 층으로 나뉘어 있고 순서가 곧 규칙이다 (뒤에 오는 것이 앞을 덮는다).
+
+        tokens      색·간격 토큰과 리셋
+        components  어디서나 쓰는 조각 (버튼·표·폼·토스트·확인창)
+        layout      뼈대 (헤더·내비·탭바)        - 헤더 안의 버튼이 공통 버튼을 덮어야 해서 뒤
+        pages       화면별
+        responsive  좁은 화면 대응              - 미디어쿼리는 우선순위가 없어 순서로만 이긴다
+        a11y        포커스·움직임 줄이기          - 포커스 윤곽선은 무엇에도 지워지면 안 된다
+
+      @import 가 아니라 link 를 여러 개 쓰는 이유: @import 는 앞 파일을 다 받은 뒤에야
+      다음 요청을 시작해 렌더링이 직렬로 늦어진다.
+    -->
+    <link rel="stylesheet" th:href="@{/css/tokens.css}">
+    <link rel="stylesheet" th:href="@{/css/components.css}">
+    <link rel="stylesheet" th:href="@{/css/layout.css}">
+    <link rel="stylesheet" th:href="@{/css/pages.css}">
+    <link rel="stylesheet" th:href="@{/css/responsive.css}">
+    <link rel="stylesheet" th:href="@{/css/a11y.css}">
     <!-- FOUC 방지: 스타일이 그려지기 전에 저장된 테마를 먼저 반영한다 (theme.js 와 한 쌍) -->
     <script>!function(){var t=localStorage.getItem('theme');t&&document.documentElement.setAttribute('data-theme',t)}();</script>
 </head>

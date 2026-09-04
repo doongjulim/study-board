@@ -14,7 +14,7 @@ class WeeklyChallengeTest {
     private static final LocalDate WEEK_START = LocalDate.of(2026, 8, 10);
 
     private MemberStudyTime time(long id, String nickname, long minutes, int goal) {
-        return new MemberStudyTime(id, nickname, minutes, goal);
+        return new MemberStudyTime(id, nickname, minutes, goal, false);
     }
 
     @Test

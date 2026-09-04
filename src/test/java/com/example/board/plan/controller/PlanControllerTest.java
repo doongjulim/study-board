@@ -24,6 +24,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -159,7 +160,9 @@ class PlanControllerTest {
         shared.changeShareScope(ShareScope.PUBLIC);
         given(planService.findById(2L)).willReturn(shared);
         given(planService.canView(shared, MEMBER_ID)).willReturn(true);
-        given(commentService.findForPlan(2L)).willReturn(List.of());
+        given(commentService.findForPlan(eq(2L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of()));
+        given(commentService.countForPlan(2L)).willReturn(0L);
 
         mockMvc.perform(get("/plans/shared/2").with(memberAuth()))
                 .andExpect(status().isOk())
@@ -184,7 +187,9 @@ class PlanControllerTest {
         Plan mine = planOwnedBy(MEMBER_ID);
         given(planService.findById(2L)).willReturn(mine);
         given(planService.canView(mine, MEMBER_ID)).willReturn(true);
-        given(commentService.findForPlan(2L)).willReturn(List.of());
+        given(commentService.findForPlan(eq(2L), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of()));
+        given(commentService.countForPlan(2L)).willReturn(0L);
 
         mockMvc.perform(get("/plans/shared/2").with(memberAuth()))
                 .andExpect(status().isOk())

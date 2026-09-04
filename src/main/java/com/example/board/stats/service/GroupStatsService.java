@@ -67,7 +67,8 @@ public class GroupStatsService {
                         member.getId(),
                         member.getNickname(),
                         minutesByMember.getOrDefault(member.getId(), 0L),
-                        member.getDailyGoalMinutes()))
+                        member.getDailyGoalMinutes(),
+                        member.hasProfileImage()))
                 .toList();
     }
 

@@ -22,6 +22,10 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import com.example.board.file.exception.UnsupportedFileTypeException;
+
+import java.io.IOException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /** 마이페이지 - 프로필·목표 시간·비밀번호·탈퇴 */
@@ -60,6 +64,32 @@ public class MyPageController {
             return backToPage(model, member);
         }
         redirectAttributes.addFlashAttribute("message", "프로필을 수정했습니다.");
+        return "redirect:/me";
+    }
+
+    /** 프로필 사진 올리기 */
+    @PostMapping("/profile-image")
+    public String changeProfileImage(@RequestParam("image") MultipartFile image,
+                                     @AuthenticationPrincipal MemberPrincipal principal,
+                                     RedirectAttributes redirectAttributes) throws IOException {
+        try {
+            memberService.changeProfileImage(principal.id(), image);
+            redirectAttributes.addFlashAttribute("message", "프로필 사진을 바꿨습니다.");
+        } catch (IllegalArgumentException | UnsupportedFileTypeException e) {
+            // 사진 하나 때문에 오류 화면으로 보내지 않는다 - 마이페이지에서 이유만 알려 준다
+            redirectAttributes.addFlashAttribute("message",
+                    e instanceof UnsupportedFileTypeException
+                            ? "이미지 파일(jpg·png·gif·webp)만 올릴 수 있습니다."
+                            : e.getMessage());
+        }
+        return "redirect:/me";
+    }
+
+    @PostMapping("/profile-image/delete")
+    public String removeProfileImage(@AuthenticationPrincipal MemberPrincipal principal,
+                                     RedirectAttributes redirectAttributes) {
+        memberService.removeProfileImage(principal.id());
+        redirectAttributes.addFlashAttribute("message", "프로필 사진을 지웠습니다.");
         return "redirect:/me";
     }
 

@@ -1,0 +1,176 @@
+/*
+  components.css - 화면을 가리지 않고 어디서나 쓰는 조각들.
+  버튼·표·페이지네이션·폼·플래시·알림 패널·토스트·확인창·복사 버튼.
+*/
+
+.flash {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: .9rem;
+}
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.toolbar form { display: flex; gap: 8px; }
+
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font-size: .9rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--on-accent); }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: var(--danger); color: var(--on-danger); }
+.btn-sm { padding: 4px 10px; font-size: .8rem; }
+
+table.board { width: 100%; min-width: 480px; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+table.board th, table.board td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); font-size: .92rem; }
+table.board th { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+table.board tr:last-child td { border-bottom: none; }
+table.board td.num { width: 64px; color: var(--ink-soft); }
+table.board td.date { width: 130px; color: var(--ink-soft); font-size: .85rem; }
+table.board a { color: var(--ink); text-decoration: none; }
+table.board a:hover { color: var(--accent); text-decoration: underline; }
+.clip { color: var(--ink-soft); font-size: .8rem; margin-left: 4px; }
+
+.empty { text-align: center; color: var(--ink-soft); padding: 48px 0; }
+
+.pagination { display: flex; justify-content: center; gap: 6px; margin-top: 24px; }
+.pagination a, .pagination span {
+  padding: 6px 12px; border-radius: 6px; text-decoration: none;
+  border: 1px solid var(--line); color: var(--ink); font-size: .85rem; background: var(--card);
+}
+.pagination .current { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.pagination a:hover { border-color: var(--accent); color: var(--accent); }
+
+.post-title { margin: 0 0 8px; font-size: 1.5rem; }
+.post-meta { color: var(--ink-soft); font-size: .85rem; margin-bottom: 20px; display: flex; gap: 14px; }
+.post-body {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 24px; white-space: pre-wrap; margin-bottom: 24px; min-height: 160px;
+}
+
+.attach { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
+.attach h3 { margin: 0 0 10px; font-size: .95rem; color: var(--ink-soft); }
+.attach ul { margin: 0; padding-left: 18px; }
+.attach li { font-size: .9rem; margin-bottom: 4px; }
+.attach .size { color: var(--ink-soft); font-size: .8rem; }
+.attach img { max-width: 100%; border-radius: 8px; margin-top: 10px; display: block; }
+
+.actions { display: flex; gap: 8px; }
+.actions form { margin: 0; }
+
+.form-card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 28px; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: 6px; }
+.form-group input[type=text], .form-group textarea {
+  width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+  font: inherit; background: var(--paper);
+}
+.form-group input:focus, .form-group textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.form-group textarea { min-height: 220px; resize: vertical; }
+.error { color: var(--danger); font-size: .82rem; margin-top: 4px; }
+.hint { color: var(--ink-soft); font-size: .8rem; margin-top: 4px; }
+
+/* ── 실시간 알림 ─────────────────────────────────────────── */
+.notif { position: relative; margin-left: auto; }
+.bell { background: none; border: none; font-size: 1.15rem; cursor: pointer; position: relative; padding: 4px 6px; }
+.badge {
+  position: absolute; top: -4px; right: -6px;
+  background: var(--danger); color: var(--on-danger); border-radius: 10px;
+  font-size: .65rem; font-weight: 700; padding: 1px 5px; line-height: 1.4;
+}
+.notif-panel {
+  position: absolute; right: 0; top: 38px; width: 300px; max-height: 360px; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12); z-index: 50;
+}
+.notif-head { padding: 10px 14px; font-weight: 700; font-size: .9rem;
+  border-bottom: 1px solid var(--line); display: flex; align-items: center;
+  justify-content: space-between; gap: 10px; }
+.notif-more { font-weight: 500; font-size: .78rem;
+  color: var(--accent); text-decoration: none; }
+/* '모두 읽음' 은 링크가 아니라 동작이라 button 이다. 모양만 링크에 맞춘다 */
+.notif-head-action { background: none; border: none; padding: 0;
+  font: inherit; font-weight: 500; font-size: .78rem; color: var(--ink-soft);
+  cursor: pointer; text-decoration: underline; }
+.notif-head-action:hover { color: var(--accent); }
+.notif-more:hover { text-decoration: underline; }
+/* 패널 안에서 알림 하나를 읽음/삭제하는 작은 버튼들 */
+.notif-item { position: relative; }
+.notif-actions { display: flex; gap: 6px; margin-top: 2px; }
+.notif-actions button { background: none; border: none; padding: 0; cursor: pointer;
+  font-size: .72rem; color: var(--ink-soft); text-decoration: underline; }
+.notif-actions button:hover { color: var(--accent); }
+.notif-panel ul { list-style: none; margin: 0; padding: 0; }
+.notif-item { padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: .85rem; display: flex; flex-direction: column; gap: 2px; }
+.notif-item:last-child { border-bottom: none; }
+.notif-item a { color: var(--ink); text-decoration: none; }
+.notif-item a:hover { color: var(--accent); }
+.notif-item.unread { background: var(--accent-soft); }
+.notif-time { color: var(--ink-soft); font-size: .75rem; }
+.notif-empty { padding: 24px; text-align: center; color: var(--ink-soft); font-size: .85rem; }
+
+.toast-box { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+.toast {
+  background: var(--ink); color: var(--paper);
+  padding: 12px 16px; border-radius: 10px; font-size: .88rem; max-width: 320px;
+  opacity: 0; transform: translateY(8px); transition: opacity .3s, transform .3s;
+}
+.toast.show { opacity: 1; transform: none; }
+
+/* ── 확인 대화상자 ────────────────────────────────────────
+   네이티브 confirm() 을 대신한다 (ui.js). <dialog> 를 쓰므로 포커스 가둠과 Esc 는 브라우저가 맡고,
+   여기서는 모양만 정한다. ::backdrop 도 테마 토큰을 따라간다. */
+.confirm-dialog {
+  border: 1px solid var(--line); border-radius: 12px; padding: 0;
+  background: var(--card); color: var(--ink);
+  max-width: min(26rem, calc(100vw - 32px));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .18);
+}
+.confirm-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.confirm-dialog form { padding: 22px 24px 18px; margin: 0; }
+.confirm-message { margin: 0 0 18px; font-size: .95rem; line-height: 1.6; white-space: pre-line; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── 토스트 종류 ──────────────────────────────────────────
+   오류는 성공과 같은 모양이면 지나친다. 색으로만 구분하지 않도록 왼쪽에 굵은 띠를 준다
+   (색각 이상이 있어도 구분되고, 흑백 화면에서도 남는다). */
+.toast-error { border-left: 4px solid var(--danger); }
+.toast-success { border-left: 4px solid var(--ok); }
+
+/* ── 복사 버튼 ────────────────────────────────────────────
+   초대 코드·구독 주소처럼 '옮겨 적는' 값 옆에 둔다. 눈으로 읽어 손으로 옮기는 일을 없앤다. */
+.copy-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.copy-row .feed-url { flex: 1; min-width: 12rem; }
+.copy-btn { white-space: nowrap; }
+
+
+/* ── 아바타 ───────────────────────────────────────────────
+   사진이 없는 사람이 훨씬 많다. 그래서 기본 모습(닉네임 첫 글자)이 초라해 보이지 않아야 한다.
+   원형 + 은은한 배경으로 두 경우가 같은 자리를 차지하게 한다. */
+.avatar {
+  display: inline-grid; place-items: center; flex-shrink: 0;
+  border-radius: 50%; overflow: hidden;
+  background: var(--accent-soft); color: var(--accent);
+  font-weight: 700; line-height: 1; user-select: none;
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-sm { width: 24px; height: 24px; font-size: .72rem; }
+.avatar-md { width: 40px; height: 40px; font-size: 1rem; }
+.avatar-lg { width: 72px; height: 72px; font-size: 1.6rem; }
+
+/* 마이페이지의 사진 바꾸기 줄 */
+.profile-image-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.profile-image-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }

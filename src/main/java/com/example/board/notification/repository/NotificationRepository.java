@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +36,36 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     /** 회원 탈퇴 시 개인 데이터 정리 */
     void deleteByRecipient_Id(Long recipientId);
+
+    /**
+     * 여러 사람에게 같은 알림을 <b>한 문장으로</b> 넣는다.
+     *
+     * <p>전체 공개 플랜 하나가 회원 수만큼 행을 만든다. 예전에는 그것을 한 건씩 save() 했다 -
+     * 회원이 만 명이면 만 번의 insert 다. 내용이 모두 같으므로 회원 목록을 그대로 select 해
+     * 한 번에 넣는다.</p>
+     *
+     * <p>JPQL 이 아니라 네이티브인 이유: 이 엔티티는 id 를 IDENTITY 로 받는데,
+     * Hibernate 는 IDENTITY 인 엔티티의 벌크 insert 를 막는다(생성된 id 를 돌려줄 수 없어서).
+     * 여기서는 id 가 필요하지 않다 - 실시간 전송 대상은 접속 중인 소수뿐이고,
+     * 그 사람들 것만 뒤에 다시 조회한다.</p>
+     *
+     * <p>created_at 을 직접 넣는 것도 같은 이유다. @CreatedDate 는 엔티티를 거칠 때만 채워진다.</p>
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(value = """
+            insert into notification (recipient_id, message, url, read_flag, created_at)
+            select m.id, :message, :url, false, :createdAt
+              from member m
+             where m.id in (:recipientIds)
+            """, nativeQuery = true)
+    int insertForAll(@Param("recipientIds") Collection<Long> recipientIds,
+                     @Param("message") String message,
+                     @Param("url") String url,
+                     @Param("createdAt") LocalDateTime createdAt);
+
+    /** 방금 넣은 것 중 접속 중인 사람들 것만 - 실시간으로 밀어 줄 대상이다 */
+    List<Notification> findByRecipient_IdInAndCreatedAt(Collection<Long> recipientIds,
+                                                        LocalDateTime createdAt);
 
     /**
      * 오래된 알림 정리.

@@ -60,7 +60,7 @@
         </th:block>
     </div>
 
-    <div th:replace="~{fragments/comments :: commentSection(${comments}, '/posts/' + ${post.id} + '/comments')}"></div>
+    <div th:replace="~{fragments/comments :: commentSection('/posts/' + ${post.id} + '/comments', '/posts/' + ${post.id})}"></div>
 </main>
 </body>
 </html>

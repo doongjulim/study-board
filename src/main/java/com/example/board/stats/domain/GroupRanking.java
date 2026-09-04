@@ -36,7 +36,7 @@ public record GroupRanking(List<Row> rows, long topMinutes) {
                 rank = index + 1; // 건너뛴 순위 - 공동 2등 다음은 4등이다
                 previousMinutes = time.minutes();
             }
-            rows.add(new Row(rank, time.memberId(), time.nickname(), time.minutes(),
+            rows.add(new Row(rank, time.memberId(), time.nickname(), time.hasProfileImage(), time.minutes(),
                     time.memberId().equals(viewerId), time.metGoalOver(days),
                     share(time.minutes(), top)));
         }
@@ -66,7 +66,7 @@ public record GroupRanking(List<Row> rows, long topMinutes) {
      * @param goalMet 기간 목표를 채웠는가
      * @param share   1등 대비 비율(%) - CSS 막대 너비
      */
-    public record Row(int rank, Long memberId, String nickname, long minutes,
+    public record Row(int rank, Long memberId, String nickname, boolean hasProfileImage, long minutes,
                       boolean me, boolean goalMet, int share) {
 
         /** "3시간 20분" 처럼 읽히게 - 분 단위 숫자는 한눈에 안 들어온다 */

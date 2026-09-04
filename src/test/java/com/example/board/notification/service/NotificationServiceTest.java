@@ -14,8 +14,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,9 +31,25 @@ import static org.mockito.BDDMockito.*;
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
 
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 3, 10, 9, 0);
+
+    /**
+     * fanout 이 쓰는 시각을 고정한다.
+     *
+     * <p>Clock 을 스텁으로 두고 필요한 테스트에서만 부른다 - 모든 테스트에 고정 시계를 주면
+     * 쓰지 않는 스텁이 되어 Mockito 가 잡아낸다. LocalDateTime.now(clock) 은 instant() 와
+     * getZone() 을 함께 부르므로 둘 다 준다.</p>
+     */
+    private void fixClock() {
+        given(clock.instant()).willReturn(NOW.toInstant(ZoneOffset.UTC));
+        given(clock.getZone()).willReturn(ZoneOffset.UTC);
+    }
+
     @Mock NotificationRepository notificationRepository;
     @Mock MemberRepository memberRepository;
     @Mock SseEmitterRegistry emitterRegistry;
+    /** fanout 이 "방금 넣은 것" 을 되찾는 표지로 쓰는 시각 */
+    @Mock Clock clock;
 
     @InjectMocks NotificationService notificationService;
 
@@ -105,36 +125,71 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("notifyAllExcept - 발신자를 제외한 모든 회원에게 알림을 만든다")
+    @DisplayName("notifyAllExcept - 발신자를 뺀 사람들을 한 문장으로 넣는다 (한 건씩 insert 하지 않는다)")
     void notifyAllExcept() {
+        fixClock();
         given(memberRepository.findIdsAllowingPlanSharedNotification()).willReturn(List.of(1L, 2L, 3L));
-        given(memberRepository.getReferenceById(1L)).willReturn(memberWithId(1L));
-        given(memberRepository.getReferenceById(3L)).willReturn(memberWithId(3L));
-        given(notificationRepository.save(any(Notification.class)))
-                .willAnswer(inv -> inv.getArgument(0));
+        given(emitterRegistry.connectedMemberIds()).willReturn(Set.of());
 
         notificationService.notifyAllExcept(2L, "공유 알림", "/plans/shared");
 
-        then(notificationRepository).should(times(2)).save(any(Notification.class));
-        then(emitterRegistry).should().send(eq(1L), anyString(), anyString(), any());
-        then(emitterRegistry).should().send(eq(3L), anyString(), anyString(), any());
-        then(emitterRegistry).should(never()).send(eq(2L), anyString(), anyString(), any());
+        // 회원이 만 명이면 만 번의 insert 가 되던 자리다
+        then(notificationRepository).should()
+                .insertForAll(eq(List.of(1L, 3L)), eq("공유 알림"), eq("/plans/shared"), eq(NOW));
+        then(notificationRepository).should(never()).save(any(Notification.class));
     }
 
     @Test
-    @DisplayName("notifyMembersExcept - 지정한 사람 중 발신자만 빼고 알림을 만든다 (그룹 공개)")
+    @DisplayName("접속 중인 사람에게만 실시간으로 밀어 준다 - 저장은 모두, 전송은 몇 명")
+    void notifyAllExcept_pushesToConnectedOnly() {
+        fixClock();
+        given(memberRepository.findIdsAllowingPlanSharedNotification()).willReturn(List.of(1L, 2L, 3L));
+        given(emitterRegistry.connectedMemberIds()).willReturn(Set.of(3L));
+        Notification pushed = notificationWithRecipient(3L);
+        given(notificationRepository.findByRecipient_IdInAndCreatedAt(List.of(3L), NOW))
+                .willReturn(List.of(pushed));
+
+        notificationService.notifyAllExcept(2L, "공유 알림", "/plans/shared");
+
+        then(emitterRegistry).should().send(eq(3L), anyString(), anyString(), any());
+        then(emitterRegistry).should(never()).send(eq(1L), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("접속자가 없으면 되찾는 조회조차 하지 않는다")
+    void notifyAllExcept_noConnected_skipsLookup() {
+        fixClock();
+        given(memberRepository.findIdsAllowingPlanSharedNotification()).willReturn(List.of(1L, 2L));
+        given(emitterRegistry.connectedMemberIds()).willReturn(Set.of());
+
+        notificationService.notifyAllExcept(2L, "공유 알림", "/plans/shared");
+
+        then(notificationRepository).should(never())
+                .findByRecipient_IdInAndCreatedAt(any(), any());
+    }
+
+    @Test
+    @DisplayName("notifyMembersExcept - 지정한 사람 중 발신자만 빼고 넣는다 (그룹 공개)")
     void notifyMembersExcept() {
+        fixClock();
         given(memberRepository.findIdsAllowingPlanSharedNotificationIn(List.of(1L, 2L, 3L)))
                 .willReturn(List.of(1L, 2L, 3L));
-        given(memberRepository.getReferenceById(1L)).willReturn(memberWithId(1L));
-        given(memberRepository.getReferenceById(3L)).willReturn(memberWithId(3L));
-        given(notificationRepository.save(any(Notification.class)))
-                .willAnswer(inv -> inv.getArgument(0));
+        given(emitterRegistry.connectedMemberIds()).willReturn(Set.of());
 
         notificationService.notifyMembersExcept(List.of(1L, 2L, 3L), 2L, "공유 알림", "/plans/shared");
 
-        then(notificationRepository).should(times(2)).save(any(Notification.class));
-        then(emitterRegistry).should(never()).send(eq(2L), anyString(), anyString(), any());
+        then(notificationRepository).should()
+                .insertForAll(eq(List.of(1L, 3L)), anyString(), anyString(), eq(NOW));
+    }
+
+    @Test
+    @DisplayName("발신자를 빼고 나면 아무도 안 남는 경우 - 아무것도 넣지 않는다")
+    void notifyAllExcept_onlySender() {
+        given(memberRepository.findIdsAllowingPlanSharedNotification()).willReturn(List.of(2L));
+
+        notificationService.notifyAllExcept(2L, "공유 알림", "/plans/shared");
+
+        then(notificationRepository).should(never()).insertForAll(any(), anyString(), anyString(), any());
     }
 
     @Test
@@ -143,7 +198,14 @@ class NotificationServiceTest {
         notificationService.notifyMembersExcept(List.of(), 2L, "공유 알림", "/plans/shared");
 
         then(memberRepository).should(never()).findIdsAllowingPlanSharedNotificationIn(any());
-        then(notificationRepository).should(never()).save(any());
+        then(notificationRepository).should(never()).insertForAll(any(), anyString(), anyString(), any());
+    }
+
+    /** 전송 대상 확인용 - 수신자 id 만 있으면 된다 */
+    private Notification notificationWithRecipient(long recipientId) {
+        Notification notification = new Notification(memberWithId(recipientId), "공유 알림", "/plans/shared");
+        ReflectionTestUtils.setField(notification, "id", 99L);
+        return notification;
     }
 
     @Test

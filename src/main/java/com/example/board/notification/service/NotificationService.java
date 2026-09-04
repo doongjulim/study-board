@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +33,8 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final MemberRepository memberRepository;
     private final SseEmitterRegistry emitterRegistry;
+    /** 저장 시각을 직접 넣어야 방금 넣은 것을 되찾을 수 있다 (아래 fanout 참고) */
+    private final Clock clock;
 
     /**
      * 특정 회원에게 알림을 저장하고, 접속 중이면 실시간 전송한다.
@@ -67,11 +71,38 @@ public class NotificationService {
                 exceptMemberId, message, url);
     }
 
-    /** 공유 알림 발송 대상은 이미 설정으로 걸러진 id 목록이다 - 여기서는 발신자만 뺀다 */
+    /**
+     * 공유 알림 발송 대상은 이미 설정으로 걸러진 id 목록이다 - 여기서는 발신자만 뺀다.
+     *
+     * <p><b>저장과 전송을 나눈다.</b> 예전에는 한 사람씩 save() 하고 곧바로 전송했다 -
+     * 회원이 만 명이면 만 번의 insert 다. 그런데 내용이 모두 같고, 실시간으로 밀어 줄 대상은
+     * <b>지금 접속 중인 몇 명</b>뿐이다. 그래서 저장은 한 문장으로 끝내고,
+     * 전송은 접속자 것만 다시 조회해서 보낸다.</p>
+     *
+     * <p>시각을 직접 만들어 넣는 이유가 여기 있다 - 그 시각이 곧 "방금 넣은 것" 의 표지가 된다.
+     * 마이크로초로 잘라 두는 것은 DB 의 timestamp(6) 를 왕복하면서 나노초가 잘려
+     * 되찾을 때 어긋나는 것을 막기 위해서다.</p>
+     */
     private void fanout(List<Long> recipientIds, Long exceptMemberId, String message, String url) {
-        recipientIds.stream()
+        List<Long> targets = recipientIds.stream()
                 .filter(memberId -> !memberId.equals(exceptMemberId))
-                .forEach(memberId -> send(memberRepository.getReferenceById(memberId), message, url));
+                .toList();
+        if (targets.isEmpty()) {
+            return;
+        }
+
+        LocalDateTime createdAt = LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
+        notificationRepository.insertForAll(targets, message, url, createdAt);
+
+        List<Long> connected = targets.stream()
+                .filter(emitterRegistry.connectedMemberIds()::contains)
+                .toList();
+        if (connected.isEmpty()) {
+            return;
+        }
+        notificationRepository.findByRecipient_IdInAndCreatedAt(connected, createdAt)
+                .forEach(saved -> emitterRegistry.send(saved.getRecipient().getId(), EVENT_NAME,
+                        String.valueOf(saved.getId()), NotificationResponse.from(saved)));
     }
 
     private void send(Member recipient, String message, String url) {

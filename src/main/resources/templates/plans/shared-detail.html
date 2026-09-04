@@ -24,7 +24,7 @@
         </div>
     </div>
 
-    <div th:replace="~{fragments/comments :: commentSection(${comments}, '/plans/' + ${plan.id} + '/comments')}"></div>
+    <div th:replace="~{fragments/comments :: commentSection('/plans/' + ${plan.id} + '/comments', '/plans/shared/' + ${plan.id})}"></div>
 
     <div class="actions">
         <a th:href="@{/plans/shared}" class="btn">목록으로</a>

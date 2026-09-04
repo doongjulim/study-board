@@ -2,6 +2,8 @@ package com.example.board.member.service;
 
 import com.example.board.auth.exception.LoginFailedException;
 import com.example.board.auth.service.RefreshTokenService;
+import com.example.board.file.store.FileStore;
+import com.example.board.file.store.TransactionalFileRemover;
 import com.example.board.member.domain.Member;
 import com.example.board.member.dto.PasswordChangeForm;
 import com.example.board.member.dto.ProfileForm;
@@ -40,6 +42,9 @@ class MemberServiceTest {
     @Mock MemberRepository memberRepository;
     @Mock RefreshTokenService refreshTokenService;
     @Mock ApplicationEventPublisher eventPublisher;
+    /** 프로필 사진 저장·삭제 */
+    @Mock FileStore fileStore;
+    @Mock TransactionalFileRemover fileRemover;
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -49,7 +54,7 @@ class MemberServiceTest {
     void setUp() {
         Clock fixed = Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
         memberService = new MemberService(memberRepository, passwordEncoder,
-                refreshTokenService, eventPublisher, fixed);
+                refreshTokenService, eventPublisher, fileStore, fileRemover, fixed);
     }
 
     private SignupForm signupForm() {
@@ -326,4 +331,95 @@ class MemberServiceTest {
             then(eventPublisher).shouldHaveNoInteractions();
         }
     }
+
+    // ── 소셜 로그인 ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("처음 온 소셜 계정이면 만들고, 제공자 id 로 다시 찾는다")
+    void findOrCreateOAuthMember_createsOnce() {
+        given(memberRepository.findByOauthProviderAndOauthProviderId("google", "1234"))
+                .willReturn(Optional.empty());
+        given(memberRepository.existsByNickname("동주")).willReturn(false);
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Member created = memberService.findOrCreateOAuthMember("google", "1234", "dj@example.com", "동주");
+
+        assertThat(created.isSocialAccount()).isTrue();
+        assertThat(created.getLoginId()).isEqualTo("google_1234");
+        assertThat(created.getNickname()).isEqualTo("동주");
+    }
+
+    @Test
+    @DisplayName("이미 있는 소셜 계정이면 새로 만들지 않는다")
+    void findOrCreateOAuthMember_reusesExisting() {
+        Member existing = Member.ofOAuth("google_1234", "동주", "dj@example.com", "google", "1234");
+        given(memberRepository.findByOauthProviderAndOauthProviderId("google", "1234"))
+                .willReturn(Optional.of(existing));
+
+        Member found = memberService.findOrCreateOAuthMember("google", "1234", "dj@example.com", "동주");
+
+        assertThat(found).isSameAs(existing);
+        then(memberRepository).should(never()).save(any(Member.class));
+    }
+
+    @Test
+    @DisplayName("같은 id 라도 제공자가 다르면 다른 사람이다")
+    void findOrCreateOAuthMember_providerIsPartOfIdentity() {
+        given(memberRepository.findByOauthProviderAndOauthProviderId("kakao", "1234"))
+                .willReturn(Optional.empty());
+        given(memberRepository.existsByNickname("동주")).willReturn(false);
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Member created = memberService.findOrCreateOAuthMember("kakao", "1234", null, "동주");
+
+        assertThat(created.getLoginId()).isEqualTo("kakao_1234");
+    }
+
+    @Test
+    @DisplayName("닉네임이 이미 쓰이면 숫자를 붙여 비켜 간다 - 소셜 로그인은 그 자리에서 고칠 기회가 없다")
+    void findOrCreateOAuthMember_avoidsNicknameClash() {
+        given(memberRepository.findByOauthProviderAndOauthProviderId("google", "1234"))
+                .willReturn(Optional.empty());
+        given(memberRepository.existsByNickname("동주")).willReturn(true);
+        given(memberRepository.existsByNickname("동주2")).willReturn(false);
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Member created = memberService.findOrCreateOAuthMember("google", "1234", null, "동주");
+
+        assertThat(created.getNickname()).isEqualTo("동주2");
+    }
+
+    @Test
+    @DisplayName("이메일을 주지 않는 제공자도 있다 - 그래도 계정은 만들어진다")
+    void findOrCreateOAuthMember_withoutEmail() {
+        given(memberRepository.findByOauthProviderAndOauthProviderId("kakao", "9"))
+                .willReturn(Optional.empty());
+        given(memberRepository.existsByNickname("회원")).willReturn(false);
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Member created = memberService.findOrCreateOAuthMember("kakao", "9", null, null);
+
+        assertThat(created.getEmail()).isNull();
+        // 이메일이 없으면 인증이라는 개념 자체가 없다
+        assertThat(created.needsEmailVerification()).isFalse();
+    }
+
+    @Test
+    @DisplayName("제공자가 확인해 준 이메일은 인증된 것으로 본다 - 로그인 자체가 소유 증명이다")
+    void oauthEmailIsVerified() {
+        Member created = Member.ofOAuth("google_1", "동주", "dj@example.com", "google", "1");
+
+        assertThat(created.isEmailVerified()).isTrue();
+        assertThat(created.needsEmailVerification()).isFalse();
+    }
+
+    @Test
+    @DisplayName("소셜 계정의 비밀번호는 어떤 입력과도 맞지 않는다")
+    void socialPasswordIsUnusable() {
+        Member created = Member.ofOAuth("google_1", "동주", "dj@example.com", "google", "1");
+
+        assertThat(passwordEncoder.matches("", created.getPassword())).isFalse();
+        assertThat(passwordEncoder.matches("!social", created.getPassword())).isFalse();
+    }
+
 }

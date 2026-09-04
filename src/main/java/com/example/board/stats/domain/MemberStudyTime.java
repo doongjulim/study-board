@@ -5,9 +5,11 @@ package com.example.board.stats.domain;
  *
  * <p>엔티티가 아니라 값으로 받는 이유는, 순위 계산이 DB 없이 검증되어야 하기 때문이다.</p>
  *
- * @param goalMinutes 하루 목표 학습 시간(분). 0 이면 스스로 목표를 끈 사람이다
+ * @param goalMinutes     하루 목표 학습 시간(분). 0 이면 스스로 목표를 끈 사람이다
+ * @param hasProfileImage 순위표에 얼굴을 함께 그릴지. 없는 사람에게 이미지 요청을 보내지 않기 위해 함께 든다
  */
-public record MemberStudyTime(Long memberId, String nickname, long minutes, int goalMinutes) {
+public record MemberStudyTime(Long memberId, String nickname, long minutes, int goalMinutes,
+                              boolean hasProfileImage) {
 
     /** 목표를 둔 사람인지 - 0 은 목표 없음이라 달성 판정의 대상이 아니다 */
     public boolean hasGoal() {

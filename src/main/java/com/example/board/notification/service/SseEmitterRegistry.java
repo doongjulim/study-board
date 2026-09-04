@@ -6,8 +6,10 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /** 접속 중인 SSE 클라이언트를 회원별로 관리하고, 특정 회원에게 이벤트를 전송한다 */
 @Component
@@ -63,6 +65,19 @@ public class SseEmitterRegistry {
                 emitters.remove(emitterId); // 끊어진 클라이언트 정리
             }
         });
+    }
+
+    /**
+     * 지금 접속 중인 회원 id.
+     *
+     * <p>전체 공개 알림은 회원 수만큼 행을 만들지만, <b>실시간으로 밀어 줄 대상은 접속 중인 몇 명</b>뿐이다.
+     * 저장은 한 번에 하고 전송은 이 목록에만 하기 위해 필요하다.</p>
+     */
+    public Set<Long> connectedMemberIds() {
+        return emittersByMember.entrySet().stream()
+                .filter(entry -> !entry.getValue().isEmpty())
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     int activeCount() {

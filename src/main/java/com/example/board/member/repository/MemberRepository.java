@@ -44,4 +44,14 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     boolean existsByNickname(String nickname);
 
     boolean existsByEmail(String email);
+
+    /**
+     * 소셜 로그인 회원 조회.
+     *
+     * <p>이메일이 아니라 <b>제공자 + 제공자가 준 id</b> 로 찾는다. 이메일은 바뀌고,
+     * 제공자가 주지 않을 수도 있으며(카카오는 동의 항목이다), 무엇보다
+     * "같은 이메일이면 같은 사람" 으로 이으면 남의 계정을 가져가는 길이 열린다.</p>
+     */
+    Optional<Member> findByOauthProviderAndOauthProviderId(String oauthProvider, String oauthProviderId);
+
 }

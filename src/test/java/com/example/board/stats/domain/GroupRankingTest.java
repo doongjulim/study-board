@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.*;
 class GroupRankingTest {
 
     private MemberStudyTime time(long id, String nickname, long minutes, int goal) {
-        return new MemberStudyTime(id, nickname, minutes, goal);
+        return new MemberStudyTime(id, nickname, minutes, goal, false);
     }
 
     @Test

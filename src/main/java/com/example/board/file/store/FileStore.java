@@ -73,6 +73,21 @@ public class FileStore {
         return result;
     }
 
+    /**
+     * 이미지만 받는다 (프로필 사진).
+     *
+     * <p>일반 첨부와 달리 확장자 화이트리스트 전체를 열지 않는다 - 프로필 자리에 zip 이나 hwp 가
+     * 올라올 이유가 없고, 좁게 받을수록 판단할 것이 줄어든다.
+     * 내용 검사는 {@link #storeFile} 이 이미 하므로 여기서는 확장자만 좁힌다.</p>
+     */
+    public AttachedFile storeImage(MultipartFile multipartFile) throws IOException {
+        String ext = extractExt(multipartFile.getOriginalFilename()).toLowerCase(Locale.ROOT);
+        if (!IMAGE_EXTENSIONS.contains(ext)) {
+            throw new UnsupportedFileTypeException(multipartFile.getOriginalFilename());
+        }
+        return storeFile(multipartFile);
+    }
+
     public AttachedFile storeFile(MultipartFile multipartFile) throws IOException {
         String originalName = multipartFile.getOriginalFilename();
         String ext = extractExt(originalName).toLowerCase(Locale.ROOT);

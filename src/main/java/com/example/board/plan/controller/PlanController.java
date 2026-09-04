@@ -2,6 +2,7 @@ package com.example.board.plan.controller;
 
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
+import com.example.board.comment.dto.CommentThread;
 import com.example.board.comment.service.CommentService;
 import com.example.board.common.web.PageBlock;
 import com.example.board.dday.service.DdayService;
@@ -44,6 +45,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @RequestMapping("/plans")
 public class PlanController {
+
+    /** 댓글 한 페이지에 담는 스레드 수 */
+    private static final int COMMENTS_PER_PAGE = 20;
 
     private final PlanService planService;
     private final CommentService commentService;
@@ -189,6 +193,7 @@ public class PlanController {
     /** 공유 플랜 상세 + 응원 댓글 */
     @GetMapping("/shared/{id}")
     public String sharedDetail(@PathVariable Long id,
+                               @RequestParam(name = "cpage", defaultValue = "0") int commentPage,
                                @AuthenticationPrincipal MemberPrincipal principal,
                                Model model) {
         Plan plan = planService.findById(id);
@@ -197,7 +202,11 @@ public class PlanController {
             throw new IllegalArgumentException("공유된 플랜이 아닙니다. id=" + id);
         }
         model.addAttribute("plan", plan);
-        model.addAttribute("comments", commentService.findForPlan(id));
+        Page<CommentThread> comments =
+                commentService.findForPlan(id, PageRequest.of(Math.max(commentPage, 0), COMMENTS_PER_PAGE));
+        model.addAttribute("comments", comments);
+        model.addAttribute("commentCount", commentService.countForPlan(id));
+        model.addAttribute("commentPageBlock", PageBlock.of(comments));
         model.addAttribute("commentForm", new CommentForm());
         return "plans/shared-detail";
     }

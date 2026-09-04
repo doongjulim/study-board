@@ -21,6 +21,17 @@ spring:
     # db/migration/h2 처럼 안에 두면 공통 위치만으로도 두 벤더의 V11 이 함께 잡혀 버전이 중복된다.
     locations: classpath:db/migration,classpath:db/vendor/{vendor}
 
+  # 소셜 로그인 설정은 application-oauth.yml 에 있다.
+  #
+  # 여기 두지 않는 이유: client-id 를 빈 값으로 선언하면 Spring Boot 가 부팅 단계에서
+  # "Client id must not be empty" 로 실패한다. 자격증명이 없을 때 앱이 아예 뜨지 않는 것보다,
+  # 쓸 사람만 프로필을 켜는 편이 낫다.
+  #
+  #   SPRING_PROFILES_ACTIVE=oauth ./gradlew bootRun
+  #
+  # 프로필을 켜지 않으면 ClientRegistrationRepository 빈이 없고,
+  # SecurityConfig 가 oauth2Login 을 붙이지 않으며, 로그인 화면에 소셜 버튼도 나오지 않는다.
+
   h2:
     console:
       # 기본값을 꺼 둔다. 켜져 있으면 DB 를 브라우저에서 그대로 열 수 있으므로,

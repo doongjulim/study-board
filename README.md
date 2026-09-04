@@ -38,8 +38,15 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 - **회고**: 하루 한 줄 회고와 주간 회고. 숫자만으로는 알 수 없는 "왜 그랬는지" 를 남기고,
   주간 인증글 초안에 그대로 실린다
 - **캘린더 연동**: 구독 주소(iCal)를 구글 캘린더에 등록하면 계획이 자동으로 따라온다. CSV 로 내려받아 엑셀에서 열 수도 있다
-- **댓글**: 게시글·공유 플랜 상세에 댓글/응원 (본인 댓글만 수정·삭제, 대상 삭제 시 함께 삭제).
-  고친 댓글에는 '수정됨' 이 붙는다 - 남이 읽은 뒤에 내용이 바뀔 수 있다면 그건 읽는 사람의 정보다
+- **댓글·대댓글**: 게시글·공유 플랜 상세에 댓글/응원. **답글은 1단계까지**(답글에 답글을 달면 원댓글에 붙는다) —
+  깊이를 열면 화면이 오른쪽으로 계속 밀린다. 스레드 단위로 페이징하므로 페이지 경계에서 스레드가 잘리지 않는다.
+  본인 것만 수정·삭제할 수 있고, 고친 댓글에는 '수정됨' 이 붙는다 - 남이 읽은 뒤에 내용이 바뀔 수 있다면 그건 읽는 사람의 정보다
+- **프로필 사진**: 댓글·그룹 멤버·순위표에 얼굴이 함께 보인다. 없으면 닉네임 첫 글자로 그리고 **요청을 보내지 않는다**
+  (대부분 사진이 없는데 매번 404 를 받으면 목록 하나에 요청이 수십 번 나간다)
+- **이메일 인증**: 주소가 실제로 닿는지 확인한다. 오타 난 주소는 비밀번호를 잊은 순간에야 문제가 되는데 그때는 고칠 방법이 없다.
+  주소를 바꾸면 인증도 처음으로 돌아간다. 확인 링크는 로그인 없이 열린다(메일은 다른 기기에서 열린다)
+- **소셜 로그인(선택)**: 구글·카카오. 자격증명이 없으면 기능 자체가 붙지 않고 로그인 화면에도 나오지 않는다.
+  성공하면 평소와 같은 JWT 쿠키를 발급하므로 그 이후의 코드는 어디로 들어왔는지 몰라도 된다
 - **소유권**: 본인 글/플랜/댓글만 수정·삭제 가능 (타인 접근 시 403)
 - **사용자별 실시간 알림**: SSE 기반. 리마인더는 본인에게, 댓글은 대상 글/플랜 작성자에게 (셀프 댓글 제외),
   플랜 공유는 **범위에 따라** 전체 또는 같은 그룹 사람에게만.
@@ -70,6 +77,37 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 | ![인증글](docs/images/post.png) | ![D-Day](docs/images/dday.png) |
 | 한 주 학습 기록을 초안으로 자동 생성 | 목표일 카운트다운 (D-n / D-DAY / D+n) |
 
+## 소셜 로그인 켜기 (선택)
+
+기본은 꺼져 있다. 자격증명이 없으면 `ClientRegistrationRepository` 빈이 만들어지지 않고,
+`SecurityConfig` 가 `oauth2Login` 을 아예 붙이지 않으며, 로그인 화면에도 버튼이 나오지 않는다.
+
+```bash
+SPRING_PROFILES_ACTIVE=oauth \
+GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... \
+KAKAO_CLIENT_ID=...  KAKAO_CLIENT_SECRET=... \
+./gradlew bootRun
+```
+
+각 콘솔에 등록할 리디렉션 주소:
+
+| 제공자 | 콘솔 | Redirect URI |
+|---|---|---|
+| 구글 | console.cloud.google.com | `{app.base-url}/login/oauth2/code/google` |
+| 카카오 | developers.kakao.com | `{app.base-url}/login/oauth2/code/kakao` |
+
+둘 중 하나만 쓸 거라면 `application-oauth.yml` 에서 나머지 `registration` 블록을 지우면 된다.
+카카오는 이메일이 동의 항목이라, 사용자가 거부하면 이메일 없는 계정으로 만들어진다.
+
+## 검색 성능 (PostgreSQL)
+
+검색은 `like '%키워드%'` 라 앞 와일드카드 때문에 B-tree 를 못 쓴다.
+흔한 처방인 전문검색(`to_tsvector`)을 쓰지 <b>않는</b> 이유는 본문이 한국어이기 때문이다 —
+기본 설정은 형태소를 모르고 공백으로만 잘라, "코딩테스트" 를 "코테" 로 찾을 수 없게 된다(지금보다 나빠진다).
+
+대신 `pg_trgm` 의 GIN 인덱스를 둔다(`db/vendor/postgresql/V28`). **쿼리를 그대로 둔 채** 가속하므로
+애플리케이션 코드는 한 줄도 바뀌지 않는다. H2 는 로컬 개발용이라 인덱스 없이 순차 검색으로 충분하다.
+
 ## 정기 정리 작업
 
 새벽에 몰아서 돈다. 지우는 규칙은 각 스케줄러 안에 상수로 적혀 있다 -
@@ -79,6 +117,7 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 |---|---|
 | 04:00 | 만료된 리프레시 토큰 정리 |
 | 04:10 | 만료된 비밀번호 재설정 토큰 정리 |
+| 04:15 | 만료된 이메일 인증 토큰 정리 |
 | 04:20 | 오래된 알림 정리 (읽음 90일 / 그 밖 180일) |
 | 04:40 | 어느 글도 참조하지 않는 업로드 파일 정리 (24시간 유예) |
 
@@ -173,8 +212,11 @@ src/main/java/com/example/board
 
 src/main/resources
 ├── application.yml
-├── db/migration/      # Flyway (V1 init ~ V23 comment_updated_at)
-├── static/{css,js}
+├── db/migration/      # Flyway (V1 init ~ V27 member_oauth)
+├── db/vendor/{h2,postgresql}/  # DB 마다 문법이 갈리는 것만 (V11 부분 유니크, V28 검색 인덱스)
+├── application-oauth.yml   # 소셜 로그인 (프로필 oauth 를 켤 때만)
+├── static/css/        # tokens → components → layout → pages → responsive → a11y (순서가 곧 규칙)
+├── static/js/
 └── templates/{auth,posts,plans,fragments,error}
 ```
 

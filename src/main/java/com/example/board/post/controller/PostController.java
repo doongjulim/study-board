@@ -2,6 +2,7 @@ package com.example.board.post.controller;
 
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
+import com.example.board.comment.dto.CommentThread;
 import com.example.board.comment.service.CommentService;
 import com.example.board.common.markdown.MarkdownRenderer;
 import com.example.board.common.web.PageBlock;
@@ -38,6 +39,9 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 @RequestMapping("/posts")
 public class PostController {
+
+    /** 댓글 한 페이지에 담는 스레드 수 */
+    private static final int COMMENTS_PER_PAGE = 20;
 
     private final PostService postService;
     private final CommentService commentService;
@@ -128,6 +132,7 @@ public class PostController {
      */
     @GetMapping("/{id}")
     public String view(@PathVariable Long id,
+                       @RequestParam(name = "cpage", defaultValue = "0") int commentPage,
                        @AuthenticationPrincipal MemberPrincipal principal,
                        HttpServletRequest request,
                        HttpServletResponse response,
@@ -143,7 +148,13 @@ public class PostController {
         model.addAttribute("post", post);
         model.addAttribute("contentHtml", MarkdownRenderer.toSafeHtml(post.getContent()));
         model.addAttribute("liked", postService.hasLiked(id, viewerId));
-        model.addAttribute("comments", commentService.findForPost(id));
+        // 댓글은 스레드(원댓글+답글) 단위로 나눈다. 파라미터 이름을 cpage 로 둔 것은
+        // 게시글 목록의 page 와 섞이지 않게 하기 위해서다
+        Page<CommentThread> comments =
+                commentService.findForPost(id, PageRequest.of(Math.max(commentPage, 0), COMMENTS_PER_PAGE));
+        model.addAttribute("comments", comments);
+        model.addAttribute("commentCount", commentService.countForPost(id));
+        model.addAttribute("commentPageBlock", PageBlock.of(comments));
         model.addAttribute("commentForm", new CommentForm());
         return "posts/view";
     }

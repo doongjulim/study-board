@@ -1,0 +1,114 @@
+/*
+  tokens.css - 색·간격 토큰과 리셋. 가장 먼저 실린다.
+
+  색은 반드시 토큰으로 쓴다. 특히 accent·ok·danger 를 배경으로 깔 때 그 위의 글자는
+  --on-accent / --on-ok / --on-danger 를 쓴다 - 테마마다 배경 밝기가 뒤집히므로
+  #fff 를 직접 적으면 다크에서 읽히지 않는다.
+
+  다크 토큰은 한 벌만 적고 선택자 둘이 그 한 벌을 함께 쓴다. 값을 두 곳에 두었더니
+  한쪽만 고쳐져서, 토글로 켠 다크에서 배지가 읽히지 않는 일이 있었다.
+*/
+
+/*
+  board.css - 단일 스타일시트.
+
+  구역 순서 (검색용 표지: "── 이름 ──" 로 시작한다)
+    1. 토큰(:root) · 리셋 · 기본 타이포
+    2. 공통 컴포넌트: 버튼 / 표 / 페이지네이션 / 폼 / 플래시
+    3. 헤더 · 내비게이션 · 알림 · 토스트
+    4. 화면별: 플래너 / 통계 / D-Day / 마이페이지 / 랜딩 / 온보딩 / 대시보드 / 그룹 / 게시판 / 회고
+    5. 반응형 (720px · 480px)
+    6. 다크모드
+    7. 접근성
+
+  색은 반드시 토큰으로 쓴다. 특히 accent·ok·danger 를 배경으로 깔 때 그 위의 글자는
+  --on-accent / --on-ok / --on-danger 를 쓴다 - 테마마다 배경 밝기가 뒤집히므로
+  #fff 를 직접 적으면 다크에서 읽히지 않는다.
+*/
+:root {
+  --ink: #1f2a24;
+  --ink-soft: #5c6b62;
+  --paper: #fafaf7;
+  --card: #ffffff;
+  --line: #e3e6e0;
+  --accent: #2f6b4f;
+  --accent-soft: #eaf2ed;
+  --danger: #b0453b;
+  /* 달성·성공 표시. accent 와 구분되어야 "우리 색"과 "해냈다"가 섞이지 않는다 */
+  --ok: #2e7d32;
+  /*
+    accent·ok 를 배경으로 깔았을 때 그 위에 얹는 글자색.
+
+    테마마다 accent 의 밝기가 뒤집힌다(라이트는 짙은 녹색, 다크는 밝은 녹색). 글자색을
+    컴포넌트마다 하드코딩하면 accent 위에 글자를 얹는 컴포넌트가 늘 때마다 테마별 보정
+    규칙이 한 줄씩 따라 붙고, 언젠가 한쪽을 빠뜨린다. 실제로 .tag-owner 가 수동 다크모드에서
+    밝은 녹색 위 흰 글자로 남아 대비 2:1 로 읽히지 않았다. 색을 토큰으로 승격시켜 갈래를 없앤다.
+  */
+  --on-accent: #ffffff;
+  --on-ok: #ffffff;
+  --on-danger: #ffffff;
+  /* accent 의 '한 단계 더 진한' 상태 (버튼 hover). 다크에서는 반대로 한 단계 더 밝아진다 */
+  --accent-strong: #275a42;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.container { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+
+/* ── 다크모드 ────────────────────────────────────────────
+   토큰은 한 벌만 적고 그 한 벌을 두 선택자가 함께 쓴다.
+
+   - :root[data-theme="dark"]                                  → 사용자가 토글로 켠 다크
+   - @media (prefers-color-scheme: dark) :root:not([="light"]) → 시스템이 다크이고 수동 라이트가 아닐 때
+
+   값을 두 곳에 적어 두면 언젠가 한쪽만 고쳐진다. 실제로 --ok 와 accent 위 글자색 보정이
+   시스템 쪽에만 있고 토글 쪽에는 없어서, 토글로 켠 다크에서 '그룹장' 배지가 읽히지 않았다.
+   컴포넌트별 보정은 --on-accent / --on-ok 가 대신하므로 여기에는 값만 남는다. */
+:root[data-theme="dark"] {
+  --ink: #e6ebe7;
+  --ink-soft: #98a69d;
+  --paper: #141917;
+  --card: #1d2320;
+  --line: #313a34;
+  --accent: #69b48d;
+  --accent-soft: #25352c;
+  --danger: #e08379;
+  --ok: #62c17d;
+  /* 다크의 accent·ok 는 밝은 녹색이라 흰 글자로는 읽히지 않는다 */
+  --on-accent: #10150f;
+  --on-ok: #10150f;
+  --on-danger: #10150f;
+  --accent-strong: #8ac9a8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e6ebe7;
+    --ink-soft: #98a69d;
+    --paper: #141917;
+    --card: #1d2320;
+    --line: #313a34;
+    --accent: #69b48d;
+    --accent-soft: #25352c;
+    --danger: #e08379;
+    --ok: #62c17d;
+    --on-accent: #10150f;
+    --on-ok: #10150f;
+    --on-danger: #10150f;
+    --accent-strong: #8ac9a8;
+  }
+}
+
+/* 그림자는 색 토큰으로 표현되지 않아 테마별 규칙이 남는 유일한 자리다 */
+:root[data-theme="dark"] .notif-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .notif-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+}

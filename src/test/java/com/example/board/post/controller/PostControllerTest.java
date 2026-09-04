@@ -57,6 +57,13 @@ class PostControllerTest {
     @MockBean CommentService commentService;
     @MockBean WeeklyReportService weeklyReportService;
 
+    /** 상세 화면이 부르는 댓글 조회. 스레드가 없어도 화면은 그려져야 한다 */
+    private void stubEmptyComments() {
+        given(commentService.findForPost(anyLong(), any(Pageable.class)))
+                .willReturn(new PageImpl<>(List.of()));
+        given(commentService.countForPost(anyLong())).willReturn(0L);
+    }
+
     private Post postFixture() {
         return new Post("제목", "내용", new Member("tester1", "encoded-password", "작성자"));
     }
@@ -169,6 +176,7 @@ class PostControllerTest {
     @DisplayName("GET /posts/{id} - 상세 페이지가 200 을 반환한다")
     void viewDetail() throws Exception {
         given(postService.read(eq(1L), any(), anyBoolean())).willReturn(postFixture());
+        stubEmptyComments();
 
         mockMvc.perform(get("/posts/1"))
                 .andExpect(status().isOk())
@@ -181,6 +189,7 @@ class PostControllerTest {
     void detailSanitizesMarkdown() throws Exception {
         Post dangerous = new Post("제목", "**굵게**<script>alert(1)</script>", postFixture().getAuthor());
         given(postService.read(eq(2L), any(), anyBoolean())).willReturn(dangerous);
+        stubEmptyComments();
 
         mockMvc.perform(get("/posts/2"))
                 .andExpect(status().isOk())

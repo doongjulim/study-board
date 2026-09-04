@@ -4,6 +4,7 @@ import com.example.board.auth.AuthCookies;
 import com.example.board.auth.dto.LoginForm;
 import com.example.board.auth.exception.LoginFailedException;
 import com.example.board.auth.exception.TooManyLoginAttemptsException;
+import com.example.board.auth.oauth.SocialLoginProviders;
 import com.example.board.auth.service.LoginAttemptLimiter;
 import com.example.board.auth.service.TokenService;
 import com.example.board.member.domain.Member;
@@ -29,11 +30,14 @@ public class AuthController {
     private final TokenService tokenService;
     private final AuthCookies authCookies;
     private final LoginAttemptLimiter loginAttemptLimiter;
+    /** 설정된 소셜 로그인만 화면에 그린다 - 눌러도 오류가 나는 버튼은 없느니만 못하다 */
+    private final SocialLoginProviders socialLoginProviders;
 
     @GetMapping("/login")
     public String loginForm(@RequestParam(required = false) String redirect, Model model) {
         model.addAttribute("loginForm", new LoginForm());
         model.addAttribute("redirect", redirect);
+        model.addAttribute("socialProviders", socialLoginProviders.enabled());
         return "auth/login";
     }
 

@@ -1,0 +1,81 @@
+/*
+  layout.css - 뼈대. 헤더·내비게이션·하단 탭바.
+  components 뒤에 온다 - 헤더 안의 버튼이 공통 버튼 규칙을 덮어써야 하기 때문이다.
+*/
+
+header.site {
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+header.site .container {
+  padding: 18px 20px;
+  display: flex; align-items: baseline; gap: 12px;
+}
+header.site a { text-decoration: none; color: var(--ink); font-weight: 700; font-size: 1.15rem; }
+header.site span { color: var(--ink-soft); font-size: .85rem; }
+
+/* ── 상단 내비게이션 ─────────────────────────────────────── */
+header.site .container { align-items: center; }
+header.site .brand { text-decoration: none; color: var(--ink); font-weight: 700; font-size: 1.1rem; white-space: nowrap; }
+header.site .gnb { display: flex; gap: 2px; flex: 1; }
+header.site .gnb a {
+  font-weight: 500; font-size: .92rem; padding: 6px 12px; border-radius: 8px;
+  color: var(--ink-soft); text-decoration: none;
+}
+header.site .gnb a:hover { color: var(--accent); background: var(--accent-soft); }
+header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(--accent-soft); }
+
+/* ── 헤더 sticky + 추가 컴포넌트 ────────────────────────── */
+header.site {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+
+/* 헤더 우측 컨트롤 묶음 (알림 + 다크모드 버튼) */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* 다크모드 토글 버튼 */
+.theme-btn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  font-size: .95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  transition: border-color .15s, background .15s;
+}
+.theme-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+/* 테이블 가로 스크롤 래퍼 (min-width 는 table.board 정의 쪽에 있다) */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* 주간·월간 가로 스크롤 래퍼 */
+.scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* 읽기 전용 input */
+.input-readonly {
+  background: var(--line) !important;
+  color: var(--ink-soft) !important;
+  cursor: not-allowed;
+}
+
+/* ── 헤더 로그인 메뉴 ───────────────────────────── */
+.auth-menu { display: flex; align-items: center; gap: 8px; }
+.auth-menu .nickname { font-size: 14px; white-space: nowrap; }
+.inline-form { display: inline; margin: 0; }
+
+/* ── 모바일 하단 탭바 (좁은 화면에서만 보인다) ──── */
+.tabbar { display: none; }
