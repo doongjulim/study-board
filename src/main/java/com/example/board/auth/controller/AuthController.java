@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+
 @Controller
 @RequiredArgsConstructor
 public class AuthController {
@@ -33,11 +35,23 @@ public class AuthController {
     /** 설정된 소셜 로그인만 화면에 그린다 - 눌러도 오류가 나는 버튼은 없느니만 못하다 */
     private final SocialLoginProviders socialLoginProviders;
 
+    /**
+     * 로그인 화면이 쓰는 소셜 제공자 목록.
+     *
+     * <p>@ModelAttribute 로 두는 이유: 이 화면은 <b>네 자리</b>에서 그려진다 -
+     * 처음 열 때(GET), 입력값이 잘못됐을 때, 인증에 실패했을 때, 시도 제한에 걸렸을 때.
+     * 각 자리에서 따로 채우면 언젠가 한 곳을 빠뜨리고, 그 순간 화면이 500 으로 죽는다.
+     * 실제로 실패 경로 세 곳이 그렇게 비어 있었다(게시글 분류를 같은 방식으로 두는 것과 같은 이유다).</p>
+     */
+    @ModelAttribute("socialProviders")
+    public List<SocialLoginProviders.Provider> socialProviders() {
+        return socialLoginProviders.enabled();
+    }
+
     @GetMapping("/login")
     public String loginForm(@RequestParam(required = false) String redirect, Model model) {
         model.addAttribute("loginForm", new LoginForm());
         model.addAttribute("redirect", redirect);
-        model.addAttribute("socialProviders", socialLoginProviders.enabled());
         return "auth/login";
     }
 
