@@ -94,15 +94,6 @@ class NotificationControllerTest {
     }
 
     @Test
-    @DisplayName("POST /notifications/delete-all - 내 알림을 모두 지운다")
-    void deleteAll() throws Exception {
-        mockMvc.perform(post("/notifications/delete-all").with(memberAuth()).with(csrf()))
-                .andExpect(status().isOk());
-
-        then(notificationService).should().deleteAll(1L);
-    }
-
-    @Test
     @DisplayName("비로그인은 알림을 건드릴 수 없다")
     void requiresLogin() throws Exception {
         mockMvc.perform(post("/notifications/7/delete").with(csrf()))

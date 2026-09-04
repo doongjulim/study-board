@@ -168,9 +168,15 @@ header.site .gnb a.on { color: var(--accent); font-weight: 700; background: var(
   box-shadow: 0 8px 24px rgba(0, 0, 0, .12); z-index: 50;
 }
 .notif-head { padding: 10px 14px; font-weight: 700; font-size: .9rem;
-  border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
-.notif-more { margin-left: auto; font-weight: 500; font-size: .78rem;
+  border-bottom: 1px solid var(--line); display: flex; align-items: center;
+  justify-content: space-between; gap: 10px; }
+.notif-more { font-weight: 500; font-size: .78rem;
   color: var(--accent); text-decoration: none; }
+/* '모두 읽음' 은 링크가 아니라 동작이라 button 이다. 모양만 링크에 맞춘다 */
+.notif-head-action { background: none; border: none; padding: 0;
+  font: inherit; font-weight: 500; font-size: .78rem; color: var(--ink-soft);
+  cursor: pointer; text-decoration: underline; }
+.notif-head-action:hover { color: var(--accent); }
 .notif-more:hover { text-decoration: underline; }
 /* 패널 안에서 알림 하나를 읽음/삭제하는 작은 버튼들 */
 .notif-item { position: relative; }

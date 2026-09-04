@@ -66,9 +66,4 @@ public class NotificationController {
         notificationService.delete(principal.id(), id);
     }
 
-    /** 내 알림 모두 삭제 */
-    @PostMapping("/delete-all")
-    public void deleteAll(@AuthenticationPrincipal MemberPrincipal principal) {
-        notificationService.deleteAll(principal.id());
-    }
 }

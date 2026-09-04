@@ -45,6 +45,8 @@
                 <div id="notif-panel" class="notif-panel" hidden>
                     <div class="notif-head">
                         <span>알림</span>
+                        <!-- 하나씩 읽는 것과 별개로, 쌓인 것을 한 번에 비우는 길도 있어야 한다 -->
+                        <button type="button" id="notif-read-all" class="notif-head-action" hidden>모두 읽음</button>
                         <a class="notif-more" th:href="@{/notifications/all}">전체 보기</a>
                     </div>
                     <ul id="notif-list"></ul>

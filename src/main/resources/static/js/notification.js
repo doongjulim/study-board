@@ -14,6 +14,7 @@
     const badge = document.getElementById('notif-badge');
     const panel = document.getElementById('notif-panel');
     const list = document.getElementById('notif-list');
+    const readAllBtn = document.getElementById('notif-read-all');
     if (!bell) return;
 
     // 연결이 끊기면 브라우저가 자동으로 재접속하고, Last-Event-ID 로 놓친 알림을 이어 받는다
@@ -63,6 +64,8 @@
     function applyBadge(unreadCount) {
         badge.hidden = unreadCount === 0;
         badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        // 읽을 것이 없으면 '모두 읽음' 도 없다 - 눌러도 아무 일이 없는 버튼은 두지 않는다
+        if (readAllBtn) readAllBtn.hidden = unreadCount === 0;
         // 배지는 aria-hidden 이라, 개수는 버튼 이름에 실어야 화면을 보지 않는 사람에게 닿는다
         bell.setAttribute('aria-label',
             unreadCount === 0 ? '알림' : `알림 (읽지 않음 ${unreadCount}건)`);
@@ -123,6 +126,12 @@
 
         li.append(link, time, actions);
         return li;
+    }
+
+    if (readAllBtn) {
+        readAllBtn.addEventListener('click', async () => {
+            if (await post('/notifications/read-all', readAllBtn)) renderPanel();
+        });
     }
 
     async function renderPanel() {
