@@ -5,6 +5,8 @@ import com.example.board.auth.service.RefreshTokenService;
 import com.example.board.file.store.FileStore;
 import com.example.board.file.store.TransactionalFileRemover;
 import com.example.board.member.domain.Member;
+import com.example.board.post.domain.AttachedFile;
+import com.example.board.member.domain.ProfileImage;
 import com.example.board.member.dto.PasswordChangeForm;
 import com.example.board.member.dto.ProfileForm;
 import com.example.board.member.dto.SignupForm;
@@ -23,6 +25,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -332,6 +335,49 @@ class MemberServiceTest {
         }
     }
 
+    // ── 프로필 사진 ───────────────────────────────────────────
+
+    @Test
+    @DisplayName("사진을 바꾸면 이전 사진은 커밋된 뒤에 지운다")
+    void changeProfileImage_removesPreviousAfterCommit() throws Exception {
+        // 지금 지우면 트랜잭션이 롤백됐을 때 회원 행은 남는데 파일만 사라진다
+        Member member = member();
+        member.changeProfileImage(new ProfileImage("old.png", "image/png"));
+        given(memberRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+        given(fileStore.storeImage(any())).willReturn(
+                new AttachedFile("new.png", "new-stored.png", "image/png", 100));
+
+        memberService.changeProfileImage(MEMBER_ID, imageOf(1024));
+
+        assertThat(member.getProfileImage().getStoredName()).isEqualTo("new-stored.png");
+        then(fileRemover).should().removeAfterCommit("old.png");
+    }
+
+    @Test
+    @DisplayName("2MB 를 넘는 사진은 저장하기 전에 거절한다")
+    void changeProfileImage_rejectsOversized() {
+        // 아바타는 화면에서 40px 로 그려진다. 받아 두면 디스크와 대역폭만 쓴다
+        assertThatThrownBy(() -> memberService.changeProfileImage(MEMBER_ID, imageOf(3 * 1024 * 1024)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("2MB");
+        then(fileStore).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("빈 파일은 사진이 아니다")
+    void changeProfileImage_rejectsEmpty() {
+        assertThatThrownBy(() -> memberService.changeProfileImage(MEMBER_ID, null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> memberService.changeProfileImage(
+                MEMBER_ID, new MockMultipartFile("file", "a.png", "image/png", new byte[0])))
+                .isInstanceOf(IllegalArgumentException.class);
+        then(fileStore).shouldHaveNoInteractions();
+    }
+
+    private MockMultipartFile imageOf(int bytes) {
+        return new MockMultipartFile("file", "avatar.png", "image/png", new byte[bytes]);
+    }
+
     // ── 소셜 로그인 ───────────────────────────────────────────
 
     @Test
@@ -402,6 +448,84 @@ class MemberServiceTest {
         assertThat(created.getEmail()).isNull();
         // 이메일이 없으면 인증이라는 개념 자체가 없다
         assertThat(created.needsEmailVerification()).isFalse();
+    }
+
+    @Test
+    @DisplayName("이미 다른 회원이 쓰는 이메일이면 비워 둔 채로 계정을 만든다")
+    void findOrCreateOAuthMember_skipsTakenEmail() {
+        // email 에는 유니크 제약이 있다. 그대로 넣으면 성공 핸들러 안에서 저장이 깨져
+        // 로그인 실패 화면도 아닌 오류 화면이 되고, 그 사람은 소셜 로그인을 영영 쓸 수 없다.
+        // 그렇다고 같은 주소라고 기존 계정에 이어 붙이면 남의 계정을 가져가는 길이 열린다
+        given(memberRepository.findByOauthProviderAndOauthProviderId("google", "1234"))
+                .willReturn(Optional.empty());
+        given(memberRepository.existsByNickname("동주")).willReturn(false);
+        given(memberRepository.existsByEmail("dj@example.com")).willReturn(true);
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Member created = memberService.findOrCreateOAuthMember("google", "1234", "dj@example.com", "동주");
+
+        assertThat(created.getEmail()).isNull();
+        assertThat(created.getLoginId()).isEqualTo("google_1234");
+    }
+
+    @Test
+    @DisplayName("아무도 안 쓰는 이메일은 그대로 저장한다")
+    void findOrCreateOAuthMember_keepsFreeEmail() {
+        given(memberRepository.findByOauthProviderAndOauthProviderId("google", "1234"))
+                .willReturn(Optional.empty());
+        given(memberRepository.existsByNickname("동주")).willReturn(false);
+        given(memberRepository.existsByEmail("dj@example.com")).willReturn(false);
+        given(memberRepository.save(any(Member.class))).willAnswer(inv -> inv.getArgument(0));
+
+        Member created = memberService.findOrCreateOAuthMember("google", "1234", "dj@example.com", "동주");
+
+        assertThat(created.getEmail()).isEqualTo("dj@example.com");
+    }
+
+    // ── 소셜 계정의 비밀번호 경로 ─────────────────────────────
+
+    @Test
+    @DisplayName("소셜 계정은 비밀번호를 바꿀 수 없다 - 애초에 비밀번호가 없다")
+    void changePassword_rejectedForSocialAccount() {
+        // 화면에서 폼을 감추지만, 화면이 유일한 방어선이면 그건 방어가 아니다
+        given(memberRepository.findById(MEMBER_ID)).willReturn(Optional.of(socialMember()));
+        PasswordChangeForm form = new PasswordChangeForm();
+        form.setCurrentPassword("무엇이든");
+        form.setNewPassword("newpassword123");
+
+        assertThatThrownBy(() -> memberService.changePassword(MEMBER_ID, form))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("소셜");
+        then(refreshTokenService).should(never()).revokeAll(any());
+    }
+
+    @Test
+    @DisplayName("소셜 계정은 닉네임을 입력해 탈퇴한다 - 비밀번호로 물으면 탈퇴할 방법이 없다")
+    void withdraw_socialAccountConfirmsWithNickname() {
+        Member member = socialMember();
+        given(memberRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        memberService.withdraw(MEMBER_ID, "동주");
+
+        assertThat(member.isWithdrawn()).isTrue();
+    }
+
+    @Test
+    @DisplayName("닉네임이 다르면 소셜 계정도 탈퇴되지 않는다")
+    void withdraw_socialAccountWrongNickname() {
+        Member member = socialMember();
+        given(memberRepository.findById(MEMBER_ID)).willReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> memberService.withdraw(MEMBER_ID, "다른이름"))
+                .isInstanceOf(LoginFailedException.class);
+        assertThat(member.isWithdrawn()).isFalse();
+        then(eventPublisher).should(never()).publishEvent(any(MemberWithdrawnEvent.class));
+    }
+
+    private Member socialMember() {
+        Member member = Member.ofOAuth("google_1234", "동주", null, "google", "1234");
+        ReflectionTestUtils.setField(member, "id", MEMBER_ID);
+        return member;
     }
 
     @Test

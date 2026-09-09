@@ -24,6 +24,9 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 public class Comment {
 
+    /** 알림 등에 실을 앞부분의 길이. 어느 댓글인지 알아볼 정도면 된다 */
+    private static final int EXCERPT_LENGTH = 40;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -106,6 +109,21 @@ public class Comment {
     /** 내용을 고친다. 대상(글/플랜)과 작성자는 바뀌지 않는다 */
     public void updateContent(String content) {
         this.content = content;
+    }
+
+    /**
+     * 알림·목록처럼 <b>어느 댓글인지 알아볼 정도만</b> 필요한 자리에 쓸 앞부분.
+     *
+     * <p>댓글은 500자까지 쓸 수 있는데 알림 메시지는 255자다. 답글 알림이 원댓글을 그대로 넘기다가
+     * 긴 댓글에서 저장이 깨진 적이 있다 - 자르는 규칙을 부르는 쪽마다 두지 않고 여기 둔다.</p>
+     *
+     * <p>줄바꿈은 공백으로 편다. 알림은 한 줄로 보이는 자리라 개행이 그대로 들어가면 잘린 것처럼 읽힌다.</p>
+     */
+    public String excerpt() {
+        String oneLine = content.replaceAll("\\s+", " ").trim();
+        return oneLine.length() <= EXCERPT_LENGTH
+                ? oneLine
+                : oneLine.substring(0, EXCERPT_LENGTH) + "\u2026";
     }
 
     /**

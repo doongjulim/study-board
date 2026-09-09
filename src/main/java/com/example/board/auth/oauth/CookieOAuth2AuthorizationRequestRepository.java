@@ -1,15 +1,16 @@
 package com.example.board.auth.oauth;
 
+import com.example.board.auth.CookiePolicy;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.stereotype.Component;
-import org.springframework.util.SerializationUtils;
 
 import java.util.Arrays;
-import java.util.Base64;
 
 /**
  * 인가 요청(state 등)을 <b>세션이 아니라 쿠키</b>에 둔다.
@@ -18,17 +19,22 @@ import java.util.Base64;
  * 세션 관리를 켜 두면 요청마다 CSRF 토큰이 갈아 끼워져 화면의 토큰이 클릭 전에 죽는다
  * (CLAUDE.md 의 '세션 관리' 함정). 소셜 로그인 하나 때문에 그 구조를 되돌릴 수는 없다.</p>
  *
- * <p>쿠키는 짧게 산다 - 제공자에 다녀오는 몇 분이면 충분하고, 끝나면 지운다.
- * HttpOnly 라 화면 스크립트가 읽지 못한다. 담기는 것은 state 와 redirect 정보이며 비밀은 아니지만,
- * 굳이 읽히게 둘 이유도 없다.</p>
+ * <p>이 클래스가 정하는 것은 <b>어디에 두는가</b>뿐이다.
+ * 무엇을 담고 어떻게 지키는가는 {@link AuthorizationRequestCodec} 가,
+ * 쿠키 속성은 {@link CookiePolicy} 가 정한다 - 셋이 한 클래스에 있으면
+ * 하나를 고칠 때마다 나머지 둘을 다시 읽어야 한다.</p>
  */
 @Component
+@RequiredArgsConstructor
 public class CookieOAuth2AuthorizationRequestRepository
         implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
 
-    private static final String COOKIE_NAME = "OAUTH2_AUTH_REQUEST";
-    /** 제공자 화면에서 로그인하고 동의하는 데 걸리는 시간 */
+    static final String COOKIE_NAME = "OAUTH2_AUTH_REQUEST";
+    /** 제공자 화면에서 로그인하고 동의하는 데 걸리는 시간. 끝나면 지우므로 더 길 이유가 없다 */
     private static final int MAX_AGE_SECONDS = 180;
+
+    private final AuthorizationRequestCodec codec;
+    private final CookiePolicy cookiePolicy;
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
@@ -42,11 +48,8 @@ public class CookieOAuth2AuthorizationRequestRepository
             clear(response);
             return;
         }
-        Cookie cookie = new Cookie(COOKIE_NAME, encode(authorizationRequest));
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(MAX_AGE_SECONDS);
-        response.addCookie(cookie);
+        response.addHeader(HttpHeaders.SET_COOKIE,
+                cookiePolicy.build(COOKIE_NAME, codec.encode(authorizationRequest), MAX_AGE_SECONDS));
     }
 
     @Override
@@ -66,30 +69,11 @@ public class CookieOAuth2AuthorizationRequestRepository
                 .filter(cookie -> COOKIE_NAME.equals(cookie.getName()))
                 .findFirst()
                 .map(Cookie::getValue)
-                .map(this::decode)
+                .map(codec::decode)
                 .orElse(null);
     }
 
-    private String encode(OAuth2AuthorizationRequest authorizationRequest) {
-        return Base64.getUrlEncoder()
-                .encodeToString(SerializationUtils.serialize(authorizationRequest));
-    }
-
-    private OAuth2AuthorizationRequest decode(String value) {
-        try {
-            Object deserialized = SerializationUtils.deserialize(Base64.getUrlDecoder().decode(value));
-            return (deserialized instanceof OAuth2AuthorizationRequest request) ? request : null;
-        } catch (IllegalArgumentException | SecurityException e) {
-            // 손상되었거나 우리가 만들지 않은 값이다. 없는 것으로 보면 로그인이 처음부터 다시 시작된다
-            return null;
-        }
-    }
-
     private void clear(HttpServletResponse response) {
-        Cookie cookie = new Cookie(COOKIE_NAME, "");
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
+        response.addHeader(HttpHeaders.SET_COOKIE, cookiePolicy.expire(COOKIE_NAME));
     }
 }

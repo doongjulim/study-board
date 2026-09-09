@@ -92,7 +92,9 @@ public class NotificationService {
         }
 
         LocalDateTime createdAt = LocalDateTime.now(clock).truncatedTo(ChronoUnit.MICROS);
-        notificationRepository.insertForAll(targets, message, url, createdAt);
+        // 이 경로는 엔티티를 거치지 않는 벌크 insert 다 - 생성자가 해 주던 길이 보정을 여기서 한 번 더 한다.
+        // 규칙 자체는 Notification 이 갖고 있으므로 값이 두 벌이 되지는 않는다
+        notificationRepository.insertForAll(targets, Notification.abbreviate(message), url, createdAt);
 
         List<Long> connected = targets.stream()
                 .filter(emitterRegistry.connectedMemberIds()::contains)

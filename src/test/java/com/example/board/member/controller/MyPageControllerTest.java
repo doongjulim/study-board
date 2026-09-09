@@ -1,6 +1,7 @@
 package com.example.board.member.controller;
 
 import com.example.board.auth.AuthCookies;
+import com.example.board.auth.CookiePolicy;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.exception.LoginFailedException;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
@@ -42,7 +43,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(MyPageController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class, CookiePolicy.class})
 class MyPageControllerTest {
 
     private static final long MEMBER_ID = 7L;
@@ -205,7 +206,7 @@ class MyPageControllerTest {
         @DisplayName("성공하면 쿠키를 지우고 로그인 화면으로 보낸다")
         void success() throws Exception {
             mockMvc.perform(post("/me/withdraw")
-                            .param("password", "password123")
+                            .param("confirmation", "password123")
                             .with(csrf()).with(memberAuth()))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/login"))
@@ -215,13 +216,13 @@ class MyPageControllerTest {
         }
 
         @Test
-        @DisplayName("비밀번호가 틀리면 마이페이지로 돌려보낸다")
-        void wrongPassword() throws Exception {
+        @DisplayName("확인 값이 틀리면 마이페이지로 돌려보낸다")
+        void wrongConfirmation() throws Exception {
             willThrow(new LoginFailedException())
                     .given(memberService).withdraw(MEMBER_ID, "wrong");
 
             mockMvc.perform(post("/me/withdraw")
-                            .param("password", "wrong")
+                            .param("confirmation", "wrong")
                             .with(csrf()).with(memberAuth()))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/me"));
@@ -230,7 +231,7 @@ class MyPageControllerTest {
         @Test
         @DisplayName("CSRF 토큰이 없으면 거부한다")
         void requiresCsrf() throws Exception {
-            mockMvc.perform(post("/me/withdraw").param("password", "password123").with(memberAuth()))
+            mockMvc.perform(post("/me/withdraw").param("confirmation", "password123").with(memberAuth()))
                     .andExpect(status().isForbidden());
 
             then(memberService).should(never()).withdraw(any(), any());

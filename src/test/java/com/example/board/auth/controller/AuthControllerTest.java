@@ -1,6 +1,7 @@
 package com.example.board.auth.controller;
 
 import com.example.board.auth.AuthCookies;
+import com.example.board.auth.CookiePolicy;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.exception.LoginFailedException;
 import com.example.board.auth.exception.TooManyLoginAttemptsException;
@@ -36,7 +37,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class, CookiePolicy.class})
 class AuthControllerTest {
 
     @Autowired MockMvc mockMvc;

@@ -136,15 +136,19 @@ public class MyPageController {
         return "redirect:/login";
     }
 
+    /**
+     * 탈퇴. 확인 값은 계정 종류가 정한다 - 일반 계정은 비밀번호, 소셜 계정은 닉네임
+     * (소셜 계정의 비밀번호는 어떤 입력과도 일치하지 않아, 물어봐야 통과할 수 없다).
+     */
     @PostMapping("/withdraw")
-    public String withdraw(@RequestParam String password,
+    public String withdraw(@RequestParam("confirmation") String confirmation,
                            @AuthenticationPrincipal MemberPrincipal principal,
                            HttpServletResponse response,
                            RedirectAttributes redirectAttributes) {
         try {
-            memberService.withdraw(principal.id(), password);
+            memberService.withdraw(principal.id(), confirmation);
         } catch (LoginFailedException e) {
-            redirectAttributes.addFlashAttribute("message", "비밀번호가 올바르지 않아 탈퇴하지 못했습니다.");
+            redirectAttributes.addFlashAttribute("message", "확인 값이 일치하지 않아 탈퇴하지 못했습니다.");
             return "redirect:/me";
         }
         authCookies.clear(response);

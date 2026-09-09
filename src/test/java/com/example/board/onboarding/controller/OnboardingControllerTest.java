@@ -1,6 +1,7 @@
 package com.example.board.onboarding.controller;
 
 import com.example.board.auth.AuthCookies;
+import com.example.board.auth.CookiePolicy;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
@@ -42,7 +43,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(OnboardingController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class,
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class, CookiePolicy.class,
         OnboardingControllerTest.FixedClockConfig.class})
 class OnboardingControllerTest {
 

@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -15,7 +14,10 @@ import java.util.Optional;
 
 /**
  * 인증 쿠키(액세스/리프레시) 읽기·쓰기 담당.
- * 두 토큰 모두 HttpOnly + SameSite=Lax 로 내려 JS 접근과 크로스 사이트 전송을 막는다.
+ *
+ * <p>쿠키 속성은 {@link CookiePolicy} 가 정한다 - 이 클래스는 <b>어떤 토큰을 얼마나 오래</b>
+ * 실을지만 정한다. 속성을 여기서도 정하면 쿠키를 내려보내는 곳마다 정책이 갈린다
+ * (실제로 소셜 로그인의 인가 요청 쿠키만 SameSite 가 빠져 있었다).</p>
  */
 @Component
 public class AuthCookies {
@@ -23,11 +25,14 @@ public class AuthCookies {
     public static final String ACCESS_TOKEN = "ACCESS_TOKEN";
     public static final String REFRESH_TOKEN = "REFRESH_TOKEN";
 
+    private final CookiePolicy cookiePolicy;
     private final Duration accessTokenValidity;
     private final Duration refreshTokenValidity;
 
-    public AuthCookies(@Value("${jwt.access-token-minutes}") long accessTokenMinutes,
+    public AuthCookies(CookiePolicy cookiePolicy,
+                       @Value("${jwt.access-token-minutes}") long accessTokenMinutes,
                        @Value("${jwt.refresh-token-days}") long refreshTokenDays) {
+        this.cookiePolicy = cookiePolicy;
         this.accessTokenValidity = Duration.ofMinutes(accessTokenMinutes);
         this.refreshTokenValidity = Duration.ofDays(refreshTokenDays);
     }
@@ -55,13 +60,7 @@ public class AuthCookies {
     }
 
     private String build(String name, String value, long maxAgeSeconds) {
-        return ResponseCookie.from(name, value)
-                .httpOnly(true)
-                .sameSite("Lax")
-                .path("/")
-                .maxAge(maxAgeSeconds)
-                .build()
-                .toString();
+        return cookiePolicy.build(name, value, maxAgeSeconds);
     }
 
     private Optional<String> read(HttpServletRequest request, String name) {

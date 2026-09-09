@@ -133,7 +133,8 @@ public class MemberService {
      * "같은 이메일이면 같은 사람" 으로 이으면 남의 계정을 가져가는 길이 열린다.</p>
      *
      * <p>닉네임이 이미 쓰이고 있으면 뒤에 숫자를 붙인다. 소셜 로그인은 사용자가 그 자리에서
-     * 다른 이름을 정할 기회가 없으므로, 막지 않고 통과시켜야 한다.</p>
+     * 다른 이름을 정할 기회가 없으므로, 막지 않고 통과시켜야 한다.
+     * 이메일도 같은 이유로 막지 않는다 - 다만 비켜 가는 방식이 다르다({@link #unusedEmail}).</p>
      */
     @Transactional
     public Member findOrCreateOAuthMember(String provider, String providerId,
@@ -142,8 +143,26 @@ public class MemberService {
                 .orElseGet(() -> memberRepository.save(Member.ofOAuth(
                         provider + "_" + providerId,
                         availableNickname(nickname),
-                        normalize(email),
+                        unusedEmail(email),
                         provider, providerId)));
+    }
+
+    /**
+     * 이미 다른 회원이 쓰는 주소면 <b>저장하지 않는다</b>.
+     *
+     * <p>email 에는 유니크 제약이 있다. 그대로 넣으면 저장이 깨지고, 그 예외는 성공 핸들러 안에서
+     * 나므로 로그인 실패 화면도 아닌 오류 화면이 된다 - 그 사람은 소셜 로그인을 영영 쓸 수 없다.</p>
+     *
+     * <p>그렇다고 "같은 이메일이면 같은 사람" 으로 이을 수는 없다. 그건 남의 계정을 가져가는 길이다
+     * (위 주석의 판단). 이으면 위험하고 넣으면 깨지므로, <b>비워 두는 것</b>이 남는 답이다.
+     * 필요하면 본인이 마이페이지에서 넣고, 그때는 이메일 인증이 그 주소가 본인 것인지 확인해 준다.</p>
+     *
+     * <p>닉네임처럼 숫자를 붙여 비켜 가지 않는 이유: 닉네임은 부르는 이름이라 바꿔도 되지만,
+     * 이메일은 바꾸면 다른 사람의 주소가 된다.</p>
+     */
+    private String unusedEmail(String email) {
+        String normalized = normalize(email);
+        return (normalized != null && memberRepository.existsByEmail(normalized)) ? null : normalized;
     }
 
     /** 이미 쓰이는 닉네임이면 뒤에 숫자를 붙여 비켜 간다 */
@@ -206,10 +225,16 @@ public class MemberService {
     /**
      * 비밀번호를 변경하고 모든 기기에서 로그아웃시킨다.
      * 현재 비밀번호를 확인하지 않으면, 잠깐 자리를 비운 사이 남이 비밀번호를 바꿔 버릴 수 있다.
+     *
+     * <p>소셜 계정은 애초에 비밀번호가 없다 - 화면에서 폼을 감추지만, 화면이 유일한 방어선이면
+     * 그건 방어가 아니다. 여기서도 막는다.</p>
      */
     @Transactional
     public void changePassword(Long memberId, PasswordChangeForm form) {
         Member member = findActive(memberId);
+        if (member.isSocialAccount()) {
+            throw new IllegalStateException("소셜 로그인 계정은 비밀번호를 사용하지 않습니다.");
+        }
         if (!passwordEncoder.matches(form.getCurrentPassword(), member.getPassword())) {
             throw new LoginFailedException();
         }
@@ -222,11 +247,9 @@ public class MemberService {
      * 개인 학습 데이터 정리는 각 모듈이 {@link MemberWithdrawnEvent} 를 받아 스스로 처리한다.
      */
     @Transactional
-    public void withdraw(Long memberId, String rawPassword) {
+    public void withdraw(Long memberId, String confirmation) {
         Member member = findActive(memberId);
-        if (!passwordEncoder.matches(rawPassword, member.getPassword())) {
-            throw new LoginFailedException();
-        }
+        verifyOwnership(member, confirmation);
 
         eventPublisher.publishEvent(new MemberWithdrawnEvent(memberId));
         refreshTokenService.revokeAll(memberId);
@@ -234,6 +257,24 @@ public class MemberService {
         String profileImage = member.hasProfileImage() ? member.getProfileImage().getStoredName() : null;
         member.withdraw(LocalDateTime.now(clock));
         fileRemover.removeAfterCommit(profileImage);
+    }
+
+    /**
+     * "정말 본인인가" 를 되묻는다. 탈퇴는 되돌릴 수 없으므로 로그인 상태만으로는 부족하다 -
+     * 자리를 잠깐 비운 사이 남이 누를 수 있다.
+     *
+     * <p>확인 수단이 계정 종류마다 다르다. 소셜 계정의 password 는 {@code !social} 이라
+     * <b>어떤 입력과도 일치하지 않는다</b> - 비밀번호로 물으면 소셜 회원은 탈퇴할 방법이 아예 없다.
+     * 그래서 닉네임을 직접 타이핑하게 한다. 눌러서 지나가는 확인이 아니라 손으로 옮겨 적는 확인이라
+     * 목적(멈춰 서게 하는 것)은 같다.</p>
+     */
+    private void verifyOwnership(Member member, String confirmation) {
+        boolean confirmed = member.isSocialAccount()
+                ? member.getNickname().equals(confirmation)
+                : passwordEncoder.matches(confirmation, member.getPassword());
+        if (!confirmed) {
+            throw new LoginFailedException();
+        }
     }
 
     private void validateLoginIdAvailable(String loginId) {

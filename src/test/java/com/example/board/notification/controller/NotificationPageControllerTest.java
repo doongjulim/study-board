@@ -1,6 +1,7 @@
 package com.example.board.notification.controller;
 
 import com.example.board.auth.AuthCookies;
+import com.example.board.auth.CookiePolicy;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
@@ -39,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 여기 있는 조작은 폼으로 이루어지므로 JS 없이도 동작해야 하고, 조작 뒤에는 보던 페이지로 돌아와야 한다.
  */
 @WebMvcTest(NotificationPageController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class, CookiePolicy.class})
 class NotificationPageControllerTest {
 
     private static final long MEMBER_ID = 1L;

@@ -63,8 +63,16 @@ file:
   upload-dir: ${FILE_UPLOAD_DIR:${user.home}/board-uploads/}
 
 app:
-  # 비밀번호 재설정 메일에 담을 링크의 앞부분 - 배포 주소에 맞춰 바꾼다
+  # 비밀번호 재설정·이메일 인증 메일에 담을 링크의 앞부분 - 배포 주소에 맞춰 바꾼다
   base-url: ${APP_BASE_URL:http://localhost:8080}
+
+  cookie:
+    # 쿠키에 Secure 를 붙일지. 붙이면 브라우저가 https 에서만 보낸다.
+    #
+    # 기본값을 false 로 두는 이유: 로컬은 http 라 켜면 인증 쿠키가 아예 실리지 않아
+    # 로그인이 조용히 안 된다. 반대로 운영은 https 이므로 반드시 켜야 한다 -
+    # 코드가 아니라 환경이 정할 일이라 설정으로 뺐다 (APP_COOKIE_SECURE=true).
+    secure: ${APP_COOKIE_SECURE:false}
 
 jwt:
   # 로컬 개발용 시크릿 - 운영 환경에서는 반드시 환경변수(JWT_SECRET)로 교체할 것 (HS256, 32바이트 이상)

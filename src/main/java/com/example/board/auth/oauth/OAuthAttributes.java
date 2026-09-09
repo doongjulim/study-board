@@ -58,11 +58,6 @@ public record OAuthAttributes(String providerId, String email, String nickname) 
         return text.isEmpty() ? null : text;
     }
 
-    /** 우리 회원의 로그인 아이디. 제공자를 접두어로 붙여 일반 가입 아이디와 부딪히지 않게 한다 */
-    public String toLoginId(String registrationId) {
-        return registrationId + "_" + providerId;
-    }
-
     /** 닉네임을 주지 않는 경우가 있다. 화면에 빈칸이 남지 않도록 대신 만든다 */
     public String nicknameOr(String fallback) {
         return (nickname == null || nickname.isBlank()) ? fallback : nickname;

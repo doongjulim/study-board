@@ -1,6 +1,7 @@
 package com.example.board.auth.jwt;
 
 import com.example.board.auth.AuthCookies;
+import com.example.board.auth.CookiePolicy;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.auth.service.TokenService;
 import jakarta.servlet.http.Cookie;
@@ -29,7 +30,7 @@ class JwtAuthenticationFilterTest {
     @Mock TokenService tokenService;
 
     private final JwtTokenProvider tokenProvider = new JwtTokenProvider(SECRET, 15);
-    private final AuthCookies authCookies = new AuthCookies(15, 14);
+    private final AuthCookies authCookies = new AuthCookies(new CookiePolicy(false), 15, 14);
 
     private JwtAuthenticationFilter filter() {
         return new JwtAuthenticationFilter(tokenProvider, tokenService, authCookies);

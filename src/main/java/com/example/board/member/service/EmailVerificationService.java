@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -28,6 +29,14 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class EmailVerificationService {
+
+    /**
+     * 재발송 간격.
+     *
+     * <p>없으면 버튼 한 번에 메일 한 통이다. 주소는 사용자가 정하는 값이라, 주소를 바꿔 가며 누르면
+     * <b>임의의 주소로 메일을 계속 보내는 도구</b>가 된다. 로그인 시도를 제한하는 것과 같은 이유다.</p>
+     */
+    private static final Duration RESEND_INTERVAL = Duration.ofMinutes(1);
 
     private final EmailVerificationTokenRepository tokenRepository;
     private final MemberService memberService;
@@ -52,11 +61,18 @@ public class EmailVerificationService {
             throw new IllegalStateException("이미 인증된 이메일입니다.");
         }
 
+        LocalDateTime now = LocalDateTime.now(clock);
+        tokenRepository.findByMember_Id(memberId)
+                .filter(issued -> issued.issuedAt().isAfter(now.minus(RESEND_INTERVAL)))
+                .ifPresent(issued -> {
+                    throw new IllegalStateException("인증 메일을 방금 보냈습니다. 잠시 후 다시 시도해 주세요.");
+                });
+
         tokenRepository.deleteByMember_Id(memberId); // 새 링크를 내면 이전 링크는 죽는다
 
         String rawToken = TokenHasher.newToken();
         tokenRepository.save(new EmailVerificationToken(
-                member, member.getEmail(), TokenHasher.hash(rawToken), LocalDateTime.now(clock)));
+                member, member.getEmail(), TokenHasher.hash(rawToken), now));
 
         mailSender.send(member.getEmail(), "[스터디플랜] 이메일 인증",
                 buildMailBody(member, rawToken));

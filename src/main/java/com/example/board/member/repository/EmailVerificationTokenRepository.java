@@ -14,6 +14,9 @@ public interface EmailVerificationTokenRepository extends JpaRepository<EmailVer
     /** 해시로만 찾는다 - 원문은 메일에만 있고 우리는 갖고 있지 않다 */
     Optional<EmailVerificationToken> findByTokenHash(String tokenHash);
 
+    /** 방금 보낸 링크가 있는가 - 재발송 간격을 재는 데 쓴다 */
+    Optional<EmailVerificationToken> findByMember_Id(Long memberId);
+
     /** 새 링크를 내면 이전 링크는 무효가 되어야 한다 */
     void deleteByMember_Id(Long memberId);
 

@@ -44,7 +44,12 @@ public class PasswordResetService {
      */
     @Transactional
     public void sendResetLink(String email) {
-        memberService.findActiveByEmail(email).ifPresent(member -> {
+        memberService.findActiveByEmail(email)
+                // 소셜 계정에는 비밀번호가 없다(!social). 링크를 보내면 그 자리에 진짜 해시가 들어가
+                // 제공자를 거치지 않는 로그인 경로가 새로 생긴다 - 로그인 방법은 계정을 만든 방식이 정한다.
+                // 조용히 넘어가는 것은 위와 같은 이유다: 어떤 계정이 소셜인지도 알려 줄 이유가 없다
+                .filter(member -> !member.isSocialAccount())
+                .ifPresent(member -> {
             // 새 링크를 내면 이전 링크는 무효가 되어야 한다
             tokenRepository.deleteByMember_Id(member.getId());
 

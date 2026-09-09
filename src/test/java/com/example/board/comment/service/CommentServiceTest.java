@@ -245,6 +245,26 @@ class CommentServiceTest {
     }
 
     @Test
+    @DisplayName("답글 알림에는 원댓글 전문이 아니라 앞부분만 실린다")
+    void reply_notificationCarriesExcerptNotWholeComment() {
+        // 댓글은 500자까지 쓸 수 있는데 알림 메시지는 255자다. 전문을 그대로 실으면
+        // 알림 저장이 컬럼 상한에 걸리고, 같은 트랜잭션이라 답글까지 함께 롤백된다
+        Post target = post();
+        ReflectionTestUtils.setField(target, "id", 1L);
+        Comment root = Comment.forPost(target, member(COMMENTER_ID, "댓글러"), "가".repeat(500));
+        ReflectionTestUtils.setField(root, "id", 5L);
+        given(commentRepository.findById(5L)).willReturn(Optional.of(root));
+        given(memberRepository.getReferenceById(30L)).willReturn(member(30L, "제삼자"));
+        given(commentRepository.save(any(Comment.class))).willAnswer(inv -> inv.getArgument(0));
+
+        commentService.reply(5L, 30L, "저도요");
+
+        ArgumentCaptor<CommentAddedEvent> event = ArgumentCaptor.forClass(CommentAddedEvent.class);
+        then(eventPublisher).should().publishEvent(event.capture());
+        assertThat(event.getValue().targetTitle()).hasSizeLessThan(50);
+    }
+
+    @Test
     @DisplayName("내 댓글에 내가 단 답글은 알리지 않는다")
     void reply_selfDoesNotNotify() {
         Post target = post();

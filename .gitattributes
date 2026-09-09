@@ -1,0 +1,13 @@
+# 줄바꿈은 Git 이 정한다.
+#
+# gradlew.bat 이 "94줄 추가 94줄 삭제" 로 바뀐 채 남아 있던 적이 있다 - 내용은 그대로이고
+# 줄바꿈만 CRLF↔LF 로 뒤집힌 것이었다. 편집기나 OS 마다 다르게 저장하면 계속 반복된다.
+* text=auto
+
+# 윈도우 배치 파일은 CRLF 여야 한다 (LF 면 일부 환경에서 실행되지 않는다)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 셸 스크립트는 LF 여야 한다 (CRLF 면 '\r: command not found' 가 난다)
+gradlew text eol=lf
+*.sh text eol=lf

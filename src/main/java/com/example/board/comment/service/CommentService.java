@@ -125,9 +125,11 @@ public class CommentService {
 
         Comment root = saved.getParent();
         if (!root.isAuthoredBy(memberId)) { // 내 댓글에 내가 단 답글은 알리지 않는다
+            // 원댓글 '전문' 이 아니라 앞부분만 보낸다 - 알림은 어느 댓글인지 알아볼 정도면 되고,
+            // 500자짜리 댓글을 그대로 넘기면 알림 목록이 그 하나로 덮인다
             eventPublisher.publishEvent(new CommentAddedEvent(
                     root.getAuthor().getId(), commenter.getNickname(),
-                    root.getContent(), urlOf(root)));
+                    root.excerpt(), urlOf(root)));
         }
         return saved.getId();
     }

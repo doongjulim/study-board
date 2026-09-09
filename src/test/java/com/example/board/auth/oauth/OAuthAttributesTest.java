@@ -88,12 +88,4 @@ class OAuthAttributesTest {
         assertThat(attributes.nickname()).isNull();
         assertThat(attributes.nicknameOr("구글 사용자")).isEqualTo("구글 사용자");
     }
-
-    @Test
-    @DisplayName("로그인 아이디는 제공자를 접두어로 붙인다 - 일반 가입 아이디와 부딪히지 않게")
-    void loginIdIsNamespaced() {
-        OAuthAttributes attributes = OAuthAttributes.of("google", Map.of("sub", "1234"));
-
-        assertThat(attributes.toLoginId("google")).isEqualTo("google_1234");
-    }
 }

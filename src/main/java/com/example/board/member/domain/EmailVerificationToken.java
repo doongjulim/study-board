@@ -60,6 +60,14 @@ public class EmailVerificationToken {
         return expiresAt.isBefore(now);
     }
 
+    /**
+     * 발급 시각. 저장할 때 만료 시각으로 환산해 두었으므로 되돌려 계산한다 -
+     * 같은 값을 두 컬럼에 두면 둘이 어긋날 수 있다({@code createdAt} 은 감사용이라 규칙에 쓰지 않는다).
+     */
+    public LocalDateTime issuedAt() {
+        return expiresAt.minus(VALIDITY);
+    }
+
     /** 발급 이후 주소가 바뀌지 않았는가 */
     public boolean matches(String currentEmail) {
         return email.equalsIgnoreCase(currentEmail);

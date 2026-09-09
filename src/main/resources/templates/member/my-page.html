@@ -140,8 +140,17 @@
         </div>
     </form>
 
-    <!-- 비밀번호 -->
+    <!--
+      비밀번호. 소셜 계정에는 아예 그리지 않는다 - 그 계정의 password 는 !social 이라
+      무엇을 넣어도 "현재 비밀번호가 올바르지 않습니다" 만 돌아온다. 통과할 수 없는 폼을
+      보여 주는 것은 안내가 아니라 함정이다. (막는 것은 서버가 한다 - 화면은 거들 뿐이다)
+    -->
+    <p id="password" class="form-card me-section hint" th:if="${member.isSocialAccount()}">
+        소셜 로그인 계정이라 비밀번호가 없습니다. 로그인은 가입할 때 쓰신 제공자에서 이루어집니다.
+    </p>
+
     <form id="password" class="form-card me-section" method="post"
+          th:unless="${member.isSocialAccount()}"
           th:object="${passwordChangeForm}" th:action="@{/me/password}">
         <h3 class="stat-title">비밀번호 변경</h3>
         <p class="hint">변경하면 <strong>모든 기기에서 로그아웃</strong>되고 다시 로그인해야 합니다.</p>
@@ -237,9 +246,18 @@
 
         <form method="post" th:action="@{/me/withdraw}"
               data-confirm="정말 탈퇴하시겠습니까?&#10;계획·D-Day·학습 기록·알림이 모두 삭제되며 되돌릴 수 없습니다." data-confirm-label="탈퇴하기">
-            <div class="form-group">
-                <label for="withdrawPassword">확인을 위해 비밀번호를 입력해 주세요</label>
-                <input type="password" id="withdrawPassword" name="password" autocomplete="current-password">
+            <!--
+              확인 수단이 계정 종류마다 다르다. 소셜 계정은 비밀번호로 물으면 통과할 방법이 없어
+              탈퇴 자체가 막힌다 - 대신 닉네임을 손으로 옮겨 적게 한다.
+            -->
+            <div class="form-group" th:unless="${member.isSocialAccount()}">
+                <label for="withdrawConfirmation">확인을 위해 비밀번호를 입력해 주세요</label>
+                <input type="password" id="withdrawConfirmation" name="confirmation"
+                       autocomplete="current-password">
+            </div>
+            <div class="form-group" th:if="${member.isSocialAccount()}">
+                <label for="withdrawNickname">확인을 위해 닉네임 <strong th:text="${member.nickname}">닉네임</strong> 을 입력해 주세요</label>
+                <input type="text" id="withdrawNickname" name="confirmation" autocomplete="off">
             </div>
             <div class="actions">
                 <button type="submit" class="btn btn-danger">탈퇴하기</button>
