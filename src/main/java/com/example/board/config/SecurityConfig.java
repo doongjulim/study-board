@@ -1,5 +1,6 @@
 package com.example.board.config;
 
+import com.example.board.auth.UnauthenticatedEntryPoint;
 import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.oauth.CookieOAuth2AuthorizationRequestRepository;
 import com.example.board.auth.oauth.OAuth2LoginSuccessHandler;
@@ -20,8 +21,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /**
  * JWT(HttpOnly 쿠키) 기반 보안 설정.
@@ -36,6 +35,12 @@ import java.nio.charset.StandardCharsets;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    /**
+     * 미인증 접근을 어떻게 돌려보낼지. 의존이 없어 빈으로 두지 않는다 -
+     * 일반 @Component 로 두면 이 설정을 import 하는 컨트롤러 테스트가 전부 컨텍스트를 못 만든다
+     */
+    private final UnauthenticatedEntryPoint unauthenticatedEntryPoint = new UnauthenticatedEntryPoint();
     /**
      * 소셜 로그인 부품들.
      *
@@ -121,13 +126,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/calendar/*.ics").permitAll()
                         // 플래너·알림 등 나머지는 전부 로그인 필요
                         .anyRequest().authenticated())
-                // 미인증 접근은 원래 가려던 경로를 들고 로그인 페이지로 보낸다
-                .exceptionHandling(handling -> handling.authenticationEntryPoint((request, response, ex) -> {
-                    String target = request.getRequestURI()
-                            + (request.getQueryString() != null ? "?" + request.getQueryString() : "");
-                    response.sendRedirect("/login?redirect="
-                            + URLEncoder.encode(target, StandardCharsets.UTF_8));
-                }))
+                // 미인증 접근의 처리는 UnauthenticatedEntryPoint 가 정한다 -
+                // 화면 이동이면 로그인 페이지로, 데이터를 기다리는 요청(fetch·SSE)이면 401
+                .exceptionHandling(handling -> handling.authenticationEntryPoint(unauthenticatedEntryPoint))
                 .formLogin(AbstractHttpConfigurer::disable)   // 세션 기반이라 사용하지 않음 - AuthController 가 담당
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)      // 쿠키 삭제 방식 로그아웃도 AuthController 가 담당

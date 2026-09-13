@@ -13,6 +13,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.Clock;
 import java.time.LocalDate;
 
 @Controller
@@ -21,12 +22,14 @@ import java.time.LocalDate;
 public class DdayController {
 
     private final DdayService ddayService;
+    /** "오늘" 은 기계가 아니라 서비스의 시간대가 정한다 ({@link com.example.board.common.time.ServiceZone}) */
+    private final Clock clock;
 
     /** 목록 + 등록 폼 - 항목이 적어 한 화면에서 처리한다 */
     @GetMapping
     public String list(@AuthenticationPrincipal MemberPrincipal principal, Model model) {
         model.addAttribute("ddays", ddayService.findMine(principal.id()));
-        model.addAttribute("today", LocalDate.now());
+        model.addAttribute("today", LocalDate.now(clock));
         if (!model.containsAttribute("ddayForm")) {
             model.addAttribute("ddayForm", new DdayForm());
         }
@@ -41,7 +44,7 @@ public class DdayController {
                          RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("ddays", ddayService.findMine(principal.id()));
-            model.addAttribute("today", LocalDate.now());
+            model.addAttribute("today", LocalDate.now(clock));
             return "ddays/list";
         }
         ddayService.create(ddayForm, principal.id());

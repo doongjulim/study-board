@@ -10,6 +10,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -32,11 +33,13 @@ public class PlanReminderScheduler {
 
     private final PlanRepository planRepository;
     private final ApplicationEventPublisher eventPublisher;
+    /** 기계의 시간대가 아니라 서비스의 시간대를 따른다 ({@link com.example.board.common.time.ServiceZone}) */
+    private final Clock clock;
 
     @Scheduled(fixedRate = 60_000)
     @Transactional
     public void sendUpcomingPlanReminders() {
-        sendUpcomingPlanReminders(LocalDateTime.now());
+        sendUpcomingPlanReminders(LocalDateTime.now(clock));
     }
 
     void sendUpcomingPlanReminders(LocalDateTime now) {

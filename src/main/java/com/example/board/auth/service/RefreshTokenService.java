@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -23,6 +24,13 @@ import java.util.Optional;
 public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
+    /**
+     * 만료 판정에 쓰는 시각.
+     *
+     * <p>{@code LocalDateTime.now()} 를 직접 부르고 있었다 - 하필 <b>토큰이 아직 유효한가</b> 라는,
+     * 시각을 가장 고정하고 싶은 규칙이 그랬다. 만료 경계를 테스트로 못 박으려면 주입받아야 한다.</p>
+     */
+    private final Clock clock;
 
     @Value("${jwt.refresh-token-days}")
     private long refreshTokenDays;
@@ -32,7 +40,7 @@ public class RefreshTokenService {
     public String issue(Member member) {
         String rawToken = TokenHasher.newToken();
         refreshTokenRepository.save(new RefreshToken(member, TokenHasher.hash(rawToken),
-                LocalDateTime.now().plus(Duration.ofDays(refreshTokenDays))));
+                LocalDateTime.now(clock).plus(Duration.ofDays(refreshTokenDays))));
         return rawToken;
     }
 
@@ -45,7 +53,7 @@ public class RefreshTokenService {
         return refreshTokenRepository.findByTokenHash(TokenHasher.hash(rawToken))
                 .flatMap(stored -> {
                     refreshTokenRepository.delete(stored); // 한 번 쓴 토큰은 항상 폐기한다
-                    if (stored.isExpired(LocalDateTime.now())) {
+                    if (stored.isExpired(LocalDateTime.now(clock))) {
                         return Optional.empty();
                     }
                     Member member = stored.getMember();

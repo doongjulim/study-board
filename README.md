@@ -83,11 +83,15 @@ Java 17 / Spring Boot 3.3 / Thymeleaf / H2(파일) / JWT 인증 기반의
 `SecurityConfig` 가 `oauth2Login` 을 아예 붙이지 않으며, 로그인 화면에도 버튼이 나오지 않는다.
 
 ```bash
-SPRING_PROFILES_ACTIVE=oauth \
+SPRING_PROFILES_ACTIVE=local,oauth \
 GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... \
 KAKAO_CLIENT_ID=...  KAKAO_CLIENT_SECRET=... \
 ./gradlew bootRun
 ```
+
+> `local` 을 함께 켜는 이유: 프로필을 하나라도 지정하면 기본 프로필(`local`)이 꺼지고,
+> 그러면 개발용 JWT 시크릿도 함께 사라져 부팅이 실패합니다.
+> 이것은 실수가 아니라 의도된 동작입니다 - '운영 주의 사항' 을 참고하세요.
 
 각 콘솔에 등록할 리디렉션 주소:
 
@@ -113,6 +117,9 @@ KAKAO_CLIENT_ID=...  KAKAO_CLIENT_SECRET=... \
 새벽에 몰아서 돈다. 지우는 규칙은 각 스케줄러 안에 상수로 적혀 있다 -
 "언제부터 사라지는가" 는 정책이고, 정책은 그것을 실행하는 자리에 있어야 나중에 찾을 수 있다.
 
+시각은 **Asia/Seoul** 기준이다(`@Scheduled(zone = ServiceZone.ID)`).
+zone 을 적지 않으면 JVM 이 뜬 기계의 시간대를 따르므로, UTC 컨테이너에서는 오후 1시에 돈다.
+
 | 시각 | 하는 일 |
 |---|---|
 | 04:00 | 만료된 리프레시 토큰 정리 |
@@ -125,9 +132,31 @@ KAKAO_CLIENT_ID=...  KAKAO_CLIENT_SECRET=... \
 
 - **h2-console 은 기본으로 꺼져 있다.** 로컬에서 필요하면 `H2_CONSOLE_ENABLED=true` 로 켠다.
   켤 때만 보안 예외가 함께 생기므로, 끄면 예외도 사라진다
-- **JWT_SECRET 은 반드시 환경변수로 교체한다** (기본값은 로컬 개발용)
+- **`JWT_SECRET` 없이는 뜨지 않는다.** 기본값을 두지 않았다 - 공개 저장소의 문자열로 토큰에 서명하는
+  배포가 생기지 않게 하기 위해서다. 개발용 값은 `local` 프로필이 들고 있고(`application-local.yml`),
+  프로필을 지정하지 않으면 `spring.profiles.default` 가 그것을 켜므로 받아서 바로 실행해도 뜬다.
+  반대로 `SPRING_PROFILES_ACTIVE` 로 다른 프로필을 지정하는 순간 진짜 시크릿을 요구한다
+- **`APP_COOKIE_SECURE=true`** 로 켠다(https 배포). 켜지 않으면 인증 쿠키가 평문으로도 오간다
+- **시간대는 `Asia/Seoul` 로 고정돼 있다**(`ServiceZone`). `TZ` 환경변수로 바꾸려 하지 말 것 -
+  코드가 정하는 값이고, 그래야 기계마다 "오늘" 이 달라지지 않는다
 - 컨테이너로 띄울 때 `/app/data`(H2)·`/app/uploads`(첨부파일)에 볼륨을 붙이지 않으면
   컨테이너를 지울 때 데이터가 함께 사라진다
+
+## 알려진 한계 (지금 규모에서는 의도적으로 두었다)
+
+- **실시간 알림은 단일 서버를 전제한다.** 인증은 무상태(JWT)라 서버를 늘려도 되지만,
+  SSE 접속은 `SseEmitterRegistry` 가 **JVM 메모리**에 들고 있다. 인스턴스를 늘리면
+  다른 인스턴스에 붙은 사용자에게는 알림이 실시간으로 가지 않는다(알림 자체는 DB 에 남으므로
+  다음 화면 이동에서 보인다). 늘려야 할 때의 답은 Redis Pub/Sub 이나 전용 메시지 브로커다
+- **스케줄러도 인스턴스마다 돈다.** 리마인더가 인스턴스 수만큼 발송되고,
+  고아 파일 정리가 동시에 돈다. ShedLock 같은 분산 락이 표준 해법이다
+- **검색은 `like %keyword%`** 다. PostgreSQL 에서는 `pg_trgm` GIN 인덱스가 이를 가속하지만,
+  한국어 형태소 분석이 필요한 수준의 검색은 별도 엔진(Elasticsearch 등)의 일이다
+- **전체 공개 알림은 회원 수만큼 행을 만든다.** 저장은 한 문장(벌크 insert)으로 끝내지만,
+  회원이 아주 많아지면 발송 자체를 비동기 큐로 미루는 편이 낫다
+
+이 네 가지는 **지금 고치면 얻는 것보다 늘어나는 구조가 크다**고 판단해 남겨 둔 것이다.
+필요해지는 시점(서버 2대)이 분명하므로, 그때 위 해법으로 옮기면 된다.
 
 ## 테스트
 
@@ -156,6 +185,10 @@ PostgreSQL 쪽이 실제로 도는지는 CI 가 매번 확인한다(`PostgresMig
 ```bash
 ./gradlew bootRun
 ```
+
+프로필을 지정하지 않으면 `local` 이 켜지고(`spring.profiles.default`), 개발용 JWT 시크릿이
+함께 내려옵니다 - 받아서 바로 실행하면 됩니다. 배포할 때는 `SPRING_PROFILES_ACTIVE` 를 지정하고
+`JWT_SECRET` 을 환경변수로 넘기세요(없으면 부팅 단계에서 실패합니다).
 
 > IDE(IntelliJ 등)에서 `BoardApplication` 을 직접 실행해도 됩니다.
 > Gradle Wrapper가 없다면 프로젝트 루트에서 `gradle wrapper` 를 한 번 실행해 생성하세요.

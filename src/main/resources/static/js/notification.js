@@ -17,8 +17,21 @@
     const readAllBtn = document.getElementById('notif-read-all');
     if (!bell) return;
 
-    // 연결이 끊기면 브라우저가 자동으로 재접속하고, Last-Event-ID 로 놓친 알림을 이어 받는다
+    // 연결이 끊기면 브라우저가 자동으로 재접속하고, Last-Event-ID 로 놓친 알림을 이어 받는다.
+    //
+    // 그 자동 재접속이 문제가 되는 경우가 하나 있다 - 인증이 끊긴 때다. 로그아웃했거나
+    // 리프레시 토큰이 만료되면 구독은 401 로 끝나는데, EventSource 는 "실패했으니 다시" 로만 읽어
+    // 탭이 열려 있는 한 몇 초마다 영원히 두드린다. 로그인할 수 없는 상태에서의 재시도는
+    // 성공할 수가 없으므로, 그때는 우리가 끊는다.
     const source = new EventSource('/notifications/subscribe');
+    source.addEventListener('error', () => {
+        // CONNECTING 이면 브라우저가 재시도하려는 중이다. 인증이 끊겼는지 한 번 물어보고 정한다
+        if (source.readyState !== EventSource.CLOSED) {
+            fetch('/notifications').then((res) => {
+                if (res.status === 401) source.close();
+            }).catch(() => { /* 네트워크가 끊긴 것이라면 재접속에 맡긴다 */ });
+        }
+    });
     source.addEventListener('notification', (e) => {
         const notification = JSON.parse(e.data);
         UI.toast('🔔 ' + notification.message);
@@ -55,10 +68,18 @@
         }
     });
 
+    const EMPTY = { unreadCount: 0, notifications: [] };
+
     async function fetchNotifications() {
-        const res = await fetch('/notifications');
-        if (!res.ok) return { unreadCount: 0, notifications: [] };
-        return res.json();
+        // 로그인이 끊기면 서버가 401 을 준다(로그인 페이지 HTML 이 아니라).
+        // 예전에는 302 를 따라가 200 + HTML 을 받았고, res.ok 가 참이라 이 방어를 그냥 통과해
+        // res.json() 이 거기서 터졌다 - 벨이 아무 말 없이 죽는 원인이었다
+        try {
+            const res = await fetch('/notifications');
+            return res.ok ? await res.json() : EMPTY;
+        } catch (e) {
+            return EMPTY;
+        }
     }
 
     function applyBadge(unreadCount) {

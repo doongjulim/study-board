@@ -1,5 +1,6 @@
 package com.example.board.auth.scheduler;
 
+import com.example.board.common.time.ServiceZone;
 import com.example.board.auth.service.PasswordResetService;
 import com.example.board.auth.service.RefreshTokenService;
 import com.example.board.member.service.EmailVerificationService;
@@ -22,7 +23,7 @@ public class TokenCleanupScheduler {
     private final EmailVerificationService emailVerificationService;
     private final Clock clock;
 
-    @Scheduled(cron = "0 0 4 * * *")
+    @Scheduled(cron = "0 0 4 * * *", zone = ServiceZone.ID)
     public void deleteExpiredRefreshTokens() {
         int deleted = refreshTokenService.deleteExpired(LocalDateTime.now(clock));
         if (deleted > 0) {
@@ -30,7 +31,7 @@ public class TokenCleanupScheduler {
         }
     }
 
-    @Scheduled(cron = "0 10 4 * * *")
+    @Scheduled(cron = "0 10 4 * * *", zone = ServiceZone.ID)
     public void deleteExpiredPasswordResetTokens() {
         int deleted = passwordResetService.deleteExpired(LocalDateTime.now(clock));
         if (deleted > 0) {
@@ -38,7 +39,7 @@ public class TokenCleanupScheduler {
         }
     }
 
-    @Scheduled(cron = "0 15 4 * * *")
+    @Scheduled(cron = "0 15 4 * * *", zone = ServiceZone.ID)
     public void deleteExpiredEmailVerificationTokens() {
         int deleted = emailVerificationService.deleteExpired(LocalDateTime.now(clock));
         if (deleted > 0) {

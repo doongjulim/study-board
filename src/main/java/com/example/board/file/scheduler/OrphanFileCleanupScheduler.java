@@ -1,5 +1,6 @@
 package com.example.board.file.scheduler;
 
+import com.example.board.common.time.ServiceZone;
 import com.example.board.file.store.FileStore;
 import com.example.board.post.repository.AttachedFileRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class OrphanFileCleanupScheduler {
     private final AttachedFileRepository fileRepository;
     private final Clock clock;
 
-    @Scheduled(cron = "0 40 4 * * *")
+    @Scheduled(cron = "0 40 4 * * *", zone = ServiceZone.ID)
     public void deleteOrphanFiles() {
         Instant threshold = clock.instant().minus(GRACE_PERIOD);
 

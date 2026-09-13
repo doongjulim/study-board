@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 
@@ -20,6 +21,8 @@ import java.time.LocalDate;
 public class StatsController {
 
     private final StudyStatisticsService statisticsService;
+    /** 연속 학습일(streak) 이 "오늘" 기준이라, 시간대가 어긋나면 기록이 하루 밀린다 */
+    private final Clock clock;
 
     /** 학습 통계 대시보드 - 주간/월간 전환 + 기준일 이동 */
     @GetMapping
@@ -28,7 +31,7 @@ public class StatsController {
                             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                             @AuthenticationPrincipal MemberPrincipal principal,
                             Model model) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         LocalDate target = (date != null) ? date : today;
         boolean monthly = "month".equals(period);
 

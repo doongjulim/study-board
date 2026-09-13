@@ -7,6 +7,7 @@ import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
+import com.example.board.support.TestClockConfig;
 import com.example.board.stats.domain.StudyStatistics;
 import com.example.board.stats.service.StudyStatisticsService;
 import org.junit.jupiter.api.DisplayName;
@@ -32,7 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(StatsController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class, CookiePolicy.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class, CookiePolicy.class, TestClockConfig.class})
 class StatsControllerTest {
 
     private static final long MEMBER_ID = 1L;

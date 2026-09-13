@@ -1,5 +1,6 @@
 package com.example.board.notification.scheduler;
 
+import com.example.board.common.time.ServiceZone;
 import com.example.board.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +34,7 @@ public class NotificationCleanupScheduler {
     private final NotificationService notificationService;
     private final Clock clock;
 
-    @Scheduled(cron = "0 20 4 * * *")
+    @Scheduled(cron = "0 20 4 * * *", zone = ServiceZone.ID)
     public void deleteOldNotifications() {
         LocalDateTime now = LocalDateTime.now(clock);
         int deleted = notificationService.deleteOld(

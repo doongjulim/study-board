@@ -34,8 +34,8 @@ import static org.assertj.core.api.Assertions.*;
 @DisplayName("Flyway 마이그레이션")
 class SchemaMigrationTest {
 
-    /** V1 init ~ V22 plan share_notified */
-    private static final int EXPECTED_MIGRATIONS = 22;
+    /** V1 init ~ V29 hot-path indexes (H2 판은 V28 이 자리만 지킨다) */
+    private static final int EXPECTED_MIGRATIONS = 29;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;

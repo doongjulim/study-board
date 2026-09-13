@@ -8,3 +8,6 @@ board-uploads/
 data/
 .DS_Store
 .claude/
+
+# JVM 이 붙을 때 작업 디렉터리에 남기는 파일 (테스트를 돌리면 생긴다)
+.attach_pid*

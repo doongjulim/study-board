@@ -1,4 +1,10 @@
 spring:
+  # 프로필을 지정하지 않고 실행하면 local 이 켜진다 (application-local.yml).
+  # 저장소를 받아 바로 ./gradlew bootRun 해도 뜨게 하면서, "로컬이 아니다" 라고 말하는 순간
+  # 로컬 전용 값(개발용 JWT 시크릿)이 사라지게 하기 위한 장치다.
+  profiles:
+    default: local
+
   datasource:
     # 운영에서는 SPRING_DATASOURCE_URL/USERNAME/PASSWORD 환경변수로 덮어쓴다 (PostgreSQL 등).
     # 드라이버 클래스는 적지 않는다 - URL 에서 유추되므로, 적어 두면 DB 를 바꿀 때 같이 고쳐야 한다
@@ -75,8 +81,18 @@ app:
     secure: ${APP_COOKIE_SECURE:false}
 
 jwt:
-  # 로컬 개발용 시크릿 - 운영 환경에서는 반드시 환경변수(JWT_SECRET)로 교체할 것 (HS256, 32바이트 이상)
-  secret: ${JWT_SECRET:study-board-local-dev-secret-key-please-override}
+  # 기본값이 없다. 환경변수 JWT_SECRET 이 없으면 앱은 부팅 단계에서 실패한다.
+  #
+  # 예전에는 여기에 로컬용 기본값이 있었고 "운영에서 반드시 교체할 것" 이라는 주석이 붙어 있었다.
+  # 그런데 그 문자열은 공개 저장소에 그대로 있다 - 환경변수를 한 번 빠뜨리면 앱은 아무 불평 없이 뜨고,
+  # 저장소를 읽을 수 있는 사람은 누구나 아무 회원의 토큰을 위조할 수 있다.
+  # H2 콘솔에 적어 둔 것과 같은 이유다: "운영에서 끄는 것을 잊지 않아야" 하는 구조는 언젠가 잊는다.
+  #
+  # 개발 편의는 local 프로필이 맡는다(application-local.yml). 프로필을 켜지 않으면
+  # spring.profiles.default 가 local 을 켜 주므로, 저장소를 받아 바로 실행해도 그대로 뜬다.
+  # 반대로 SPRING_PROFILES_ACTIVE 로 다른 프로필을 지정하는 순간 - 즉 "여기는 로컬이 아니다" 라고
+  # 말하는 순간 - 안전망이 사라지고 진짜 시크릿을 요구한다.
+  secret: ${JWT_SECRET}
   # 액세스 토큰은 무상태라 폐기할 수 없으므로 짧게, 재로그인은 리프레시 토큰으로 대신한다
   access-token-minutes: 15
   refresh-token-days: 14

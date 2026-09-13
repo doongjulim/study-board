@@ -32,6 +32,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -51,6 +52,18 @@ public class PlanController {
 
     private final PlanService planService;
     private final CommentService commentService;
+    /**
+     * "오늘" 의 기준.
+     *
+     * <p>{@code LocalDate.now()} 를 직접 부르면 기계의 시간대를 따른다 - 로컬(KST)과
+     * 배포 환경(대개 UTC)에서 같은 순간이 서로 다른 날이 된다. 날짜가 화면의 축인 이 컨트롤러에서는
+     * 그게 곧 "자정에 적은 일정이 어제 것으로 들어가는" 증상이 된다
+     * ({@link com.example.board.common.time.ServiceZone}).</p>
+     *
+     * <p>한 요청 안에서는 {@code today()} 를 한 번만 불러 쓴다 - 자정 경계에서
+     * 기준 날짜와 '오늘' 표시가 서로 다른 날을 가리키지 않게 하기 위해서다.</p>
+     */
+    private final Clock clock;
     /** 일간 뷰 상단에 남은 날짜를 보여주기 위한 읽기 전용 의존 */
     private final DdayService ddayService;
     /** 회고는 계획을 보던 자리에서 바로 적는 것이라 같은 화면에 싣는다 (읽기 전용) */
@@ -66,7 +79,8 @@ public class PlanController {
     public String daily(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                         @AuthenticationPrincipal MemberPrincipal principal,
                         Model model) {
-        LocalDate target = (date != null) ? date : LocalDate.now();
+        LocalDate today = today();
+        LocalDate target = (date != null) ? date : today;
         LocalDate previous = target.minusDays(1);
         List<Plan> plans = planService.findDaily(target, principal.id());
 
@@ -75,8 +89,8 @@ public class PlanController {
         model.addAttribute("progress", DailyProgress.of(plans));
         model.addAttribute("prevDate", previous);
         model.addAttribute("nextDate", target.plusDays(1));
-        model.addAttribute("today", LocalDate.now());
-        model.addAttribute("upcomingDdays", ddayService.findUpcoming(principal.id(), LocalDate.now()));
+        model.addAttribute("today", today);
+        model.addAttribute("upcomingDdays", ddayService.findUpcoming(principal.id(), today));
         // 어제 남긴 일정을 그대로 흘려보내지 않도록 안내한다
         model.addAttribute("leftoverCount", planService.findUnfinished(previous, principal.id()).size());
         model.addAttribute("shareScopes", ShareScope.values());
@@ -108,7 +122,7 @@ public class PlanController {
     public String weekly(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                          @AuthenticationPrincipal MemberPrincipal principal,
                          Model model) {
-        LocalDate target = (date != null) ? date : LocalDate.now();
+        LocalDate target = (date != null) ? date : today();
         LocalDate weekStart = target.with(DayOfWeek.MONDAY);
 
         List<LocalDate> weekDays = new ArrayList<>();
@@ -126,7 +140,7 @@ public class PlanController {
         model.addAttribute("plansByDate", plansByDate);
         model.addAttribute("prevWeek", weekStart.minusWeeks(1));
         model.addAttribute("nextWeek", weekStart.plusWeeks(1));
-        model.addAttribute("today", LocalDate.now());
+        model.addAttribute("today", today());
         model.addAttribute("retro",
                 retrospectiveService.find(principal.id(), RetroType.WEEKLY, weekStart).orElse(null));
         model.addAttribute("retroType", RetroType.WEEKLY);
@@ -140,7 +154,7 @@ public class PlanController {
     public String monthly(@RequestParam(required = false) String month,
                           @AuthenticationPrincipal MemberPrincipal principal,
                           Model model) {
-        YearMonth target = (month != null && !month.isBlank()) ? YearMonth.parse(month) : YearMonth.now();
+        YearMonth target = (month != null && !month.isBlank()) ? YearMonth.parse(month) : YearMonth.from(today());
 
         Map<LocalDate, List<Plan>> plansByDate = planService.findMonth(target, principal.id()).stream()
                 .collect(Collectors.groupingBy(Plan::getPlanDate));
@@ -150,7 +164,7 @@ public class PlanController {
         model.addAttribute("plansByDate", plansByDate);
         model.addAttribute("prevMonth", target.minusMonths(1));
         model.addAttribute("nextMonth", target.plusMonths(1));
-        model.addAttribute("today", LocalDate.now());
+        model.addAttribute("today", today());
         return "plans/monthly";
     }
 
@@ -175,7 +189,7 @@ public class PlanController {
         model.addAttribute("pageBlock", PageBlock.of(results));
         model.addAttribute("condition", condition);
         model.addAttribute("statuses", PlanStatus.values());
-        model.addAttribute("today", LocalDate.now());
+        model.addAttribute("today", today());
         return "plans/search";
     }
 
@@ -216,7 +230,7 @@ public class PlanController {
     public String createForm(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                              Model model) {
         PlanForm form = new PlanForm();
-        form.setPlanDate(date != null ? date : LocalDate.now());
+        form.setPlanDate(date != null ? date : today());
         model.addAttribute("planForm", form);
         model.addAttribute("mode", "create");
         return "plans/form";
@@ -348,6 +362,11 @@ public class PlanController {
     }
 
     /** 반복 설정 교차 검증 - 종료일 필요 여부와 생성 개수 상한을 확인한다 */
+    /** 서비스 시간대의 오늘 */
+    private LocalDate today() {
+        return LocalDate.now(clock);
+    }
+
     private void validateRepeat(PlanForm form, BindingResult bindingResult) {
         if (!form.getRepeatType().isRepeating() || form.getPlanDate() == null) {
             return;
