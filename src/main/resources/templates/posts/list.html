@@ -5,8 +5,12 @@
 <main class="container">
     <div th:if="${message}" class="flash" th:text="${message}"></div>
 
-    <!-- 분류 탭: 지금 나에게 필요한 글만 볼 수 있어야 목록이 쓸모 있어진다 -->
-    <nav class="view-tabs">
+    <!--
+      분류 필터. 플래너의 view-tabs 와 생김새는 같지만 하는 일이 다르다 -
+      저쪽은 화면을 바꾸고 이쪽은 목록을 거른다. 클래스와 aria-label 로 그 차이를 남긴다
+      (filter-tabs 는 view-tabs 의 모양을 그대로 쓴다).
+    -->
+    <nav class="view-tabs filter-tabs" aria-label="분류 필터">
         <a th:href="@{/posts(keyword=${keyword}, searchType=${searchType}, sort=${sort})}"
            th:classappend="${category == null} ? 'on'">전체</a>
         <a th:each="item : ${categories}"
@@ -32,6 +36,8 @@
                 <option value="popular" th:selected="${sort == 'popular'}">인기순</option>
             </select>
             <button type="submit" class="btn">검색</button>
+            <!-- 검색어·분류·정렬을 한 번에 푼다. 입력칸을 비우고 다시 누르게 하지 않는다 -->
+            <a th:if="${keyword != null and !keyword.isBlank()}" class="btn" th:href="@{/posts}">조건 초기화</a>
         </form>
         <span class="toolbar-actions">
             <a th:if="${currentMember != null}" th:href="@{/posts/mine}" class="btn">모아보기</a>

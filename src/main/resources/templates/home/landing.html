@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{fragments/layout :: page('스터디플랜 - 취업 준비 학습 기록', '', ~{::main})}">
+      th:replace="~{fragments/layout :: page('취업 준비 학습 기록', '', ~{::main})}">
 <body>
 <main class="container">
 
@@ -15,7 +15,7 @@
             계획 대비 얼마나 해냈는지가 그대로 보입니다.
         </p>
         <div class="hero-actions">
-            <a class="btn btn-primary btn-lg" th:href="@{/signup}">무료로 시작하기</a>
+            <a class="btn btn-lg btn-primary" th:href="@{/signup}">무료로 시작하기</a>
             <a class="btn btn-lg" th:href="@{/login}">로그인</a>
         </div>
         <p class="hint">둘러보기만 하려면 <a th:href="@{/posts}">게시판</a>은 로그인 없이 볼 수 있어요.</p>
@@ -70,7 +70,7 @@
     <section class="cta">
         <h2>오늘 30분부터 시작해 볼까요</h2>
         <p class="hint">가입은 아이디와 비밀번호만 있으면 됩니다. 이메일은 선택이에요.</p>
-        <a class="btn btn-primary btn-lg" th:href="@{/signup}">회원가입</a>
+        <a class="btn btn-lg btn-primary" th:href="@{/signup}">회원가입</a>
     </section>
 </main>
 </body>

@@ -190,6 +190,8 @@ public class PlanController {
         model.addAttribute("condition", condition);
         model.addAttribute("statuses", PlanStatus.values());
         model.addAttribute("today", today());
+        // 결과 줄이 일간 뷰와 같은 프래그먼트라, 그 줄이 그리는 공유 범위 선택지도 함께 필요하다
+        model.addAttribute("shareScopes", ShareScope.values());
         return "plans/search";
     }
 

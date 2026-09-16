@@ -70,7 +70,7 @@
                 <span th:text="${file.originalName}">파일명</span>
                 <form th:action="@{/posts/{postId}/files/{fileId}/delete(postId=${post.id}, fileId=${file.id})}"
                       method="post" data-confirm="이 첨부파일을 삭제할까요?&#10;되돌릴 수 없습니다." data-confirm-label="삭제">
-                    <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
                 </form>
             </li>
         </ul>

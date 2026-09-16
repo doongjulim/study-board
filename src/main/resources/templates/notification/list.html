@@ -12,7 +12,7 @@
         <span class="toolbar-actions">
             <form th:if="${unreadCount > 0}" th:action="@{/notifications/all/read-all}" method="post">
                 <input type="hidden" name="page" th:value="${notifications.number}">
-                <button type="submit" class="btn btn-sm">모두 읽음으로</button>
+                <button type="submit" class="btn btn-sm">모두 읽음</button>
             </form>
             <form th:if="${!notifications.isEmpty()}" th:action="@{/notifications/all/delete-all}"
                   method="post"

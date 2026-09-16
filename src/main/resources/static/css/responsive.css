@@ -24,15 +24,35 @@
   /* 월간 달력은 칸이 좁아 hover 가 없으므로 추가 버튼을 항상 보여 준다 */
   .cal-add { opacity: 1; }
 
-  .tabbar { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  .tabbar { display: flex; align-items: stretch; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
     background: var(--card); border-top: 1px solid var(--line);
     padding-bottom: env(safe-area-inset-bottom); }
-  .tabbar a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 8px 0 6px; text-decoration: none; color: var(--ink-soft); font-size: .68rem; }
-  .tabbar a.on { color: var(--accent); font-weight: 700; }
+  .tabbar > a, .tab-more > summary { flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 2px; padding: 8px 0 6px; text-decoration: none;
+    color: var(--ink-soft); font-size: .68rem; }
+  .tabbar > a.on, .tab-more > summary.on { color: var(--accent); font-weight: 700; }
   .tab-icon { font-size: 1.15rem; line-height: 1; }
+
+  /* 더보기 - 탭바가 화면 아래에 붙어 있으므로 패널은 위로 연다 */
+  .tab-more { flex: 1; display: flex; }
+  .tab-more > summary { list-style: none; cursor: pointer; }
+  .tab-more > summary::-webkit-details-marker { display: none; }
+  .tab-more-panel {
+    position: absolute; right: 8px; bottom: calc(100% + 8px); z-index: 30;
+    display: flex; flex-direction: column; min-width: 10rem;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+  }
+  .tab-more-panel a { padding: 10px 14px; border-radius: 8px; text-decoration: none;
+    color: var(--ink); font-size: .9rem; }
+  .tab-more-panel a.on { color: var(--accent); font-weight: 700; background: var(--accent-soft); }
+  :root[data-theme="dark"] .tab-more-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
   /* 탭바에 본문이 가리지 않도록 아래 여백을 둔다 */
   .container, .container-wide { padding-bottom: 76px; }
+}
+
+@media (max-width: 720px) and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .tab-more-panel { box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
 }
 
 /* ── 모바일 추가 브레이크포인트 (≤ 480px) ───────────────── */

@@ -74,7 +74,7 @@
               (th:each 와 th:replace 를 한 태그에 같이 쓰면 replace 가 먼저 처리돼 each 가 사라지므로 감싼다)
             -->
             <th:block th:each="plan : ${plans}">
-                <th:block th:replace="~{plans/row :: planRow}"></th:block>
+                <th:block th:replace="~{plans/row :: planRow(false)}"></th:block>
             </th:block>
         </ul>
     </div>

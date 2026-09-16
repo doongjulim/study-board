@@ -46,7 +46,7 @@
                     <label class="sr-only" th:for="'reply-' + ${thread.root.id}">답글</label>
                     <textarea th:id="'reply-' + ${thread.root.id}" name="content" rows="2"
                               maxlength="500" placeholder="답글을 입력하세요 (500자 이내)"></textarea>
-                    <button type="submit" class="btn btn-primary btn-sm">등록</button>
+                    <button type="submit" class="btn btn-sm btn-primary">등록</button>
                 </form>
             </details>
         </li>
@@ -104,7 +104,7 @@
                 <label class="sr-only" th:for="'comment-edit-' + ${comment.id}">댓글 수정</label>
                 <textarea th:id="'comment-edit-' + ${comment.id}" name="content" rows="2"
                           maxlength="500" th:text="${comment.content}"></textarea>
-                <button type="submit" class="btn btn-primary btn-sm">저장</button>
+                <button type="submit" class="btn btn-sm btn-primary">저장</button>
             </form>
         </details>
         <form th:action="@{/comments/{id}/delete(id=${comment.id})}" method="post"

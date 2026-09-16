@@ -374,6 +374,43 @@ class PlanControllerTest {
     }
 
     @Test
+    @DisplayName("검색 결과의 일정도 일간 뷰와 똑같이 다룰 수 있다")
+    void search_rowsAreInteractive() throws Exception {
+        // 예전에는 이 화면만 줄을 손으로 그려서, 체크 상자가 <span> 이라 눌러도 완료가 되지 않았다.
+        // 모양은 일간 뷰와 똑같았으므로 사용자는 자기 조작이 실패했다고 느꼈다
+        Plan plan = plan();
+        ReflectionTestUtils.setField(plan, "id", 5L);
+        given(planService.search(eq(MEMBER_ID), any(PlanSearchCondition.class), any()))
+                .willReturn(new PageImpl<>(List.of(plan)));
+
+        mockMvc.perform(get("/plans/search").with(memberAuth()))
+                .andExpect(status().isOk())
+                // 완료 토글 - 일간 뷰와 같은 폼이다
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/plans/5/toggle")))
+                // 삭제·공유 범위도 여기서 바로 할 수 있어야 한다
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/plans/5/delete")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/plans/5/share")));
+    }
+
+    @Test
+    @DisplayName("여러 날짜가 섞인 목록에만 날짜가 붙는다")
+    void search_showsDateButDailyDoesNot() throws Exception {
+        Plan plan = plan();
+        ReflectionTestUtils.setField(plan, "id", 5L);
+        given(planService.search(eq(MEMBER_ID), any(PlanSearchCondition.class), any()))
+                .willReturn(new PageImpl<>(List.of(plan)));
+        given(planService.findDaily(any(), eq(MEMBER_ID))).willReturn(List.of(plan));
+
+        // 검색 결과는 날짜가 섞여 있으니 줄마다 날짜가 필요하다
+        mockMvc.perform(get("/plans/search").with(memberAuth()))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("plan-date")));
+        // 일간 뷰는 화면 제목이 이미 그날이라 줄마다 반복할 이유가 없다
+        mockMvc.perform(get("/plans/daily").with(memberAuth()))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("plan-date"))));
+    }
+
+    @Test
     @DisplayName("GET /plans/search - 넘긴 조건이 그대로 검색에 전달된다")
     void search_passesCondition() throws Exception {
         given(planService.search(eq(MEMBER_ID), any(PlanSearchCondition.class), any()))

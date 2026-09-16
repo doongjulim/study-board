@@ -98,6 +98,44 @@
         });
     });
 
+    /*
+      서버로 제출되는 폼의 중복 전송 막기.
+
+      withBusy 는 fetch 로 처리하는 곳(빠른 추가·완료 토글·타이머)에만 붙어 있었다.
+      그런데 글쓰기·일정 저장·그룹 만들기처럼 <b>화면이 통째로 넘어가는 폼</b>이 훨씬 많고,
+      그쪽은 응답이 올 때까지 화면이 그대로라 사용자가 "안 눌렸나" 하고 한 번 더 누른다.
+      느린 연결에서는 그것이 그대로 두 번의 등록이 된다.
+
+      버튼을 잠그되 폼 자체는 막지 않는다 - 제출은 이미 시작됐고, 여기서 막으면
+      브라우저가 요청을 보내지 않는다. disabled 인 버튼은 값이 실리지 않으므로
+      이름 있는 버튼(name 속성)은 건드리지 않는다.
+
+      뒤로 가기로 돌아오면 브라우저가 화면을 캐시에서 되살리는데, 그때 버튼이 잠긴 채라면
+      다시 제출할 수 없다. pageshow 에서 풀어 준다.
+    */
+    const LOCK_ATTR = 'data-submit-lock';
+
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (e.defaultPrevented) return;          // 확인창이 가로챈 제출
+        if (form.dataset.noSubmitLock === 'yes') return;
+
+        for (const button of form.querySelectorAll('button[type="submit"], button:not([type])')) {
+            if (button.name) continue;           // 어느 버튼을 눌렀는지 서버가 알아야 하는 경우
+            button.setAttribute(LOCK_ATTR, 'yes');
+            // 지금 잠그면 이 버튼의 값이 요청에서 빠질 수 있다. 다음 틱에 잠근다
+            setTimeout(() => { button.disabled = true; }, 0);
+        }
+    });
+
+    window.addEventListener('pageshow', () => {
+        document.querySelectorAll('[' + LOCK_ATTR + ']').forEach((button) => {
+            button.disabled = false;
+            button.removeAttribute(LOCK_ATTR);
+        });
+    });
+
     // ── 중복 제출 방지 ────────────────────────────────────────
     /**
      * 비동기 작업이 끝날 때까지 버튼을 잠근다.

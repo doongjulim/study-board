@@ -14,7 +14,7 @@
 
     <div class="plan-nav">
         <a class="btn" th:href="@{/plans/weekly(date=${prevWeek})}">← 이전 주</a>
-        <h2 th:text="|${#temporals.format(weekStart, 'yyyy.MM.dd')} ~ ${#temporals.format(weekStart.plusDays(6), 'MM.dd')}|">주간</h2>
+        <h2 th:text="|${#temporals.format(weekStart, 'M월 d일')} ~ ${#temporals.format(weekStart.plusDays(6), 'M월 d일')}|">주간</h2>
         <div class="btn-group">
             <a class="btn" th:href="@{/plans/weekly}">이번 주</a>
             <a class="btn" th:href="@{/plans/weekly(date=${nextWeek})}">다음 주 →</a>
@@ -33,9 +33,15 @@
                 <a th:href="@{/plans/daily(date=${day})}"
                    th:text="${#temporals.format(day, 'M/d (E)')}">날짜</a>
             </h3>
-            <div class="week-plan" th:each="plan : ${plansByDate.get(day)}"
-                 th:classappend="${plan.completed} ? 'done'"
-                 th:text="${plan.startTime != null} ? |${#temporals.format(plan.startTime, 'HH:mm')} ${plan.title}| : ${plan.title}"></div>
+            <!--
+              월간 뷰의 같은 자리(.cal-plan)는 눌러서 그날 목록으로 가는데 여기만 <div> 라 눌리지 않았다.
+              생김새가 같으면 동작도 같아야 한다.
+            -->
+            <a class="week-plan" th:each="plan : ${plansByDate.get(day)}"
+               th:href="@{/plans/daily(date=${day})}"
+               th:classappend="${plan.completed} ? 'done'"
+               th:title="${plan.title}"
+               th:text="${plan.startTime != null} ? |${#temporals.format(plan.startTime, 'HH:mm')} ${plan.title}| : ${plan.title}"></a>
             <a class="week-add" th:href="@{/plans/new(date=${day})}">+ 추가</a>
         </div>
     </div>
@@ -47,7 +53,7 @@
         <ul class="retro-lines">
             <li th:each="line : ${dailyRetros}">
                 <a class="retro-date" th:href="@{/plans/daily(date=${line.targetDate})}"
-                   th:text="${#temporals.format(line.targetDate, 'M/d(E)')}">날짜</a>
+                   th:text="${#temporals.format(line.targetDate, 'M/d (E)')}">날짜</a>
                 <span th:text="${line.content}">내용</span>
             </li>
         </ul>

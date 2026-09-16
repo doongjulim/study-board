@@ -85,9 +85,29 @@
             <a th:href="@{/posts}" th:classappend="${active == 'posts'} ? 'on'">
                 <span class="tab-icon" aria-hidden="true">📋</span><span>게시판</span>
             </a>
-            <a th:href="@{/me}" th:classappend="${active == 'me'} ? 'on'">
-                <span class="tab-icon" aria-hidden="true">👤</span><span>내 정보</span>
-            </a>
+            <!--
+              나머지 메뉴가 들어오는 자리.
+
+              탭바에 다섯 칸뿐이라 헤더의 일곱 메뉴가 다 들어가지 않는다. 예전에는 넘치는 것을
+              그냥 뺐는데, 그 결과 좁은 화면에서 D-Day·그룹·공유 플랜으로 가는 길이 사라졌다 -
+              특히 D-Day 는 홈의 칩으로만 갈 수 있었고 그 칩은 등록된 게 있을 때만 그려져서,
+              아무것도 없는 사람은 등록하러 갈 수조차 없었다.
+
+              <details> 를 쓰는 이유는 일정 카드의 '⋯' 과 같다 - 열고 닫기·Esc·포커스·스크린리더를
+              브라우저가 이미 처리해 준다. 탭바는 화면 아래에 붙어 있으므로 패널은 위로 열린다.
+            -->
+            <details class="tab-more"
+                     th:with="moreActive=${active == 'ddays' or active == 'groups' or active == 'shared' or active == 'me'}">
+                <summary th:classappend="${moreActive} ? 'on'" aria-label="더보기 메뉴">
+                    <span class="tab-icon" aria-hidden="true">⋯</span><span>더보기</span>
+                </summary>
+                <div class="tab-more-panel">
+                    <a th:href="@{/ddays}" th:classappend="${active == 'ddays'} ? 'on'">🎯 D-Day</a>
+                    <a th:href="@{/groups}" th:classappend="${active == 'groups'} ? 'on'">👥 그룹</a>
+                    <a th:href="@{/plans/shared}" th:classappend="${active == 'shared'} ? 'on'">🔗 공유 플랜</a>
+                    <a th:href="@{/me}" th:classappend="${active == 'me'} ? 'on'">👤 내 정보</a>
+                </div>
+            </details>
         </th:block>
         <th:block th:if="${currentMember == null}">
             <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">

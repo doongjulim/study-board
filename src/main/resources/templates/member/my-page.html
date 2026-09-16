@@ -8,7 +8,7 @@
     <h2 class="page-title">내 정보</h2>
     <p class="hint">
         <span th:text="'아이디 ' + ${member.loginId}">아이디</span> ·
-        <span th:text="${#temporals.format(member.createdAt, 'yyyy년 M월 d일')} + ' 가입'">가입일</span> ·
+        <span th:text="${#temporals.format(member.createdAt, 'yyyy-MM-dd')} + ' 가입'">가입일</span> ·
         <!-- 내가 쓴 글은 '내 정보' 에서 찾게 된다. 게시판 툴바에만 두면 거기까지 가야 한다 -->
         <a th:href="@{/posts/mine}">내가 쓴 글 · 좋아요한 글</a>
     </p>
@@ -20,7 +20,7 @@
     <nav class="section-nav" aria-label="내 정보 구역">
         <a href="#profile">프로필</a>
         <a href="#notifications">알림</a>
-        <a href="#password">비밀번호</a>
+        <a href="#password" th:unless="${member.isSocialAccount()}">비밀번호</a>
         <a href="#calendar">캘린더 연동</a>
         <a href="#withdraw">회원 탈퇴</a>
     </nav>
@@ -42,8 +42,8 @@
                 </form>
                 <form th:if="${member.hasProfileImage()}" th:action="@{/me/profile-image/delete}"
                       method="post"
-                      data-confirm="프로필 사진을 지울까요?" data-confirm-label="지우기">
-                    <button type="submit" class="btn btn-sm btn-danger">사진 지우기</button>
+                      data-confirm="프로필 사진을 삭제할까요?" data-confirm-label="삭제">
+                    <button type="submit" class="btn btn-sm btn-danger">사진 삭제</button>
                 </form>
             </div>
         </div>
@@ -245,7 +245,7 @@
         </p>
 
         <form method="post" th:action="@{/me/withdraw}"
-              data-confirm="정말 탈퇴하시겠습니까?&#10;계획·D-Day·학습 기록·알림이 모두 삭제되며 되돌릴 수 없습니다." data-confirm-label="탈퇴하기">
+              data-confirm="정말 탈퇴할까요?&#10;계획·D-Day·학습 기록·알림이 모두 삭제되며 되돌릴 수 없습니다." data-confirm-label="탈퇴하기">
             <!--
               확인 수단이 계정 종류마다 다르다. 소셜 계정은 비밀번호로 물으면 통과할 방법이 없어
               탈퇴 자체가 막힌다 - 대신 닉네임을 손으로 옮겨 적게 한다.

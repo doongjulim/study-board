@@ -9,14 +9,20 @@
     <p class="hint">다른 취업준비생들이 공유한 공부 플랜을 둘러보세요.</p>
 
     <ul class="plan-list">
-        <li th:if="${plans.isEmpty()}" class="empty plan-empty">아직 공유된 플랜이 없습니다.</li>
+        <!-- 빈 목록에서 끝내지 않는다 - 여기서 할 수 있는 일을 알려 준다 -->
+        <li th:if="${plans.isEmpty()}" class="empty plan-empty">
+            아직 공유된 플랜이 없습니다.
+            <a th:href="@{/plans/daily}">내 플랜을 공유해 보세요 →</a>
+        </li>
         <li th:each="plan : ${plans.content}" class="plan-card" th:classappend="${plan.completed} ? 'done'">
+            <!-- 남의 일정이라 누를 수 없다. 완료 여부는 표시만 한다 (aria-hidden 은 옆의 '완료' 태그가 대신 읽힌다) -->
+            <span class="check check-static" aria-hidden="true"
+                  th:text="${plan.completed} ? '✅' : '⬜'"></span>
             <div class="plan-main">
-                <div class="plan-time">
+                <div class="plan-date">
                     <span th:text="${#temporals.format(plan.planDate, 'yyyy-MM-dd (E)')}"></span>
-                    <span th:if="${plan.startTime != null}"
-                          th:text="${#temporals.format(plan.startTime, 'HH:mm')}"></span>
                 </div>
+                <div th:replace="~{plans/row :: planTime(${plan})}"></div>
                 <div class="plan-title">
                     <a th:href="@{/plans/shared/{id}(id=${plan.id})}" th:text="${plan.title}">제목</a>
                 </div>
@@ -26,7 +32,7 @@
                     <span class="tag-category" th:text="${plan.category.label}">분류</span>
                     <span th:text="${plan.author.nickname}">작성자</span>
                     <span class="tag-shared" th:text="${plan.shareScope.label}">공유 범위</span>
-                    <span th:if="${plan.completed}">✅ 완료한 플랜</span>
+                    <span th:if="${plan.completed}">완료</span>
                 </div>
             </div>
         </li>

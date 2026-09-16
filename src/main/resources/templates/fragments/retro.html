@@ -34,16 +34,16 @@
                         : '예) 계획을 과하게 잡았다. 다음 주엔 하루 두 개까지만.'"></textarea>
         <div class="actions retro-actions">
             <span class="hint retro-saved" th:if="${retro != null && retro.updatedAt != null}"
-                  th:text="${#temporals.format(retro.updatedAt, 'M월 d일 HH:mm')} + ' 저장됨'">저장 시각</span>
-            <button type="submit" class="btn btn-primary btn-sm">저장</button>
+                  th:text="${#temporals.format(retro.updatedAt, 'yyyy-MM-dd HH:mm')} + ' 저장됨'">저장 시각</span>
+            <button type="submit" class="btn btn-sm btn-primary">저장</button>
         </div>
     </form>
 
     <form th:if="${retro != null}" th:action="@{/retros/{id}/delete(id=${retro.id})}" method="post"
-          data-confirm="회고를 지울까요?" data-confirm-label="삭제">
+          data-confirm="회고를 삭제할까요?" data-confirm-label="삭제">
         <input type="hidden" name="type" th:value="${retroType}">
         <input type="hidden" name="date" th:value="${date}">
-        <button type="submit" class="btn btn-sm btn-danger">회고 지우기</button>
+        <button type="submit" class="btn btn-sm btn-danger">회고 삭제</button>
     </form>
 </section>
 </body>

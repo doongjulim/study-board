@@ -12,7 +12,7 @@
 
     <div class="plan-nav">
         <a class="btn" th:href="@{/stats(period=${period}, date=${prevDate})}">← 이전</a>
-        <h3 th:text="${#temporals.format(statistics.from, 'yyyy.MM.dd')} + ' ~ ' + ${#temporals.format(statistics.to, 'MM.dd')}">기간</h3>
+        <h3 th:text="${#temporals.format(statistics.from, 'M월 d일')} + ' ~ ' + ${#temporals.format(statistics.to, 'M월 d일')}">기간</h3>
         <div class="btn-group">
             <a class="btn" th:href="@{/stats(period=${period})}">오늘</a>
             <a class="btn" th:href="@{/stats(period=${period}, date=${nextDate})}">다음 →</a>
@@ -59,19 +59,10 @@
         <h3 class="stat-title">일별 달성률</h3>
         <p class="empty" th:if="${statistics.totalCount == 0 and statistics.actualMinutes == 0}">
             이 기간에 등록된 계획도 학습 기록도 없습니다.</p>
-        <div class="trend-chart" th:if="${statistics.totalCount > 0 or statistics.actualMinutes > 0}">
-            <div class="trend-col" th:each="day : ${statistics.dailyTrend}">
-                <div class="trend-bar-wrap"
-                     th:title="${day.isEmpty()} ? '기록 없음'
-                               : ${day.completedCount} + '/' + ${day.totalCount} + ' 완료 · '
-                                 + ${day.actualHours()} + '시간 ' + ${day.actualRemainderMinutes()} + '분'">
-                    <div class="trend-bar" th:unless="${day.isEmpty()}"
-                         th:classappend="${day.completionRate() == 0} ? 'pending'"
-                         th:style="'height:' + ${day.barHeight()} + '%'"></div>
-                </div>
-                <span class="trend-label" th:text="${#temporals.format(day.date, 'M/d')}">날짜</span>
-            </div>
-        </div>
+        <!-- th:if 를 th:replace 와 한 태그에 두면 replace 가 먼저 처리돼 조건이 무시된다 -->
+        <th:block th:if="${statistics.totalCount > 0 or statistics.actualMinutes > 0}">
+            <div th:replace="~{fragments/trend :: trendChart(${statistics.dailyTrend})}"></div>
+        </th:block>
     </section>
 
     <!-- 분류별 집계 -->
