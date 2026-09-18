@@ -186,6 +186,38 @@ class PostControllerTest {
     }
 
     @Test
+    @DisplayName("GET /posts/{id} - 공유 미리보기에 글 제목과 본문 앞부분을 싣는다")
+    void detailFillsOpenGraph() throws Exception {
+        Post post = new Post("이번 주 학습 인증", "# 회고\n\n이번 주에는 **DP** 를 집중해서 봤다.",
+                postFixture().getAuthor());
+        given(postService.read(eq(3L), any(), anyBoolean())).willReturn(post);
+        stubEmptyComments();
+
+        mockMvc.perform(get("/posts/3"))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("ogTitle", "이번 주 학습 인증"))
+                .andExpect(model().attribute("ogType", "article"))
+                // 마크다운 기호가 그대로 가면 미리보기에 '**DP**' 가 보인다
+                .andExpect(model().attribute("ogDescription",
+                        org.hamcrest.Matchers.allOf(
+                                org.hamcrest.Matchers.containsString("DP"),
+                                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("**")),
+                                org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("#")))));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{id} - 본문이 비면 설명을 넣지 않는다 - 빈 설명은 기본 설명보다 나쁘다")
+    void detailSkipsEmptyOpenGraphDescription() throws Exception {
+        given(postService.read(eq(4L), any(), anyBoolean()))
+                .willReturn(new Post("제목만 있는 글", "", postFixture().getAuthor()));
+        stubEmptyComments();
+
+        mockMvc.perform(get("/posts/4"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("ogDescription"));
+    }
+
+    @Test
     @DisplayName("GET /posts/{id} - 본문의 마크다운은 살균된 HTML 로 모델에 담긴다")
     void detailSanitizesMarkdown() throws Exception {
         Post dangerous = new Post("제목", "**굵게**<script>alert(1)</script>", postFixture().getAuthor());

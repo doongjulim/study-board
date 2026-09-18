@@ -4,6 +4,7 @@ import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.dto.CommentThread;
 import com.example.board.comment.service.CommentService;
+import com.example.board.common.web.OpenGraphMeta;
 import com.example.board.common.web.PageBlock;
 import com.example.board.dday.service.DdayService;
 import com.example.board.plan.domain.DailyProgress;
@@ -225,6 +226,10 @@ public class PlanController {
         model.addAttribute("commentCount", commentService.countForPlan(id));
         model.addAttribute("commentPageBlock", PageBlock.of(comments));
         model.addAttribute("commentForm", new CommentForm());
+        // 공유 플랜도 링크로 돌아다닌다 - 제목만이라도 미리보기에 뜨게 한다
+        OpenGraphMeta.apply(model, plan.getTitle(),
+                "%s님의 공부 계획 · %s".formatted(plan.getAuthor().getNickname(), plan.getCategory().getLabel()),
+                "article");
         return "plans/shared-detail";
     }
 

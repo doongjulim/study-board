@@ -13,7 +13,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -33,10 +32,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 @RequestMapping("/me")
 public class MyPageController {
-
-    /** 캘린더 구독 주소를 만들 때 쓴다 (비밀번호 재설정 링크와 같은 설정값) */
-    @Value("${app.base-url:http://localhost:8080}")
-    private String baseUrl;
 
     private final MemberService memberService;
     private final AuthCookies authCookies;
@@ -160,14 +155,13 @@ public class MyPageController {
     private String backToPage(Model model, Member member) {
         fillMissingForms(model, member);
         model.addAttribute("member", member);
-        model.addAttribute("baseUrl", baseUrl);
         return "member/my-page";
     }
 
     private void prepare(Model model, Member member) {
         model.addAttribute("member", member);
-        // 구독 주소는 외부 앱에 붙여 넣는 값이라 전체 URL 이어야 한다
-        model.addAttribute("baseUrl", baseUrl);
+        // 구독 주소(baseUrl)는 SiteMetaAdvice 가 모든 화면에 넣어 준다 -
+        // 외부 앱에 붙여 넣는 값이라 전체 URL 이어야 하고, 그 규칙은 한 곳에만 있으면 된다
         model.addAttribute("profileForm", toForm(member));
         model.addAttribute("passwordChangeForm", new PasswordChangeForm());
         model.addAttribute("notificationSettingForm",

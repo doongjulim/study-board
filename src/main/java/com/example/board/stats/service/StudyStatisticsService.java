@@ -5,6 +5,8 @@ import com.example.board.plan.domain.Plan;
 import com.example.board.plan.repository.PlanRepository;
 import com.example.board.session.domain.StudySession;
 import com.example.board.session.repository.StudySessionRepository;
+import com.example.board.stats.domain.PeriodComparison;
+import com.example.board.stats.domain.StatsPeriod;
 import com.example.board.stats.domain.StudyStatistics;
 import com.example.board.stats.domain.StudyStreak;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,22 @@ public class StudyStatisticsService {
 
     public StudyStatistics calculate(Long memberId, LocalDate from, LocalDate to) {
         return StudyStatistics.of(findPlans(memberId, from, to), findSessions(memberId, from, to), from, to);
+    }
+
+    public StudyStatistics calculate(Long memberId, StatsPeriod period) {
+        return calculate(memberId, period.from(), period.to());
+    }
+
+    /**
+     * 이번 기간과 지난 같은 기간을 함께 계산한다.
+     *
+     * <p>지난 기간을 한 번 더 조회하는 값이 있다 - "12시간" 만으로는 잘한 것인지 알 수 없고,
+     * 판단에 필요한 정보가 화면에 없으면 숫자는 장식이 된다. 두 조회 모두
+     * {@code plan (author_id, plan_date)} 인덱스를 탄다.</p>
+     */
+    public PeriodComparison compare(Long memberId, StatsPeriod period) {
+        return new PeriodComparison(calculate(memberId, period),
+                calculate(memberId, period.previous()), period.previousLabel());
     }
 
     public int currentStreak(Long memberId, LocalDate today) {

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -25,8 +26,11 @@ import java.time.LocalDate;
 /**
  * 가입 직후 첫 사용 안내.
  *
- * <p>목표를 정하고(1) 오늘 할 일을 적고(2) 타이머를 눌러 보는(3) 데까지 3분 안에 데려간다.
+ * <p>오늘 할 일을 적고(1) 목표일을 정하고(2) 타이머를 눌러 보는(3) 데까지 3분 안에 데려간다.
  * 빈 화면부터 마주하면 무엇을 하는 서비스인지 알 수 없기 때문이다.</p>
+ *
+ * <p>순서의 근거는 {@link OnboardingProgress} 에 적었다 - 첫 질문이 "목표가 뭔가요?" 이던 때,
+ * 그 화면을 보는 사람은 아직 이 도구가 뭘 해 주는지 모르는 상태였다.</p>
  */
 @Controller
 @RequiredArgsConstructor
@@ -39,8 +43,9 @@ public class OnboardingController {
     private final Clock clock;
 
     @GetMapping
-    public String onboarding(@AuthenticationPrincipal MemberPrincipal principal, Model model) {
-        return render(principal, model);
+    public String onboarding(@RequestParam(defaultValue = "false") boolean skipGoal,
+                             @AuthenticationPrincipal MemberPrincipal principal, Model model) {
+        return render(principal, model, skipGoal);
     }
 
     @PostMapping("/dday")
@@ -81,12 +86,18 @@ public class OnboardingController {
     }
 
     private String render(MemberPrincipal principal, Model model) {
+        return render(principal, model, false);
+    }
+
+    private String render(MemberPrincipal principal, Model model, boolean skipGoal) {
         LocalDate today = LocalDate.now(clock);
-        OnboardingProgress progress = onboardingService.progress(principal.id(), today);
+        OnboardingProgress progress = onboardingService.progress(principal.id(), today, skipGoal);
 
         model.addAttribute("progress", progress);
         model.addAttribute("today", today);
         model.addAttribute("nickname", principal.nickname());
+        // 건너뛰기를 주소로 들고 다닌다 - 저장하지 않으므로 뒤로 가기가 그대로 동작한다
+        model.addAttribute("skipGoal", skipGoal);
         if (!model.containsAttribute("ddayForm")) {
             model.addAttribute("ddayForm", new DdayForm());
         }

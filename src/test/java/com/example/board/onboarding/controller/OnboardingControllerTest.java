@@ -35,6 +35,7 @@ import java.time.ZoneId;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -81,9 +82,11 @@ class OnboardingControllerTest {
                 List.of(new SimpleGrantedAuthority("ROLE_MEMBER"))));
     }
 
-    private void givenProgress(boolean dday, boolean plan) {
+    private void givenProgress(boolean plan, boolean dday) {
+        given(onboardingService.progress(eq(MEMBER_ID), any(), anyBoolean()))
+                .willReturn(new OnboardingProgress(plan, dday, false));
         given(onboardingService.progress(eq(MEMBER_ID), any()))
-                .willReturn(new OnboardingProgress(dday, plan));
+                .willReturn(new OnboardingProgress(plan, dday, false));
     }
 
     @Nested
@@ -122,6 +125,22 @@ class OnboardingControllerTest {
                     .andExpect(model().attributeDoesNotExist("todayPlans"));
 
             then(planService).shouldHaveNoInteractions();
+        }
+
+        @Test
+        @DisplayName("GET /onboarding?skipGoal=true - 목표일을 건너뛰겠다는 뜻을 서비스에 그대로 넘긴다")
+        void skipGoalIsPassedThrough() throws Exception {
+            given(onboardingService.progress(eq(MEMBER_ID), any(), eq(true)))
+                    .willReturn(new OnboardingProgress(true, false, true));
+            given(planService.findDaily(FixedClockConfig.TODAY, MEMBER_ID)).willReturn(List.of());
+
+            mockMvc.perform(get("/onboarding").param("skipGoal", "true").with(memberAuth()))
+                    .andExpect(status().isOk())
+                    // 건너뛴 사람은 마지막 단계로 간다 - 시험일이 없다고 안내가 막히면 안 된다
+                    .andExpect(model().attributeExists("todayPlans"))
+                    .andExpect(model().attribute("skipGoal", true));
+
+            then(onboardingService).should().progress(eq(MEMBER_ID), any(), eq(true));
         }
 
         @Test

@@ -114,6 +114,14 @@ public class SecurityConfig {
                         // 비밀번호 찾기는 로그인할 수 없는 상태에서 쓰는 기능이라 공개다
                         .requestMatchers("/login", "/logout", "/signup", "/password/**",
                                 "/css/**", "/js/**", "/images/**", "/error").permitAll()
+                        // 아이콘·manifest·공유 이미지.
+                        //
+                        // 브라우저는 파비콘을, 메신저는 og:image 를 <b>로그인하지 않은 채</b> 가져간다.
+                        // 열어 두지 않으면 둘 다 로그인 화면으로 302 되고, 받는 쪽은 그것을 이미지로
+                        // 읽으려다 실패한다 - 화면 안에서는 아무 표도 나지 않으므로 오래 남는 종류의 결함이다.
+                        // 담긴 것은 로고와 서비스 소개뿐이라 공개해도 잃을 것이 없다.
+                        .requestMatchers("/icons/**", "/manifest.json",
+                                "/favicon.svg", "/favicon.ico").permitAll()
                         // 인증 메일의 링크는 다른 기기에서 열리는 일이 흔하다.
                         // 링크에 든 토큰이 곧 신원이고, 하는 일은 "이 주소가 닿는다" 표시뿐이다
                         .requestMatchers(HttpMethod.GET, "/email/verify").permitAll()

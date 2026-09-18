@@ -221,5 +221,30 @@
               copied ? 'success' : 'error');
     });
 
+    // ── 접힌 구역으로 가는 앵커 ────────────────────────────
+    //
+    // #calendar 처럼 <details> 안이나 <details> 자신을 가리키는 링크는, 열어 주지 않으면
+    // 접힌 상자 앞에 도착만 하고 찾던 내용은 보이지 않는다. 브라우저마다 동작이 갈리는
+    // 자리라 여기서 맞춘다. JS 가 없으면 접힌 채로 도착하고 한 번 누르면 열린다 -
+    // 없어도 길이 막히지는 않는다.
+    function openTargetDetails() {
+        if (!location.hash || location.hash.length < 2) return;
+        let target;
+        try {
+            target = document.querySelector(location.hash);
+        } catch {
+            return; // 주소창에 손으로 적은 값이 선택자로 성립하지 않을 수 있다
+        }
+        if (!target) return;
+        const details = target.closest('details');
+        if (details && !details.open) {
+            details.open = true;
+            details.scrollIntoView({ block: 'start' });
+        }
+    }
+
+    window.addEventListener('hashchange', openTargetDetails);
+    openTargetDetails();
+
     window.UI = { csrfHeaders, toast, confirmDialog, withBusy, readError, copyText };
 })();

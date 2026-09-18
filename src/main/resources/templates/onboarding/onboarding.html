@@ -7,15 +7,18 @@
     <h2 class="dash-greeting" th:text="|${nickname}님, 반가워요|">환영합니다</h2>
     <p class="hint">3분이면 끝나요. 언제든 건너뛸 수 있습니다.</p>
 
-    <!-- 진행 표시 -->
+    <!--
+      진행 표시. 순서를 한 번 뒤집었다 - 근거는 OnboardingProgress 에 적었다.
+      체크는 '실제로 한 것' 에만 붙는다(건너뛴 목표일은 done 이 아니다).
+    -->
     <ol class="step-bar">
-        <li th:classappend="${progress.completedSteps() >= 1} ? 'done' : (${progress.isStep(1)} ? 'on' : '')">
-            <span class="step-num" th:text="${progress.completedSteps() >= 1} ? '✓' : '1'">1</span>
-            <span>목표 정하기</span>
-        </li>
-        <li th:classappend="${progress.completedSteps() >= 2} ? 'done' : (${progress.isStep(2)} ? 'on' : '')">
-            <span class="step-num" th:text="${progress.completedSteps() >= 2} ? '✓' : '2'">2</span>
+        <li th:classappend="${progress.planCreated()} ? 'done' : (${progress.isStep(1)} ? 'on' : '')">
+            <span class="step-num" th:text="${progress.planCreated()} ? '✓' : '1'">1</span>
             <span>오늘 할 일</span>
+        </li>
+        <li th:classappend="${progress.ddayCreated()} ? 'done' : (${progress.isStep(2)} ? 'on' : '')">
+            <span class="step-num" th:text="${progress.ddayCreated()} ? '✓' : '2'">2</span>
+            <span>목표 정하기</span>
         </li>
         <li th:classappend="${progress.isStep(3)} ? 'on'">
             <span class="step-num">3</span>
@@ -23,32 +26,8 @@
         </li>
     </ol>
 
-    <!-- 1단계: D-Day -->
+    <!-- 1단계: 오늘 할 일. 30초 만에 첫 성공을 만드는 자리라 물어보는 것을 최소로 둔다 -->
     <form class="form-card" th:if="${progress.isStep(1)}"
-          method="post" th:object="${ddayForm}" th:action="@{/onboarding/dday}">
-        <h3 class="stat-title">목표가 뭔가요?</h3>
-        <p class="hint">시험일이나 면접일을 정해 두면 남은 날짜가 늘 눈에 들어옵니다.</p>
-
-        <div class="form-row">
-            <div class="form-group">
-                <label for="title">목표</label>
-                <input type="text" id="title" th:field="*{title}" placeholder="예) 정보처리기사 실기" autofocus>
-                <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
-            </div>
-            <div class="form-group">
-                <label for="targetDate">날짜</label>
-                <input type="date" id="targetDate" th:field="*{targetDate}">
-                <p class="error" th:if="${#fields.hasErrors('targetDate')}" th:errors="*{targetDate}"></p>
-            </div>
-        </div>
-
-        <div class="actions">
-            <button type="submit" class="btn btn-primary">다음</button>
-        </div>
-    </form>
-
-    <!-- 2단계: 오늘 계획 -->
-    <form class="form-card" th:if="${progress.isStep(2)}"
           method="post" th:object="${planForm}" th:action="@{/onboarding/plan}">
         <h3 class="stat-title">오늘은 뭘 공부하죠?</h3>
         <p class="hint">거창하지 않아도 됩니다. 30분짜리 하나면 충분해요.</p>
@@ -77,6 +56,35 @@
 
         <div class="actions">
             <button type="submit" class="btn btn-primary">다음</button>
+        </div>
+    </form>
+
+    <!--
+      2단계: 목표일. 여기서는 건너뛸 수 있어야 한다 - 시험일이 아직 안 정해진 사람이
+      그 이유로 안내 전체를 그만두게 되면 안 된다. 건너뛰기는 주소로만 남으므로
+      나중에 마이페이지나 D-Day 화면에서 언제든 적을 수 있다.
+    -->
+    <form class="form-card" th:if="${progress.isStep(2)}"
+          method="post" th:object="${ddayForm}" th:action="@{/onboarding/dday}">
+        <h3 class="stat-title">좋아요! 목표한 날이 있나요?</h3>
+        <p class="hint">시험일이나 면접일을 정해 두면 남은 날짜가 늘 눈에 들어옵니다.</p>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="title">목표</label>
+                <input type="text" id="title" th:field="*{title}" placeholder="예) 정보처리기사 실기" autofocus>
+                <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+            </div>
+            <div class="form-group">
+                <label for="targetDate">날짜</label>
+                <input type="date" id="targetDate" th:field="*{targetDate}">
+                <p class="error" th:if="${#fields.hasErrors('targetDate')}" th:errors="*{targetDate}"></p>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">다음</button>
+            <a class="btn" th:href="@{/onboarding(skipGoal=true)}">아직 없어요</a>
         </div>
     </form>
 

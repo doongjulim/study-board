@@ -25,6 +25,14 @@
             <span class="stat-label">완료율</span>
             <strong class="stat-value" th:text="${statistics.completionRate()} + '%'">0%</strong>
             <span class="stat-sub" th:text="${statistics.completedCount} + ' / ' + ${statistics.totalCount} + '개 완료'">0 / 0</span>
+            <!--
+              지난 기간이 없으면 비교하지 않는다 - 처음 쓰는 사람에게 "지난주 대비 +12%p" 는
+              없던 지난주를 있었던 것처럼 말하는 셈이다(PeriodComparison#hasPrevious).
+            -->
+            <span class="stat-delta" th:if="${comparison.hasPrevious()}"
+                  th:classappend="${comparison.completionRateDelta() > 0} ? 'up'
+                                  : (${comparison.completionRateDelta() < 0} ? 'down')"
+                  th:text="${comparison.readableCompletionRateDelta()}">지난주 대비</span>
         </div>
         <div class="stat-card">
             <span class="stat-label">공부 시간</span>
@@ -35,6 +43,10 @@
                   th:text="'계획 ' + ${statistics.readablePlanned()}
                            + ' 대비 ' + ${statistics.executionRate()} + '%'">계획 대비</span>
             <span class="stat-sub" th:unless="${statistics.plannedMinutes > 0}">타이머로 기록한 실제 시간</span>
+            <span class="stat-delta" th:if="${comparison.hasPrevious()}"
+                  th:classappend="${comparison.actualIncreased()} ? 'up'
+                                  : (${comparison.actualDecreased()} ? 'down')"
+                  th:text="${comparison.readableActualDelta()}">지난주 대비</span>
         </div>
         <div class="stat-card">
             <span class="stat-label">연속 달성</span>

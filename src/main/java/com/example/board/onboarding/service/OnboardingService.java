@@ -28,9 +28,18 @@ public class OnboardingService {
 
     /** 어디까지 왔는지 - 도중에 나갔다 돌아와도 하던 곳에서 이어지도록 매번 상태에서 계산한다 */
     public OnboardingProgress progress(Long memberId, LocalDate today) {
+        return progress(memberId, today, false);
+    }
+
+    /**
+     * @param goalSkipped 목표일 단계를 건너뛰겠다고 했는가. 목표일은 없을 수도 있는 것이라
+     *                    저장된 상태만으로는 "안 적은 사람" 과 "안 적기로 한 사람" 을 가를 수 없다
+     */
+    public OnboardingProgress progress(Long memberId, LocalDate today, boolean goalSkipped) {
         return new OnboardingProgress(
+                !planService.findDaily(today, memberId).isEmpty(),
                 !ddayService.findMine(memberId).isEmpty(),
-                !planService.findDaily(today, memberId).isEmpty());
+                goalSkipped);
     }
 
     @Transactional

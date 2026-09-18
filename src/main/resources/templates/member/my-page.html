@@ -16,6 +16,8 @@
     <!--
       구역 이동. 폼이 다섯 개라 아래쪽(특히 탈퇴)까지 스크롤이 길다.
       단순한 앵커 목록이라 JS 없이 동작하고, 주소에 남으므로 되돌아오기도 쉽다.
+      접어 둔 구역(캘린더·탈퇴)으로 갈 때는 ui.js 가 그 <details> 를 열어 준다 -
+      JS 가 없으면 접힌 채로 그 자리에 도착하고, 한 번 누르면 열린다.
     -->
     <nav class="section-nav" aria-label="내 정보 구역">
         <a href="#profile">프로필</a>
@@ -183,9 +185,15 @@
         </div>
     </form>
 
-    <!-- 캘린더 연동 -->
-    <section id="calendar" class="form-card me-section">
-        <h3 class="stat-title">캘린더 연동</h3>
+    <!--
+      캘린더 연동은 접어 둔다.
+
+      한 번 설정하면 다시 열 일이 거의 없는데, 펼쳐 두면 프로필·알림과 같은 무게로 놓여
+      매번 지나쳐야 하는 분량이 된다. <details> 를 쓰는 이유는 일정 카드의 '⋯' 과 같다 -
+      열고 닫기·키보드·스크린리더를 브라우저가 이미 처리해 준다.
+    -->
+    <details id="calendar" class="form-card me-section me-fold">
+        <summary class="stat-title">캘린더 연동 · 내려받기</summary>
         <p class="hint">
             쓰던 캘린더 앱에 이 플래너를 얹을 수 있어요. 구독 주소를 구글 캘린더의
             "URL로 캘린더 추가" 에 붙여 넣으면 계획이 자동으로 따라옵니다.
@@ -233,11 +241,14 @@
                 <button type="submit" class="btn">CSV 내려받기</button>
             </div>
         </form>
-    </section>
+    </details>
 
-    <!-- 탈퇴 -->
-    <section id="withdraw" class="form-card danger-zone me-section">
-        <h3 class="stat-title">회원 탈퇴</h3>
+    <!--
+      탈퇴도 접어 둔다. 되돌릴 수 없는 행동을 늘 펼쳐 두면 두 가지가 나빠진다 -
+      매일 쓰는 화면에 '삭제' 가 상주하고, 정작 필요할 때는 다른 설정에 섞여 눈에 덜 띈다.
+    -->
+    <details id="withdraw" class="form-card danger-zone me-section me-fold">
+        <summary class="stat-title">회원 탈퇴</summary>
         <p class="hint">
             계획·D-Day·학습 기록·알림은 <strong>모두 삭제</strong>됩니다.
             게시글과 댓글은 다른 분들의 대화가 끊기지 않도록 남고, 작성자는 <strong>탈퇴한 회원</strong>으로 표시됩니다.
@@ -263,7 +274,7 @@
                 <button type="submit" class="btn btn-danger">탈퇴하기</button>
             </div>
         </form>
-    </section>
+    </details>
 </main>
 </body>
 </html>

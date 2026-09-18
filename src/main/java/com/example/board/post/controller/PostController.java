@@ -5,6 +5,7 @@ import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.dto.CommentThread;
 import com.example.board.comment.service.CommentService;
 import com.example.board.common.markdown.MarkdownRenderer;
+import com.example.board.common.web.OpenGraphMeta;
 import com.example.board.common.web.PageBlock;
 import com.example.board.post.domain.Post;
 import com.example.board.post.domain.PostCategory;
@@ -161,6 +162,8 @@ public class PostController {
         model.addAttribute("commentCount", commentService.countForPost(id));
         model.addAttribute("commentPageBlock", PageBlock.of(comments));
         model.addAttribute("commentForm", new CommentForm());
+        // 인증글을 카톡·슬랙에 공유하는 것이 이 서비스가 퍼지는 가장 자연스러운 경로다
+        OpenGraphMeta.applyFromMarkdown(model, post.getTitle(), post.getContent());
         return "posts/view";
     }
 

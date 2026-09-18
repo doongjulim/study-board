@@ -119,6 +119,12 @@
 .stat-label { font-size: .78rem; color: var(--ink-soft); }
 .stat-value { font-size: 1.6rem; line-height: 1.2; }
 .stat-sub { font-size: .72rem; color: var(--ink-soft); }
+/* 지난 기간 대비.
+   색만으로 오르내림을 말하지 않는다 - 문구에 이미 +/- 가 들어 있어(PeriodComparison)
+   색을 못 보는 사람도 같은 것을 읽는다. 색은 훑을 때의 단서일 뿐이다. */
+.stat-delta { font-size: .72rem; color: var(--ink-soft); margin-top: 2px; }
+.stat-delta.up { color: var(--ok); }
+.stat-delta.down { color: var(--danger); }
 
 .stat-section { margin-bottom: 32px; }
 .stat-title { margin-bottom: 12px; font-size: 1rem; }
@@ -404,6 +410,12 @@ header.site .nickname:hover { color: var(--accent); }
 /* 라벨은 화면에서 감추되 스크린리더에는 남긴다 */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* 내 정보의 접히는 구역(캘린더·탈퇴).
+   요약줄은 제목처럼 보여야 하므로 stat-title 을 그대로 쓰고, 커서와 화살표만 더한다. */
+.me-fold > summary { cursor: pointer; user-select: none; }
+.me-fold > summary::marker { color: var(--ink-soft); }
+.me-fold[open] > summary { margin-bottom: 10px; }
 
 /* ── 일간 플래너: 한 줄 추가 · 이월 ─────────────── */
 .quick-add { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
