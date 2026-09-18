@@ -101,7 +101,43 @@
             markPlanButtons();
             // 종료 직후 "몇 분 했는지" 를 바로 보여 준다 - 기록이 남았다는 확인이 있어야 다시 켠다
             UI.toast(`⏱ ${result.minutes}분 기록했습니다.`, 'success');
+            await askIfFinished(result);
         });
+    }
+
+    /**
+     * 그 계획을 끝냈는지 묻는다.
+     *
+     * 예전에는 묻지 않았다 - 계획에서 '시작' 을 눌러 두 시간 공부하고 종료해도
+     * "120분 기록했습니다" 만 뜨고 체크 상자는 그대로 비어 있었다. 하루에 가장 자주 하는
+     * 두 가지(공부하기 / 끝냈다고 표시하기)가 서로를 모르는 상태였다.
+     *
+     * 자동으로 완료 처리하지는 않는다 - 두 시간 앉아 있었어도 다 못 끝냈을 수 있다.
+     * 정하는 것은 사람이고, 화면은 그 자리를 마련해 주기만 한다.
+     */
+    async function askIfFinished(result) {
+        if (!result.planId || result.planCompleted) return;   // 계획 없이 켰거나 이미 끝낸 것
+
+        const ok = await UI.confirmDialog(
+            `"${result.planTitle}" 을(를) 끝냈나요?`, '완료로 표시');
+        if (!ok) return;
+
+        const res = await fetch(`/api/plans/${result.planId}/toggle`, {
+            method: 'POST',
+            headers: UI.csrfHeaders()
+        });
+        if (!res.ok) {
+            UI.toast(await UI.readError(res, '완료로 표시하지 못했습니다.'), 'error');
+            return;
+        }
+        UI.toast('완료로 표시했습니다.', 'success');
+        // 이 화면에 그 계획이 그려져 있으면 체크 상태를 맞춘다 (일간 뷰·검색 결과)
+        const card = document.querySelector(`[data-plan-id="${result.planId}"]`);
+        if (card) {
+            const check = card.querySelector('[data-toggle]');
+            if (check) check.textContent = '✅';
+            card.classList.add('done');
+        }
     }
 
     /** 진행 중인 계획의 버튼만 '진행 중' 으로 바꾼다 */

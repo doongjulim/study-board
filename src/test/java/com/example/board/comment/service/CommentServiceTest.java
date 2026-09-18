@@ -81,7 +81,7 @@ class CommentServiceTest {
         then(eventPublisher).should().publishEvent(captor.capture());
         assertThat(captor.getValue().recipientId()).isEqualTo(POST_AUTHOR_ID);
         assertThat(captor.getValue().commenterNickname()).isEqualTo("댓글러");
-        assertThat(captor.getValue().url()).isEqualTo("/posts/1");
+        assertThat(captor.getValue().url()).startsWith("/posts/1#comment-");
     }
 
     @Test
@@ -110,7 +110,7 @@ class CommentServiceTest {
         ArgumentCaptor<CommentAddedEvent> captor = ArgumentCaptor.forClass(CommentAddedEvent.class);
         then(eventPublisher).should().publishEvent(captor.capture());
         assertThat(captor.getValue().recipientId()).isEqualTo(POST_AUTHOR_ID);
-        assertThat(captor.getValue().url()).isEqualTo("/plans/shared/2");
+        assertThat(captor.getValue().url()).startsWith("/plans/shared/2#comment-");
     }
 
     @Test

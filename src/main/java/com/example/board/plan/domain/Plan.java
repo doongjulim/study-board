@@ -59,6 +59,16 @@ public class Plan {
     @Column(nullable = false)
     private boolean reminderSent;
 
+    /**
+     * 이 계획을 다음 날로 이월했는가.
+     *
+     * <p>이월이 '옮기기' 에서 '복제' 로 바뀌면서 필요해졌다 - 원본이 어제에 그대로 남으므로,
+     * 표시가 없으면 버튼을 두 번 누른 사람에게 오늘 같은 계획이 두 개 생긴다.
+     * "이월했다" 는 것도 그날 있었던 일이므로 기록으로 남길 값이다.</p>
+     */
+    @Column(nullable = false)
+    private boolean rolledOver;
+
     /** 반복 생성된 일정들을 묶는 식별자 - 단건 일정은 null */
     @Column(length = 36)
     private String seriesId;
@@ -141,6 +151,28 @@ public class Plan {
         this.planDate = date;
         this.reminderSent = false;
         this.seriesId = null;
+    }
+
+    /**
+     * 다른 날짜로 <b>복제</b>한다. 이월(rollover)이 쓴다.
+     *
+     * <p>― 왜 옮기지 않고 복제하는가<br>
+     * 이월이 {@link #moveTo} 로 날짜를 옮기던 때, <b>어제의 기록이 바뀌었다.</b>
+     * 어제 계획이 3개였고 1개를 끝냈다면 완료율은 33%다. 남은 2개를 오늘로 옮기면
+     * 어제에는 완료한 1개만 남아 <b>100%가 된다</b> — 통계에 없던 완벽한 하루가 생긴다.
+     *
+     * <p>이 판단은 이미 위에 절반만 적혀 있었다: 완료한 일정은 "지난 기록이 바뀐다" 는 이유로
+     * 옮기지 못하게 막아 두었다. 그런데 완료율을 흔드는 것은 분자(완료 수)만이 아니라
+     * 분모(전체 수)도 마찬가지다. 기록은 일어난 일을 적는 것이고, <b>못 한 것도 일어난 일이다.</b>
+     *
+     * <p>복제본은 새 하루의 새 계획이므로 반복 묶음·공유·알림 이력을 물려받지 않는다 -
+     * 물려받으면 오늘 것이 어제 것의 그림자가 된다.
+     */
+    public Plan copyTo(LocalDate date) {
+        this.rolledOver = true;   // 두 번 눌러도 두 개가 생기지 않게
+        Plan copy = new Plan(title, content, author, category, date, startTime, endTime);
+        copy.shareScope = ShareScope.PRIVATE;
+        return copy;
     }
 
     public boolean isShared() {

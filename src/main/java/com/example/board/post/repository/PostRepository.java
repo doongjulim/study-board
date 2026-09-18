@@ -73,4 +73,26 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             order by liked.id desc
             """)
     Page<PostSummary> findLikedSummaries(@Param("memberId") Long memberId, Pageable pageable);
+
+    /**
+     * 내가 댓글을 단 글.
+     *
+     * <p>'질문' 분류가 있는 게시판인데, 답변을 기다리는 사람이 자기가 참여한 대화를
+     * 되찾을 길이 없었다 - '내가 쓴 글' 과 '좋아요한 글' 만 있었다.</p>
+     *
+     * <p>한 글에 댓글을 여러 개 달았어도 글은 하나여야 하므로 distinct 로 묶고,
+     * <b>마지막으로 참여한 순서</b>로 정렬한다 - 방금 이야기하던 것이 위에 있어야 한다.
+     * (글 id 로 묶어 그 안의 최대 댓글 id 를 기준으로 삼는다)</p>
+     */
+    @Query("""
+            select new com.example.board.post.dto.PostSummary(
+                p.id, p.title, p.author.nickname, p.category, p.createdAt, size(p.files),
+                p.viewCount, p.likeCount)
+            from Comment c join c.post p
+            where c.author.id = :memberId
+            group by p.id, p.title, p.author.nickname, p.category, p.createdAt,
+                     p.viewCount, p.likeCount
+            order by max(c.id) desc
+            """)
+    Page<PostSummary> findCommentedSummaries(@Param("memberId") Long memberId, Pageable pageable);
 }

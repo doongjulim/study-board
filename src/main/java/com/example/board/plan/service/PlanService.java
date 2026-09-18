@@ -159,7 +159,8 @@ public class PlanService {
     @Transactional
     public int rollover(Long memberId, LocalDate from, LocalDate to) {
         List<Plan> unfinished = findUnfinished(from, memberId);
-        unfinished.forEach(plan -> plan.moveTo(to));
+        // 옮기지 않고 복제한다 - 옮기면 어제의 완료율이 뒤에서 바뀐다 (Plan#copyTo 참고)
+        planRepository.saveAll(unfinished.stream().map(plan -> plan.copyTo(to)).toList());
         return unfinished.size();
     }
 

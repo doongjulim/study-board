@@ -70,6 +70,11 @@ public class PostService {
         return postRepository.findLikedSummaries(memberId, pageable);
     }
 
+    /** 내가 댓글을 단 글 모아보기 - 답변을 기다리는 질문을 되찾는 길이다 */
+    public Page<PostSummary> findCommented(Long memberId, Pageable pageable) {
+        return postRepository.findCommentedSummaries(memberId, pageable);
+    }
+
     /**
      * 상세를 연다. 읽기 작업이지만 카운터가 움직일 수 있으므로 쓰기 트랜잭션으로 연다.
      *

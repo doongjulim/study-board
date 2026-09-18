@@ -96,16 +96,21 @@ public class PostController {
                        @RequestParam(defaultValue = "0") int page,
                        @AuthenticationPrincipal MemberPrincipal principal,
                        Model model) {
-        boolean liked = "liked".equals(tab);
         // 정렬은 쿼리 안에 있으므로 여기서는 페이지만 정한다 (둘을 겹치면 order by 가 두 번 붙는다)
         Pageable pageable = PageRequest.of(Math.max(page, 0), 10);
-        Page<PostSummary> posts = liked
-                ? postService.findLiked(principal.id(), pageable)
-                : postService.findMine(principal.id(), pageable);
+        String selected = switch (tab) {
+            case "liked", "commented" -> tab;
+            default -> "written";
+        };
+        Page<PostSummary> posts = switch (selected) {
+            case "liked" -> postService.findLiked(principal.id(), pageable);
+            case "commented" -> postService.findCommented(principal.id(), pageable);
+            default -> postService.findMine(principal.id(), pageable);
+        };
 
         model.addAttribute("posts", posts);
         model.addAttribute("pageBlock", PageBlock.of(posts));
-        model.addAttribute("tab", liked ? "liked" : "written");
+        model.addAttribute("tab", selected);
         model.addAttribute("likedPostIds", postService.findLikedPostIds(principal.id(), posts.getContent()));
         return "posts/mine";
     }

@@ -375,17 +375,59 @@ class PlanServiceTest {
     // ── 이월 ─────────────────────────────────────────────────
 
     @Test
-    @DisplayName("rollover 는 못 끝낸 일정만 다음 날로 옮기고 건수를 반환한다")
+    @DisplayName("rollover 는 옮기지 않고 복제한다 - 어제 기록이 뒤에서 바뀌면 안 된다")
     void rollover() {
+        // 옮기던 때: 어제 3개 중 1개 완료(33%)였는데 남은 2개를 옮기면
+        // 어제에는 완료한 1개만 남아 100% 가 됐다. 통계에 없던 완벽한 하루가 생긴다
+        Plan unfinished = plan();                              // plan() 이 만드는 날짜가 7/9 다
+        LocalDate yesterday = LocalDate.of(2026, 7, 9);
+        LocalDate today = LocalDate.of(2026, 7, 10);
+        given(planRepository.findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(1L, yesterday))
+                .willReturn(List.of(unfinished));
+
+        int rolled = planService.rollover(1L, yesterday, today);
+
+        assertThat(rolled).isEqualTo(1);
+        // 원본은 어제에 그대로 남는다
+        assertThat(unfinished.getPlanDate()).isEqualTo(yesterday);
+        // 복제본이 오늘 날짜로 저장된다
+        ArgumentCaptor<List<Plan>> saved = ArgumentCaptor.forClass(List.class);
+        then(planRepository).should().saveAll(saved.capture());
+        assertThat(saved.getValue()).singleElement()
+                .satisfies(copy -> {
+                    assertThat(copy.getPlanDate()).isEqualTo(today);
+                    assertThat(copy.getTitle()).isEqualTo(unfinished.getTitle());
+                    assertThat(copy.isCompleted()).isFalse();
+                });
+    }
+
+    @Test
+    @DisplayName("이월한 일정은 다시 이월 대상이 되지 않는다 - 두 번 눌러도 두 개가 생기지 않게")
+    void rollover_marksSourceAsRolledOver() {
         Plan unfinished = plan();
         LocalDate yesterday = LocalDate.of(2026, 7, 8);
         given(planRepository.findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(1L, yesterday))
                 .willReturn(List.of(unfinished));
 
-        int moved = planService.rollover(1L, yesterday, LocalDate.of(2026, 7, 9));
+        planService.rollover(1L, yesterday, LocalDate.of(2026, 7, 9));
 
-        assertThat(moved).isEqualTo(1);
-        assertThat(unfinished.getPlanDate()).isEqualTo(LocalDate.of(2026, 7, 9));
+        assertThat(unfinished.isRolledOver()).isTrue();
+    }
+
+    @Test
+    @DisplayName("복제본은 공유 범위를 물려받지 않는다 - 새 하루의 새 계획이다")
+    void rollover_copyIsPrivate() {
+        Plan shared = plan();
+        shared.changeShareScope(ShareScope.PUBLIC);
+        LocalDate yesterday = LocalDate.of(2026, 7, 8);
+        given(planRepository.findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(1L, yesterday))
+                .willReturn(List.of(shared));
+
+        planService.rollover(1L, yesterday, LocalDate.of(2026, 7, 9));
+
+        ArgumentCaptor<List<Plan>> saved = ArgumentCaptor.forClass(List.class);
+        then(planRepository).should().saveAll(saved.capture());
+        assertThat(saved.getValue().get(0).getShareScope()).isEqualTo(ShareScope.PRIVATE);
     }
 
     @Test

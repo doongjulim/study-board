@@ -258,6 +258,23 @@ header.site .nickname:hover { color: var(--accent); }
   white-space: nowrap; }
 .dash-plan .btn { flex-shrink: 0; }
 
+/*
+  알림을 타고 들어온 댓글.
+
+  주소가 그 자리로 데려가도 "어느 것인지" 가 보이지 않으면 결국 눈으로 찾아야 한다.
+  잠깐 강조했다가 가라앉힌다 - 계속 칠해 두면 다음에 그 글을 열었을 때도 남아 있어
+  새 댓글처럼 읽힌다.
+*/
+.comment-item:target {
+  background: var(--accent-soft);
+  border-radius: 8px;
+  animation: comment-highlight 2.4s ease-out 1s forwards;
+}
+@keyframes comment-highlight { to { background: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .comment-item:target { animation: none; }
+}
+
 /* ── 플랜 검색 ─────────────────────────────────── */
 .search-panel { margin-bottom: 18px; }
 .search-panel .select-input { width: 100%; }

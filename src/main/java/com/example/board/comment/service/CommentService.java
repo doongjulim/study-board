@@ -83,8 +83,10 @@ public class CommentService {
         Comment saved = commentRepository.save(Comment.forPost(post, commenter, content));
 
         if (!post.isAuthoredBy(memberId)) { // 내 글에 내가 단 댓글은 알리지 않는다
+            // 주소에 댓글 앵커까지 싣는다 - 글로만 데려가면 무엇이 새로 달렸는지 직접 찾아야 한다
             eventPublisher.publishEvent(new CommentAddedEvent(
-                    post.getAuthor().getId(), commenter.getNickname(), post.getTitle(), "/posts/" + postId));
+                    post.getAuthor().getId(), commenter.getNickname(), post.getTitle(),
+                    "/posts/" + postId + "#comment-" + saved.getId()));
         }
         return saved.getId();
     }
@@ -102,7 +104,7 @@ public class CommentService {
         if (!plan.isAuthoredBy(memberId)) {
             eventPublisher.publishEvent(new CommentAddedEvent(
                     plan.getAuthor().getId(), commenter.getNickname(), plan.getTitle(),
-                    "/plans/shared/" + planId));
+                    "/plans/shared/" + planId + "#comment-" + saved.getId()));
         }
         return saved.getId();
     }
@@ -129,7 +131,7 @@ public class CommentService {
             // 500자짜리 댓글을 그대로 넘기면 알림 목록이 그 하나로 덮인다
             eventPublisher.publishEvent(new CommentAddedEvent(
                     root.getAuthor().getId(), commenter.getNickname(),
-                    root.excerpt(), urlOf(root)));
+                    root.excerpt(), urlOf(root) + "#comment-" + saved.getId()));
         }
         return saved.getId();
     }

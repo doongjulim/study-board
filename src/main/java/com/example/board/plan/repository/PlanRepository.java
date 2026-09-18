@@ -85,11 +85,19 @@ public interface PlanRepository extends JpaRepository<Plan, Long>, JpaSpecificat
     @EntityGraph(attributePaths = "author")
     List<Plan> findBySeriesId(String seriesId);
 
-    /** 그날 남은 일정 - 다음 날로 이월할 대상 (정렬 규칙은 위 설명과 같다) */
+    /**
+     * 그날 남은 일정 중 <b>아직 이월하지 않은 것</b> - 이월 안내와 이월 실행이 함께 쓴다.
+     *
+     * <p>이월이 복제가 되면서 원본이 어제에 남는다. rolledOver 를 보지 않으면
+     * 안내 문구가 사라지지 않고, 버튼을 다시 누르면 같은 계획이 하나 더 생긴다.</p>
+     *
+     * <p>(정렬 규칙은 위 설명과 같다)</p>
+     */
     @EntityGraph(attributePaths = "author")
     @Query("""
             select p from Plan p
-            where p.author.id = :authorId and p.planDate = :planDate and p.completed = false
+            where p.author.id = :authorId and p.planDate = :planDate
+              and p.completed = false and p.rolledOver = false
             order by p.startTime asc nulls first, p.id asc
             """)
     List<Plan> findByAuthor_IdAndPlanDateAndCompletedFalseOrderByStartTimeAscIdAsc(

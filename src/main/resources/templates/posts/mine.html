@@ -5,8 +5,9 @@
 <main class="container">
     <h2 class="page-title">모아보기</h2>
 
-    <nav class="view-tabs">
+    <nav class="view-tabs filter-tabs" aria-label="모아보기 종류">
         <a th:href="@{/posts/mine(tab='written')}" th:classappend="${tab == 'written'} ? 'on'">내가 쓴 글</a>
+        <a th:href="@{/posts/mine(tab='commented')}" th:classappend="${tab == 'commented'} ? 'on'">내가 댓글 단 글</a>
         <a th:href="@{/posts/mine(tab='liked')}" th:classappend="${tab == 'liked'} ? 'on'">좋아요한 글</a>
     </nav>
 
@@ -17,7 +18,9 @@
 
     <th:block th:with="emptyMessage=${tab == 'liked'}
                                      ? '아직 좋아요한 글이 없습니다.'
-                                     : '아직 쓴 글이 없습니다.'">
+                                     : (${tab == 'commented'}
+                                        ? '아직 댓글을 단 글이 없습니다.'
+                                        : '아직 쓴 글이 없습니다.')">
         <div th:replace="~{posts/table :: postTable}"></div>
     </th:block>
 
