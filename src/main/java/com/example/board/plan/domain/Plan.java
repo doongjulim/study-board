@@ -1,5 +1,6 @@
 package com.example.board.plan.domain;
 
+import com.example.board.common.time.ReadableDuration;
 import com.example.board.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -18,6 +19,9 @@ import java.time.LocalTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 public class Plan {
+
+    /** 예상 소요 시간의 상한(분) - 하루. 근거는 {@link #validateEstimate} 에 적었다 */
+    public static final int MAX_ESTIMATED_MINUTES = 24 * 60;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,6 +47,23 @@ public class Plan {
     private LocalTime startTime; // null 이면 종일 일정
 
     private LocalTime endTime;
+
+    /**
+     * 예상 소요 시간(분). 적지 않았으면 null.
+     *
+     * <p>― 왜 시작·종료 시각과 따로 두는가<br>
+     * 통계의 '계획 대비 실행률' 은 한동안 <b>대부분의 사용자에게 보이지 않았다.</b>
+     * 계획 시간을 {@code endTime - startTime} 으로만 구했는데, 정작 주 입력 경로인
+     * 한 줄 추가는 시각을 받지 않기 때문이다. 시각이 없으면 계획 시간이 0이고,
+     * 0이면 화면이 실행률을 조용히 감췄다 - 기능이 없어진 줄도 모르고 쓰게 된다.
+     *
+     * <p>"언제 할까"(시각)와 "얼마나 걸릴까"(소요 시간)는 다른 값이다.
+     * 사람은 대개 뒤의 것을 먼저 안다 - 몇 시에 앉을지는 몰라도 두 시간쯤 걸린다는 건 안다.
+     * 그리고 실행률이 답하려던 질문("내가 계획을 과하게 잡는구나")에 필요한 것도 뒤의 값이다.
+     *
+     * <p>시각이 둘 다 있으면 그것이 더 정확한 정보이므로 그쪽을 쓴다({@link #getStudyMinutes}).
+     */
+    private Integer estimatedMinutes;
 
     @Column(nullable = false)
     private boolean completed;
@@ -81,7 +102,14 @@ public class Plan {
 
     public Plan(String title, String content, Member author, PlanCategory category,
                 LocalDate planDate, LocalTime startTime, LocalTime endTime) {
+        this(title, content, author, category, planDate, startTime, endTime, null);
+    }
+
+    public Plan(String title, String content, Member author, PlanCategory category,
+                LocalDate planDate, LocalTime startTime, LocalTime endTime,
+                Integer estimatedMinutes) {
         validateTimeRange(startTime, endTime);
+        validateEstimate(estimatedMinutes);
         this.title = title;
         this.content = content;
         this.author = author;
@@ -89,6 +117,7 @@ public class Plan {
         this.planDate = planDate;
         this.startTime = startTime;
         this.endTime = endTime;
+        this.estimatedMinutes = estimatedMinutes;
     }
 
     /** 현재 사용자가 이 플랜의 작성자인지 확인한다 */
@@ -113,17 +142,49 @@ public class Plan {
         return planDate.atTime(startTime);
     }
 
-    /** 계획된 공부 시간(분). 종일 일정처럼 시간이 없으면 0분으로 본다 */
+    /**
+     * 계획된 공부 시간(분).
+     *
+     * <p>시작·종료 시각이 둘 다 있으면 그 구간이 가장 정확한 정보이므로 그것을 쓰고,
+     * 없으면 직접 적은 예상 소요 시간을 쓴다. 둘 다 없으면 0 이다.</p>
+     */
     public long getStudyMinutes() {
-        if (startTime == null || endTime == null) {
-            return 0;
+        if (startTime != null && endTime != null) {
+            return java.time.Duration.between(startTime, endTime).toMinutes();
         }
-        return java.time.Duration.between(startTime, endTime).toMinutes();
+        return estimatedMinutes != null ? estimatedMinutes : 0;
+    }
+
+    /** 계획 시간을 적어 두었는가 - 화면이 '계획 대비' 를 보여 줄지 정할 때 쓴다 */
+    public boolean hasPlannedTime() {
+        return getStudyMinutes() > 0;
+    }
+
+    /**
+     * 예상 소요 시간을 "1시간 30분" 처럼 읽히게. 적지 않았으면 null.
+     *
+     * <p>시작·종료 시각이 <b>둘 다</b> 있으면 null 을 준다 - 그때는 그 구간이 계획 시간이라
+     * ({@link #getStudyMinutes}) 예상값을 함께 적으면 화면에 서로 다른 두 숫자가 놓인다.
+     * 보이는 값과 계산에 쓰는 값은 같아야 한다.</p>
+     */
+    public String getReadableEstimate() {
+        if (estimatedMinutes == null || (startTime != null && endTime != null)) {
+            return null;
+        }
+        return ReadableDuration.of(estimatedMinutes);
     }
 
     public void update(String title, String content, PlanCategory category,
                        LocalDate planDate, LocalTime startTime, LocalTime endTime) {
+        update(title, content, category, planDate, startTime, endTime, this.estimatedMinutes);
+    }
+
+    public void update(String title, String content, PlanCategory category,
+                       LocalDate planDate, LocalTime startTime, LocalTime endTime,
+                       Integer estimatedMinutes) {
         validateTimeRange(startTime, endTime);
+        validateEstimate(estimatedMinutes);
+        this.estimatedMinutes = estimatedMinutes;
         this.title = title;
         this.content = content;
         this.category = (category != null) ? category : PlanCategory.ETC;
@@ -170,7 +231,8 @@ public class Plan {
      */
     public Plan copyTo(LocalDate date) {
         this.rolledOver = true;   // 두 번 눌러도 두 개가 생기지 않게
-        Plan copy = new Plan(title, content, author, category, date, startTime, endTime);
+        Plan copy = new Plan(title, content, author, category, date, startTime, endTime,
+                estimatedMinutes);
         copy.shareScope = ShareScope.PRIVATE;
         return copy;
     }
@@ -207,6 +269,26 @@ public class Plan {
     private void validateTimeRange(LocalTime startTime, LocalTime endTime) {
         if (startTime != null && endTime != null && endTime.isBefore(startTime)) {
             throw new IllegalArgumentException("종료 시간은 시작 시간보다 빠를 수 없습니다.");
+        }
+    }
+
+    /**
+     * 예상 소요 시간을 검사한다.
+     *
+     * <p>위쪽 한계를 <b>하루</b>로 둔 것은 통계를 지키기 위해서다. 이 값은 그대로
+     * '계획 시간' 에 합산되므로, 단위를 착각해 분 대신 초를 적거나(7200) 0 을 하나 더 누르면
+     * 그 하루의 실행률이 0% 근처로 내려앉고 주간 추이까지 함께 망가진다.
+     * 하루를 넘는 계획은 하나의 일정이 아니라 여러 날에 걸친 일이므로 나눠 적는 것이 맞다.</p>
+     */
+    private void validateEstimate(Integer estimatedMinutes) {
+        if (estimatedMinutes == null) {
+            return;
+        }
+        if (estimatedMinutes <= 0) {
+            throw new IllegalArgumentException("예상 소요 시간은 1분 이상이어야 합니다.");
+        }
+        if (estimatedMinutes > MAX_ESTIMATED_MINUTES) {
+            throw new IllegalArgumentException("예상 소요 시간은 24시간을 넘을 수 없습니다.");
         }
     }
 }

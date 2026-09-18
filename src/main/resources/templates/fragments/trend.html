@@ -22,7 +22,7 @@
              th:with="summary=${day.isEmpty()}
                       ? '기록 없음'
                       : (${day.completedCount} + '/' + ${day.totalCount} + ' 완료 · '
-                         + ${day.actualHours()} + '시간 ' + ${day.actualRemainderMinutes()} + '분')"
+                         + ${day.readableActual()})"
              th:title="${summary}"
              th:attr="aria-label=${#temporals.format(day.date, 'M/d')} + ' ' + ${summary}">
             <div class="trend-bar" th:unless="${day.isEmpty()}" aria-hidden="true"

@@ -81,7 +81,11 @@
                     body: JSON.stringify({
                         title,
                         planDate: date,
-                        category: quickForm.querySelector('[name="category"]').value
+                        category: quickForm.querySelector('[name="category"]').value,
+                        // '예상 없음' 은 빈 문자열이다 - 0 으로 보내면 "0분 걸린다" 가 되어
+                        // 안 적은 것과 구분되지 않는다 (Plan#estimatedMinutes)
+                        estimatedMinutes: Number(
+                            quickForm.querySelector('[name="estimatedMinutes"]:checked')?.value) || null
                     })
                 });
                 if (!res.ok) {

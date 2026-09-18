@@ -41,6 +41,24 @@
             </div>
         </div>
 
+        <!--
+          예상 소요 시간. 시각과 나란히 두지 않고 한 줄 아래에 둔 이유는 서로 다른 질문이기 때문이다 -
+          위는 "언제 할까", 여기는 "얼마나 걸릴까". 사람은 대개 뒤의 것을 먼저 안다.
+
+          여기는 칩을 두지 않는다. 자주 쓰는 길이는 일간 뷰의 한 줄 추가가 클릭 한 번으로 받고,
+          이 화면은 거기 없는 길이를 적으러 오는 자리다 - 흔한 길은 빠르게, 드문 길은 가능하게.
+        -->
+        <div class="form-group">
+            <label for="estimatedMinutes">예상 소요 시간 (분)</label>
+            <input type="number" id="estimatedMinutes" th:field="*{estimatedMinutes}"
+                   class="estimate-minutes" min="1" th:max="${maxEstimateMinutes}"
+                   inputmode="numeric" placeholder="예) 90">
+            <p class="hint">비워두면 적지 않은 것으로 둡니다.
+                시작·종료 시간을 모두 적으면 그 구간을 계획 시간으로 씁니다.</p>
+            <p class="error" th:if="${#fields.hasErrors('estimatedMinutes')}"
+               th:errors="*{estimatedMinutes}"></p>
+        </div>
+
         <!-- 반복 설정은 새 일정 등록에서만 사용한다 -->
         <div class="form-row" th:if="${mode != 'edit'}">
             <div class="form-group">

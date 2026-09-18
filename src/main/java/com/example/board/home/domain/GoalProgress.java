@@ -1,5 +1,7 @@
 package com.example.board.home.domain;
 
+import com.example.board.common.time.ReadableDuration;
+
 /**
  * 오늘 목표 대비 진행도. 대시보드의 진행률 링에 쓰인다.
  *
@@ -49,6 +51,11 @@ public record GoalProgress(long actualMinutes, int goalMinutes) {
 
     public long goalHours() {
         return goalMinutes / 60;
+    }
+
+    /** 화면에 적을 실제 공부 시간 - 표기 규칙은 {@link ReadableDuration} 한 곳이 정한다 */
+    public String readableActual() {
+        return ReadableDuration.of(actualMinutes);
     }
 
     public long goalRemainderMinutes() {

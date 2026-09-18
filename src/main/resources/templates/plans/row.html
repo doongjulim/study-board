@@ -106,11 +106,20 @@
   아무것도 보여 주지 않았다.
 -->
 <div th:fragment="planTime(plan)" class="plan-time"
-     th:with="startText=${plan.startTime != null ? #temporals.format(plan.startTime, 'HH:mm') : ''}"
-     th:text="${plan.startTime == null}
-              ? '종일'
-              : (${plan.endTime != null}
-                 ? |${startText} ~ ${#temporals.format(plan.endTime, 'HH:mm')}|
-                 : ${startText})">시간</div>
+     th:with="startText=${plan.startTime != null ? #temporals.format(plan.startTime, 'HH:mm') : ''}">
+    <span th:text="${plan.startTime == null}
+                   ? '종일'
+                   : (${plan.endTime != null}
+                      ? |${startText} ~ ${#temporals.format(plan.endTime, 'HH:mm')}|
+                      : ${startText})">시간</span>
+    <!--
+      예상 소요 시간. 시작·종료 시각이 둘 다 있으면 Plan#getReadableEstimate 가 null 을 주므로
+      여기서 따로 거르지 않는다 - '언제' 와 '얼마나' 중 무엇을 계획 시간으로 쓰는지는
+      도메인이 정하고, 화면은 그 결정을 그대로 따른다.
+    -->
+    <span class="plan-estimate" th:if="${plan.readableEstimate != null}"
+          th:text="|예상 ${plan.readableEstimate}|"
+          th:attr="aria-label=|예상 소요 시간 ${plan.readableEstimate}|">예상</span>
+</div>
 </body>
 </html>

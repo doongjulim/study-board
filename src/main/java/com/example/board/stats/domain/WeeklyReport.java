@@ -1,5 +1,6 @@
 package com.example.board.stats.domain;
 
+import com.example.board.common.time.ReadableDuration;
 import com.example.board.plan.domain.Plan;
 import com.example.board.retro.domain.Retrospective;
 import com.example.board.session.domain.StudySession;
@@ -53,13 +54,11 @@ public record WeeklyReport(String title, String content) {
         StringBuilder content = new StringBuilder();
         content.append("이번 주 완료율 %d%% (%d/%d)%n".formatted(
                 statistics.completionRate(), statistics.completedCount(), statistics.totalCount()));
-        content.append("총 공부 시간 %d시간 %d분%n".formatted(
-                statistics.actualHours(), statistics.actualRemainderMinutes()));
+        content.append("총 공부 시간 %s%n".formatted(statistics.readableActual()));
         // 계획을 세워 둔 주에만 대비 실행률을 덧붙인다 (계획이 없으면 비교 대상이 없다)
         if (statistics.plannedMinutes() > 0) {
-            content.append("계획 %d시간 %d분 대비 %d%%%n".formatted(
-                    statistics.plannedHours(), statistics.plannedRemainderMinutes(),
-                    statistics.executionRate()));
+            content.append("계획 %s 대비 %d%%%n".formatted(
+                    statistics.readablePlanned(), statistics.executionRate()));
         }
         content.append(System.lineSeparator());
 
@@ -77,8 +76,8 @@ public record WeeklyReport(String title, String content) {
 
         if (!statistics.categories().isEmpty()) {
             content.append("📊 분류별 공부 시간%n".formatted());
-            statistics.categories().forEach(stat -> content.append("- %s %d시간 %d분%n".formatted(
-                    stat.category().getLabel(), stat.actualHours(), stat.actualRemainderMinutes())));
+            statistics.categories().forEach(stat -> content.append("- %s %s%n".formatted(
+                    stat.category().getLabel(), stat.readableActual())));
         }
         return content.toString().trim();
     }
@@ -112,8 +111,8 @@ public record WeeklyReport(String title, String content) {
         if (minutes <= 0) {
             return "";
         }
-        return minutes % 60 == 0
-                ? " (%d시간)".formatted(minutes / 60)
-                : " (%d시간 %d분)".formatted(minutes / 60, minutes % 60);
+        // 이 메서드가 갖고 있던 "딱 떨어지면 분을 생략한다" 규칙은 ReadableDuration 의 규칙과 같다.
+        // 같은 규칙이 두 곳에 적혀 있으면 언젠가 한쪽만 바뀐다.
+        return " (%s)".formatted(ReadableDuration.of(minutes));
     }
 }

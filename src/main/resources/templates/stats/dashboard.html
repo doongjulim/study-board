@@ -29,11 +29,11 @@
         <div class="stat-card">
             <span class="stat-label">공부 시간</span>
             <strong class="stat-value"
-                    th:text="${statistics.actualHours()} + '시간 ' + ${statistics.actualRemainderMinutes()} + '분'">0시간</strong>
+                    th:text="${statistics.readableActual()}">0시간</strong>
             <!-- 계획 시간과 나란히 놓아야 "계획을 과하게 잡는지" 가 보인다 -->
             <span class="stat-sub" th:if="${statistics.plannedMinutes > 0}"
-                  th:text="'계획 ' + ${statistics.plannedHours()} + '시간 ' + ${statistics.plannedRemainderMinutes()}
-                           + '분 대비 ' + ${statistics.executionRate()} + '%'">계획 대비</span>
+                  th:text="'계획 ' + ${statistics.readablePlanned()}
+                           + ' 대비 ' + ${statistics.executionRate()} + '%'">계획 대비</span>
             <span class="stat-sub" th:unless="${statistics.plannedMinutes > 0}">타이머로 기록한 실제 시간</span>
         </div>
         <div class="stat-card">
@@ -73,7 +73,7 @@
                 <div class="category-head">
                     <span class="tag-category" th:text="${stat.category.label}">분류</span>
                     <span class="category-time"
-                          th:text="${stat.actualHours()} + '시간 ' + ${stat.actualRemainderMinutes()} + '분'">시간</span>
+                          th:text="${stat.readableActual()}">시간</span>
                     <span class="category-count"
                           th:text="${stat.completedCount} + '/' + ${stat.totalCount} + '개 · ' + ${stat.completionRate()} + '%'">개수</span>
                 </div>

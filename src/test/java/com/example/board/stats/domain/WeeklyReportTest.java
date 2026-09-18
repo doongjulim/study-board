@@ -90,7 +90,9 @@ class WeeklyReportTest {
         ), List.of(session(PlanCategory.CODING_TEST, MONDAY, 180)), MONDAY, SUNDAY);
 
         assertThat(report.content()).contains("이번 주 완료율 50% (1/2)");
-        assertThat(report.content()).contains("총 공부 시간 3시간 0분");
+        // "3시간 0분" 이 아니다 - 딱 떨어지면 분을 적지 않는다(ReadableDuration)
+        assertThat(report.content()).contains("총 공부 시간 3시간");
+        assertThat(report.content()).doesNotContain("3시간 0분");
         assertThat(report.content()).contains("계획 4시간 30분 대비 67%"); // 180 / 270
     }
 
@@ -100,7 +102,8 @@ class WeeklyReportTest {
         WeeklyReport report = WeeklyReport.of(List.of(),
                 List.of(session(PlanCategory.MAJOR, MONDAY, 45)), MONDAY, SUNDAY);
 
-        assertThat(report.content()).contains("총 공부 시간 0시간 45분");
+        // 한 시간 미만은 분으로만 적는다 - "0시간 45분" 은 사람이 쓰는 말이 아니다
+        assertThat(report.content()).contains("총 공부 시간 45분");
         assertThat(report.content()).doesNotContain("대비");
     }
 

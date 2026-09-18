@@ -1,5 +1,6 @@
 package com.example.board.stats.domain;
 
+import com.example.board.common.time.ReadableDuration;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
 import com.example.board.session.domain.StudySession;
@@ -68,6 +69,22 @@ public record StudyStatistics(LocalDate from, LocalDate to,
 
     public long plannedRemainderMinutes() {
         return plannedMinutes % 60;
+    }
+
+    /**
+     * 화면에 적을 실제 공부 시간 - "2시간 10분".
+     *
+     * <p>위의 시·분 접근자를 화면에서 이어 붙이면 "0시간 45분" 과 "1시간 0분" 이 나온다.
+     * 순위표·챌린지는 같은 값을 "45분"·"1시간" 으로 적고 있었으므로, 한 앱 안에서 같은 값이
+     * 두 가지로 읽혔다. 표기 규칙은 {@link ReadableDuration} 한 곳에만 둔다.</p>
+     */
+    public String readableActual() {
+        return ReadableDuration.of(actualMinutes);
+    }
+
+    /** 화면에 적을 계획 시간 - "4시간 30분" */
+    public String readablePlanned() {
+        return ReadableDuration.of(plannedMinutes);
     }
 
     /** 계획을 세우기만 하고 타이머를 쓰지 않은 상태 - 화면에서 안내를 띄우는 데 쓴다 */
@@ -167,6 +184,11 @@ public record StudyStatistics(LocalDate from, LocalDate to,
         public long plannedRemainderMinutes() {
             return plannedMinutes % 60;
         }
+
+        /** 화면에 적을 실제 공부 시간 - 표기 규칙은 {@link ReadableDuration} */
+        public String readableActual() {
+            return ReadableDuration.of(actualMinutes);
+        }
     }
 
     /** 일별 집계 - 추이 막대에 사용 */
@@ -194,6 +216,11 @@ public record StudyStatistics(LocalDate from, LocalDate to,
 
         public long actualRemainderMinutes() {
             return actualMinutes % 60;
+        }
+
+        /** 화면에 적을 실제 공부 시간 - 표기 규칙은 {@link ReadableDuration} */
+        public String readableActual() {
+            return ReadableDuration.of(actualMinutes);
         }
     }
 }

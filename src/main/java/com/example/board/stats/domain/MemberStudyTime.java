@@ -1,5 +1,7 @@
 package com.example.board.stats.domain;
 
+import com.example.board.common.time.ReadableDuration;
+
 /**
  * 한 사람의 기간 학습 시간과 목표. 순위·챌린지 계산의 입력 단위다.
  *
@@ -21,13 +23,13 @@ public record MemberStudyTime(Long memberId, String nickname, long minutes, int 
         return hasGoal() && minutes >= (long) goalMinutes * days;
     }
 
-    /** 분 합계를 "3시간 20분" 처럼 읽히게 한다. 패키지 안에서 공용 */
+    /**
+     * 분 합계를 "3시간 20분" 처럼 읽히게 한다. 패키지 안에서 공용.
+     *
+     * <p>규칙 자체는 {@link ReadableDuration} 한 곳에 있다 - 플래너의 예상 소요 시간도 같은 표기를
+     * 써야 해서 공용으로 옮겼다. 이 메서드는 통계 쪽 호출부를 위한 이름만 남긴 것이다.</p>
+     */
     static String readableMinutes(long minutes) {
-        if (minutes < 60) {
-            return minutes + "분";
-        }
-        long hours = minutes / 60;
-        long rest = minutes % 60;
-        return (rest == 0) ? hours + "시간" : hours + "시간 " + rest + "분";
+        return ReadableDuration.of(minutes);
     }
 }

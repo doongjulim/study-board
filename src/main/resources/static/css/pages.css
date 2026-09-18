@@ -31,6 +31,8 @@
 .plan-card .check { background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 2px; }
 .plan-main { flex: 1; min-width: 0; }
 .plan-time { font-size: .8rem; color: var(--accent); font-weight: 600; display: flex; gap: 8px; }
+/* 예상 소요 시간. 시각과 한 줄에 있지만 확정된 값이 아니므로 약하게 적는다 */
+.plan-estimate { color: var(--ink-soft); font-weight: 500; }
 /* 여러 날짜가 섞인 목록(검색·공유)에서만 나온다. 시간과 구분되도록 약하게 */
 .plan-date { font-size: .78rem; color: var(--ink-soft); }
 .plan-date a { color: inherit; text-decoration: none; }
@@ -407,6 +409,22 @@ header.site .nickname:hover { color: var(--accent); }
 .quick-add { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .quick-title { flex: 1; min-width: 12rem; }
 .quick-add .select-input { width: auto; padding: 8px 12px; }
+
+/* 예상 소요 시간 칩.
+   라디오를 감춘 <label> 이라 눌리는 범위가 칩 전체이고, 키보드 포커스는 감춘 입력에 간다 -
+   그래서 테두리를 :focus-visible 이 아니라 :focus-within 으로 그린다.
+   fieldset 의 기본 테두리·여백은 지운다(모양은 칩 줄이지 상자가 아니다). */
+.quick-estimate { display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  border: 0; padding: 0; margin: 0; min-width: 0; }
+.quick-estimate .chip { display: inline-flex; align-items: center; cursor: pointer;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+  font-size: .8rem; color: var(--ink-soft); background: var(--card);
+  transition: background .15s, color .15s, border-color .15s; }
+.quick-estimate .chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+.quick-estimate .chip:hover { border-color: var(--accent); color: var(--accent); }
+.quick-estimate .chip:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.quick-estimate .chip:has(input:checked) { background: var(--accent); border-color: var(--accent);
+  color: #fff; font-weight: 600; }
 
 .leftover { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 10px;

@@ -11,6 +11,7 @@ import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.config.SecurityConfig;
 import com.example.board.support.TestClockConfig;
 import com.example.board.member.domain.Member;
+import com.example.board.plan.domain.EstimatePreset;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.domain.ShareScope;
@@ -492,6 +493,91 @@ class PlanControllerTest {
     void row_requiresLogin() throws Exception {
         mockMvc.perform(get("/plans/5/row"))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    // ── 예상 소요 시간 ────────────────────────────────────────
+    //
+    // 계획 시간이 시각에서만 나오던 동안, 주 입력 경로인 한 줄 추가로 적은 일정은 계획 시간이 0 이었고
+    // 통계는 0 이면 실행률을 감췄다. 화면에서 이 입력이 사라지면 같은 상태로 조용히 돌아간다.
+
+    private Plan planWithEstimate(Integer estimatedMinutes, LocalTime start, LocalTime end) {
+        Member author = new Member("tester1", "encoded-password", "동주");
+        ReflectionTestUtils.setField(author, "id", MEMBER_ID);
+        Plan plan = new Plan("자료구조 공부", null, author, PlanCategory.CODING_TEST,
+                LocalDate.of(2026, 7, 9), start, end, estimatedMinutes);
+        ReflectionTestUtils.setField(plan, "id", 5L);
+        return plan;
+    }
+
+    @Test
+    @DisplayName("일간 뷰의 한 줄 추가에 예상 소요 시간 칩이 모두 그려진다 - 클릭 한 번으로 끝나야 채워진다")
+    void daily_rendersEstimateChips() throws Exception {
+        given(planService.findDaily(any(LocalDate.class), eq(MEMBER_ID))).willReturn(List.of());
+
+        String html = mockMvc.perform(get("/plans/daily").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("name=\"estimatedMinutes\"");
+        for (EstimatePreset preset : EstimatePreset.values()) {
+            assertThat(html)
+                    .as("칩 %s 가 없다", preset.getLabel())
+                    .contains("value=\"" + preset.getMinutes() + "\"")
+                    .contains(preset.getLabel());
+        }
+    }
+
+    @Test
+    @DisplayName("시각 없이 예상 소요 시간만 적은 일정은 줄에 '예상 1시간' 이 함께 나온다")
+    void row_showsEstimate() throws Exception {
+        given(planService.findOwned(5L, MEMBER_ID)).willReturn(planWithEstimate(60, null, null));
+
+        mockMvc.perform(get("/plans/5/row").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("plan-estimate")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("예상 1시간")));
+    }
+
+    @Test
+    @DisplayName("시작·종료 시각이 둘 다 있으면 예상값은 줄에 나오지 않는다 - 계획 시간으로 쓰이지 않는 숫자다")
+    void row_hidesEstimateWhenTimeRangeWins() throws Exception {
+        given(planService.findOwned(5L, MEMBER_ID))
+                .willReturn(planWithEstimate(30, LocalTime.of(10, 0), LocalTime.of(12, 0)));
+
+        mockMvc.perform(get("/plans/5/row").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("10:00 ~ 12:00")))
+                // 설명 주석에도 '예상' 이 들어 있으므로 문구가 아니라 실제 자리(class)로 본다
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("plan-estimate"))));
+    }
+
+    @Test
+    @DisplayName("작성 폼에도 예상 소요 시간을 직접 적는 칸이 있다 - 칩에 없는 길이를 적으러 오는 자리다")
+    void newForm_hasEstimateField() throws Exception {
+        String html = mockMvc.perform(get("/plans/new").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("id=\"estimatedMinutes\"");
+        assertThat(html).contains("max=\"" + Plan.MAX_ESTIMATED_MINUTES + "\"");
+    }
+
+    @Test
+    @DisplayName("POST /plans - 하루를 넘는 예상 소요 시간이면 폼으로 돌아가고 저장하지 않는다")
+    void create_rejectsAbsurdEstimate() throws Exception {
+        mockMvc.perform(post("/plans")
+                        .param("title", "자료구조 공부")
+                        .param("category", "CODING_TEST")
+                        .param("planDate", "2026-07-09")
+                        .param("repeatType", "NONE")
+                        .param("estimatedMinutes", String.valueOf(Plan.MAX_ESTIMATED_MINUTES + 1))
+                        .with(csrf()).with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("plans/form"))
+                .andExpect(model().attributeHasFieldErrors("planForm", "estimatedMinutes"));
+
+        then(planService).should(never()).create(any(), any());
     }
 
 }

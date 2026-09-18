@@ -100,7 +100,7 @@ public class PlanService {
         List<Plan> plans = dates.stream()
                 .map(date -> {
                     Plan plan = new Plan(form.getTitle(), form.getContent(), author, form.getCategory(),
-                            date, form.getStartTime(), form.getEndTime());
+                            date, form.getStartTime(), form.getEndTime(), form.getEstimatedMinutes());
                     if (seriesId != null) {
                         plan.assignSeries(seriesId);
                     }
@@ -113,7 +113,7 @@ public class PlanService {
     @Transactional
     public void update(Long id, PlanForm form, Long memberId) {
         findOwned(id, memberId).update(form.getTitle(), form.getContent(), form.getCategory(),
-                form.getPlanDate(), form.getStartTime(), form.getEndTime());
+                form.getPlanDate(), form.getStartTime(), form.getEndTime(), form.getEstimatedMinutes());
     }
 
     @Transactional

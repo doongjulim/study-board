@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -33,6 +34,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.*;
@@ -99,6 +101,61 @@ class PlanApiControllerTest {
                     .andExpect(jsonPath("$.plan.category").value("코딩테스트"))
                     .andExpect(jsonPath("$.plan.time").value("09:00 ~ 10:00"))
                     .andExpect(jsonPath("$.progress.totalCount").value(1));
+        }
+
+        @Test
+        @DisplayName("칩으로 고른 예상 소요 시간이 함께 등록된다 - 시각을 받지 않는 이 경로가 계획 시간을 채우는 유일한 길이다")
+        void carriesEstimatedMinutes() throws Exception {
+            given(planService.create(any(PlanForm.class), eq(MEMBER_ID))).willReturn(10L);
+            given(planService.findOwned(10L, MEMBER_ID)).willReturn(plan(10L, "백준 DP 3문제", false));
+            given(planService.findDaily(TODAY, MEMBER_ID)).willReturn(List.of());
+
+            mockMvc.perform(post("/api/plans")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"title":"백준 DP 3문제","planDate":"2026-08-12","category":"CODING_TEST",
+                                     "estimatedMinutes":60}
+                                    """)
+                            .with(csrf()).with(memberAuth()))
+                    .andExpect(status().isCreated());
+
+            ArgumentCaptor<PlanForm> captor = ArgumentCaptor.forClass(PlanForm.class);
+            then(planService).should().create(captor.capture(), eq(MEMBER_ID));
+            assertThat(captor.getValue().getEstimatedMinutes()).isEqualTo(60);
+        }
+
+        @Test
+        @DisplayName("칩을 고르지 않으면 예상 소요 시간은 null 이다 - 0 이면 '0분 걸린다' 로 읽힌다")
+        void estimateStaysNullWhenNotChosen() throws Exception {
+            given(planService.create(any(PlanForm.class), eq(MEMBER_ID))).willReturn(10L);
+            given(planService.findOwned(10L, MEMBER_ID)).willReturn(plan(10L, "백준 DP 3문제", false));
+            given(planService.findDaily(TODAY, MEMBER_ID)).willReturn(List.of());
+
+            mockMvc.perform(post("/api/plans")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"title":"백준 DP 3문제","planDate":"2026-08-12","category":"CODING_TEST"}
+                                    """)
+                            .with(csrf()).with(memberAuth()))
+                    .andExpect(status().isCreated());
+
+            ArgumentCaptor<PlanForm> captor = ArgumentCaptor.forClass(PlanForm.class);
+            then(planService).should().create(captor.capture(), eq(MEMBER_ID));
+            assertThat(captor.getValue().getEstimatedMinutes()).isNull();
+        }
+
+        @Test
+        @DisplayName("하루를 넘는 예상 소요 시간은 400 이다 - 단위를 착각한 값 하나가 그 주의 통계를 망가뜨린다")
+        void rejectsAbsurdEstimate() throws Exception {
+            mockMvc.perform(post("/api/plans")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"title":"백준 DP 3문제","planDate":"2026-08-12","estimatedMinutes":7200}
+                                    """)
+                            .with(csrf()).with(memberAuth()))
+                    .andExpect(status().isBadRequest());
+
+            then(planService).should(never()).create(any(), any());
         }
 
         @Test

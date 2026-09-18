@@ -22,10 +22,8 @@
         <div class="goal-ring" th:classappend="*{goal.reached()} ? 'done'"
              th:style="'--p:' + *{goal.percent()}">
             <div class="ring-inner">
-                <strong class="ring-value" th:if="*{goal.actualHours() > 0}"
-                        th:text="*{goal.actualHours()} + '시간 ' + *{goal.actualRemainderMinutes()} + '분'">0분</strong>
-                <strong class="ring-value" th:unless="*{goal.actualHours() > 0}"
-                        th:text="*{goal.actualRemainderMinutes()} + '분'">0분</strong>
+                <!-- 한 시간 미만이면 '분' 만 적는 규칙은 ReadableDuration 이 이미 안다 -->
+                <strong class="ring-value" th:text="*{goal.readableActual()}">0분</strong>
                 <span class="ring-unit">오늘 공부</span>
             </div>
         </div>
@@ -103,7 +101,7 @@
         </div>
 
         <p class="hint">
-            <span th:text="|실제 공부 *{week.actualHours()}시간 *{week.actualRemainderMinutes()}분|">시간</span>
+            <span th:text="|실제 공부 *{week.readableActual()}|">시간</span>
             <span th:if="*{week.plannedMinutes > 0}"
                   th:text="|· 계획 대비 *{week.executionRate()}%|">실행률</span>
         </p>

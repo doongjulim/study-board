@@ -7,6 +7,7 @@ import com.example.board.comment.service.CommentService;
 import com.example.board.common.web.PageBlock;
 import com.example.board.dday.service.DdayService;
 import com.example.board.plan.domain.DailyProgress;
+import com.example.board.plan.domain.EstimatePreset;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
 import com.example.board.plan.domain.PlanSearchCondition;
@@ -244,6 +245,21 @@ public class PlanController {
         return PlanCategory.values();
     }
 
+    /**
+     * 예상 소요 시간의 기본 선택지 - 한 줄 추가의 칩과 작성/수정 폼이 함께 쓴다.
+     * 화면마다 숫자를 손으로 적으면 어느 화면은 30·60·120, 어느 화면은 25·50 이 된다.
+     */
+    @ModelAttribute("estimateChoices")
+    public EstimatePreset[] estimateChoices() {
+        return EstimatePreset.values();
+    }
+
+    /** 직접 적는 칸의 상한 - 화면과 검증이 같은 숫자를 보게 한다 */
+    @ModelAttribute("maxEstimateMinutes")
+    public int maxEstimateMinutes() {
+        return Plan.MAX_ESTIMATED_MINUTES;
+    }
+
     /** 폼의 반복 선택지 */
     @ModelAttribute("repeatTypes")
     public RepeatType[] repeatTypes() {
@@ -282,6 +298,7 @@ public class PlanController {
         form.setPlanDate(plan.getPlanDate());
         form.setStartTime(plan.getStartTime());
         form.setEndTime(plan.getEndTime());
+        form.setEstimatedMinutes(plan.getEstimatedMinutes());
         model.addAttribute("planForm", form);
         model.addAttribute("mode", "edit");
         model.addAttribute("planId", id);
