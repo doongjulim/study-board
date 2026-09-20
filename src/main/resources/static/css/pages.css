@@ -175,6 +175,42 @@
 .dday-title { font-weight: 600; }
 .dday-date { font-size: .76rem; color: var(--ink-soft); }
 .dday-item .actions { margin-left: auto; }
+/* 사흘 안쪽으로 다가온 마감. 색만으로 말하지 않는다 - 글자(D-2)에 이미 남은 날이 들어 있다 */
+.dday-badge.urgent { color: var(--danger); }
+
+/* ── 지원 현황 ─────────────────────────────────── */
+/* 지금 단계와 이번 주 학습량을 나란히 놓는 자리.
+   손대지 않은 줄만 눈에 걸리게 한다 - 나머지는 견주라고 있는 값이지 경고가 아니다. */
+.focus-card { margin-bottom: 20px; }
+.focus-list { list-style: none; padding: 0; margin: 0; }
+.focus-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .85rem; }
+.focus-row:last-child { border-bottom: none; }
+.focus-count { color: var(--ink-soft); }
+.focus-time { margin-left: auto; font-weight: 600; }
+.focus-row.neglected .focus-time { color: var(--danger); }
+.focus-row .btn { margin-left: 8px; }
+
+.application-list { list-style: none; padding: 0; margin: 0; }
+.application-item { padding: 14px 0; border-bottom: 1px solid var(--line); }
+/* 끝난 지원은 흐리게 - 목록을 여는 이유가 "다음에 뭘 해야 하나" 이기 때문이다 */
+.application-item.closed { opacity: .6; }
+.application-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.application-company { font-weight: 700; }
+.application-position { color: var(--ink-soft); font-size: .85rem; }
+.application-head .dday-badge { margin-left: auto; }
+.application-meta { display: flex; gap: 10px; flex-wrap: wrap;
+  font-size: .78rem; color: var(--ink-soft); margin-top: 4px; }
+.application-memo { white-space: pre-wrap; }
+.application-item .actions { margin-top: 8px; }
+
+.tag-stage { background: var(--accent-soft); color: var(--accent); border-radius: 6px;
+  padding: 1px 8px; font-size: .72rem; font-weight: 600; }
+/* 결과는 네 가지뿐이라 색으로 구분해도 되지만, 글자가 이미 결과를 말한다 */
+.tag-result { background: var(--line); color: var(--ink); border-radius: 999px;
+  padding: 1px 8px; font-size: .72rem; }
+.tag-result.passed { background: var(--ok); color: var(--on-ok); }
+.tag-result.failed { background: var(--danger); color: var(--on-danger); }
 
 /* ── 마이페이지 ────────────────────────────────── */
 .form-card + .form-card { margin-top: 20px; }

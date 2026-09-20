@@ -3,6 +3,7 @@ package com.example.board.plan.controller;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.service.CommentService;
 import com.example.board.dday.service.DdayService;
+import com.example.board.application.service.JobApplicationService;
 import com.example.board.auth.AuthCookies;
 import com.example.board.auth.CookiePolicy;
 import com.example.board.auth.service.TokenService;
@@ -59,6 +60,7 @@ class PlanControllerTest {
     @MockBean TokenService tokenService;
     @MockBean CommentService commentService;
     @MockBean DdayService ddayService;
+    @MockBean JobApplicationService applicationService;
 
     private Plan plan() {
         return planOwnedBy(MEMBER_ID);

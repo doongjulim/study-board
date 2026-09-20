@@ -11,6 +11,7 @@
             <a th:href="@{/}" th:classappend="${active == 'home'} ? 'on'">홈</a>
             <a th:href="@{/plans/daily}" th:classappend="${active == 'plans'} ? 'on'">플래너</a>
             <a th:href="@{/ddays}" th:classappend="${active == 'ddays'} ? 'on'">D-Day</a>
+            <a th:href="@{/applications}" th:classappend="${active == 'applications'} ? 'on'">지원 현황</a>
             <a th:href="@{/stats}" th:classappend="${active == 'stats'} ? 'on'">통계</a>
             <a th:href="@{/groups}" th:classappend="${active == 'groups'} ? 'on'">그룹</a>
             <a th:href="@{/plans/shared}" th:classappend="${active == 'shared'} ? 'on'">공유 플랜</a>
@@ -112,12 +113,13 @@
               브라우저가 이미 처리해 준다. 탭바는 화면 아래에 붙어 있으므로 패널은 위로 열린다.
             -->
             <details class="tab-more"
-                     th:with="moreActive=${active == 'ddays' or active == 'groups' or active == 'shared' or active == 'me'}">
+                     th:with="moreActive=${active == 'ddays' or active == 'applications' or active == 'groups' or active == 'shared' or active == 'me'}">
                 <summary th:classappend="${moreActive} ? 'on'" aria-label="더보기 메뉴">
                     <span class="tab-icon" aria-hidden="true">⋯</span><span>더보기</span>
                 </summary>
                 <div class="tab-more-panel">
                     <a th:href="@{/ddays}" th:classappend="${active == 'ddays'} ? 'on'">🎯 D-Day</a>
+                    <a th:href="@{/applications}" th:classappend="${active == 'applications'} ? 'on'">🏢 지원 현황</a>
                     <a th:href="@{/groups}" th:classappend="${active == 'groups'} ? 'on'">👥 그룹</a>
                     <a th:href="@{/plans/shared}" th:classappend="${active == 'shared'} ? 'on'">🔗 공유 플랜</a>
                     <a th:href="@{/me}" th:classappend="${active == 'me'} ? 'on'">👤 내 정보</a>

@@ -1,5 +1,8 @@
 package com.example.board.member.service;
 
+import com.example.board.application.domain.ApplicationStage;
+import com.example.board.application.dto.JobApplicationForm;
+import com.example.board.application.service.JobApplicationService;
 import com.example.board.dday.dto.DdayForm;
 import com.example.board.dday.service.DdayService;
 import com.example.board.group.dto.GroupForm;
@@ -55,6 +58,7 @@ class MemberWithdrawalIntegrationTest {
     @Autowired PlanService planService;
     @Autowired StudySessionService sessionService;
     @Autowired DdayService ddayService;
+    @Autowired JobApplicationService applicationService;
     @Autowired RetrospectiveService retrospectiveService;
     @Autowired NotificationService notificationService;
     @Autowired StudyGroupService studyGroupService;
@@ -94,6 +98,16 @@ class MemberWithdrawalIntegrationTest {
 
         Long postId = postService.create(postForm(), member.getId());
         postService.toggleLike(postId, member.getId());
+
+        // 지원 현황은 글·댓글과 달리 남기지 않는다 - 어디에 지원했는지는 가장 사적인 기록이다
+        applicationService.create(applicationForm(), member.getId());
+    }
+
+    private JobApplicationForm applicationForm() {
+        JobApplicationForm form = new JobApplicationForm();
+        form.setCompany("카카오");
+        form.setStage(ApplicationStage.DOCUMENT);
+        return form;
     }
 
     private PlanForm planForm(String title) {
@@ -148,6 +162,7 @@ class MemberWithdrawalIntegrationTest {
         assertThat(countOwned("Retrospective", "owner", leaver)).as("회고").isZero();
         assertThat(countOwned("Notification", "recipient", leaver)).as("알림").isZero();
         assertThat(countOwned("PostLike", "member", leaver)).as("좋아요").isZero();
+        assertThat(countOwned("JobApplication", "owner", leaver)).as("지원 현황").isZero();
     }
 
     @Test
@@ -176,6 +191,7 @@ class MemberWithdrawalIntegrationTest {
         assertThat(countOwned("Retrospective", "owner", bystander)).isEqualTo(1);
         assertThat(countOwned("Notification", "recipient", bystander)).isEqualTo(1);
         assertThat(countOwned("PostLike", "member", bystander)).isEqualTo(1);
+        assertThat(countOwned("JobApplication", "owner", bystander)).isEqualTo(1);
     }
 
     @Test

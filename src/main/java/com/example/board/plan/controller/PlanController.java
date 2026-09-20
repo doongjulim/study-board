@@ -1,5 +1,6 @@
 package com.example.board.plan.controller;
 
+import com.example.board.application.service.JobApplicationService;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.comment.dto.CommentForm;
 import com.example.board.comment.dto.CommentThread;
@@ -71,6 +72,8 @@ public class PlanController {
     private final Clock clock;
     /** 일간 뷰 상단에 남은 날짜를 보여주기 위한 읽기 전용 의존 */
     private final DdayService ddayService;
+    /** 지원 마감도 같은 자리에 함께 뜬다 (읽기 전용) */
+    private final JobApplicationService applicationService;
     /** 회고는 계획을 보던 자리에서 바로 적는 것이라 같은 화면에 싣는다 (읽기 전용) */
     private final RetrospectiveService retrospectiveService;
 
@@ -96,6 +99,9 @@ public class PlanController {
         model.addAttribute("nextDate", target.plusDays(1));
         model.addAttribute("today", today);
         model.addAttribute("upcomingDdays", ddayService.findUpcoming(principal.id(), today));
+        // 지원 마감도 같은 줄에 뜬다 - 사용자에게는 둘 다 "곧 다가오는 날" 하나다
+        model.addAttribute("upcomingApplications",
+                applicationService.findUpcoming(principal.id(), today));
         // 어제 남긴 일정을 그대로 흘려보내지 않도록 안내한다
         model.addAttribute("leftoverCount", planService.findUnfinished(previous, principal.id()).size());
         model.addAttribute("shareScopes", ShareScope.values());

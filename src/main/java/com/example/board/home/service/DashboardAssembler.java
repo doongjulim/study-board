@@ -1,5 +1,6 @@
 package com.example.board.home.service;
 
+import com.example.board.application.service.JobApplicationService;
 import com.example.board.dday.service.DdayService;
 import com.example.board.home.dto.DashboardView;
 import com.example.board.member.service.MemberService;
@@ -25,6 +26,8 @@ import java.time.LocalDate;
 public class DashboardAssembler {
 
     private final PlanService planService;
+    /** 지원 마감도 D-Day 와 같은 자리에 뜬다 (읽기 전용 참조) */
+    private final JobApplicationService applicationService;
     private final DdayService ddayService;
     private final StudyStatisticsService statisticsService;
     private final MemberService memberService;
@@ -39,6 +42,7 @@ public class DashboardAssembler {
                 statisticsService.calculate(memberId, today, today),
                 statisticsService.calculate(memberId, weekStart, weekStart.plusDays(6)),
                 ddayService.findUpcoming(memberId, today),
+                applicationService.findUpcoming(memberId, today),
                 statisticsService.currentStreak(memberId, today),
                 memberService.findDailyGoalMinutes(memberId));
     }

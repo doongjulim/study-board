@@ -30,8 +30,8 @@ import static org.assertj.core.api.Assertions.*;
 @EnabledIfEnvironmentVariable(named = "POSTGRES_URL", matches = ".+")
 class PostgresMigrationTest {
 
-    /** V1 init ~ V33 그룹 응원. 공통 31개 + PostgreSQL 전용 V11·V28 */
-    private static final int EXPECTED_MIGRATIONS = 33;
+    /** V1 init ~ V34 지원 현황. 공통 32개 + PostgreSQL 전용 V11·V28 */
+    private static final int EXPECTED_MIGRATIONS = 34;
 
     private JdbcTemplate jdbc;
     private MigrateResult result;
@@ -69,7 +69,7 @@ class PostgresMigrationTest {
     }
 
     @Test
-    @DisplayName("V1~V33 이 PostgreSQL 에서 모두 실행된다 - 문법 호환의 첫 관문")
+    @DisplayName("V1~V34 가 PostgreSQL 에서 모두 실행된다 - 문법 호환의 첫 관문")
     void allMigrationsApply() {
         assertThat(result.migrationsExecuted).isGreaterThanOrEqualTo(EXPECTED_MIGRATIONS);
     }

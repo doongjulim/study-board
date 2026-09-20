@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('지원 현황', 'applications', ~{::main})}">
+<body>
+<main class="container">
+    <div th:if="${message}" class="flash" th:text="${message}"></div>
+
+    <h2 class="page-title">지원 현황</h2>
+    <p class="hint">
+        어느 회사에, 지금 어느 단계로, 언제까지인지를 한자리에 둡니다.
+        마감이 가까워지면 플래너에서도 함께 알려 드려요.
+    </p>
+
+    <!--
+      지금 단계와 이번 주 학습량을 나란히 놓는다.
+
+      통계에는 분류별 학습량이 이미 있었지만 그건 그냥 숫자였다 - "코딩테스트 12시간" 이
+      많은지 적은지 견줄 기준이 없었기 때문이다. 지원 현황이 기준을 만든다.
+      판단은 하지 않는다. 지원 3건과 0시간이 한 줄에 있으면 판단은 사용자가 한다.
+    -->
+    <section class="form-card focus-card" th:if="${!focus.isEmpty()}">
+        <h3 class="stat-title">이번 주, 지금 단계에 맞게</h3>
+        <ul class="focus-list">
+            <li th:each="row : ${focus}" class="focus-row"
+                th:classappend="${row.isNeglected()} ? 'neglected'">
+                <span class="tag-category" th:text="${row.category.label}">분류</span>
+                <span class="focus-count" th:text="|지원 ${row.applicationCount}건|">지원 0건</span>
+                <span class="focus-time" th:text="|이번 주 ${row.readableStudied()}|">이번 주 0분</span>
+                <!-- 0시간만 따로 말한다 - 그건 견줄 것도 없는 상태다 -->
+                <a th:if="${row.isNeglected()}" class="btn btn-sm"
+                   th:href="@{/plans/daily}">오늘 계획 세우기 →</a>
+            </li>
+        </ul>
+    </section>
+
+    <!-- 공고를 보다가 바로 적는 것이라 목록과 같은 화면에 둔다 (D-Day 와 같은 방식) -->
+    <form class="form-card" method="post" th:object="${applicationForm}" th:action="@{/applications}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="company">회사</label>
+                <input type="text" id="company" th:field="*{company}" placeholder="예) 카카오">
+                <p class="error" th:if="${#fields.hasErrors('company')}" th:errors="*{company}"></p>
+            </div>
+            <div class="form-group">
+                <label for="position">직무 (선택)</label>
+                <input type="text" id="position" th:field="*{position}" placeholder="예) 백엔드 엔지니어">
+                <p class="error" th:if="${#fields.hasErrors('position')}" th:errors="*{position}"></p>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="stage">전형 단계</label>
+                <select id="stage" th:field="*{stage}" class="select-input">
+                    <option th:each="s : ${stages}" th:value="${s}" th:text="${s.label}"></option>
+                </select>
+                <p class="error" th:if="${#fields.hasErrors('stage')}" th:errors="*{stage}"></p>
+            </div>
+            <div class="form-group">
+                <label for="deadline">다음 마감일 (선택)</label>
+                <input type="date" id="deadline" th:field="*{deadline}">
+                <p class="hint">서류 마감·코테 응시 기한·면접 날짜 중 다음에 오는 것 하나면 됩니다.</p>
+            </div>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">추가</button>
+        </div>
+    </form>
+
+    <ul class="application-list">
+        <li th:if="${applications.isEmpty()}" class="empty">
+            아직 등록한 지원이 없습니다. 위에 회사 이름만 적어도 됩니다.
+        </li>
+        <li th:each="app : ${applications}" class="application-item"
+            th:classappend="${!app.isOngoing()} ? 'closed'">
+            <div class="application-head">
+                <span class="application-company" th:text="${app.company}">회사</span>
+                <span class="application-position" th:if="${app.position != null}"
+                      th:text="${app.position}">직무</span>
+                <span class="tag-stage" th:text="${app.stage.label}">단계</span>
+                <span class="tag-result" th:classappend="${app.result.name().toLowerCase()}"
+                      th:text="${app.result.label}">결과</span>
+                <!-- 마감 표기는 D-Day 와 같은 모양이다 - 나란히 놓이는 값이 다르게 보이면 안 된다 -->
+                <span class="dday-badge" th:if="${app.deadlineLabel(today) != null}"
+                      th:classappend="${app.isUpcoming(today, 3)} ? 'urgent'"
+                      th:text="${app.deadlineLabel(today)}">D-0</span>
+            </div>
+            <div class="application-meta">
+                <span th:if="${app.deadline != null}"
+                      th:text="${#temporals.format(app.deadline, 'yyyy-MM-dd (E)')} + ' 마감'">마감일</span>
+                <span class="application-memo" th:if="${app.memo != null}" th:text="${app.memo}">메모</span>
+            </div>
+            <div class="actions">
+                <a class="btn btn-sm" th:href="@{/applications/{id}/edit(id=${app.id})}">수정</a>
+                <form th:action="@{/applications/{id}/delete(id=${app.id})}" method="post"
+                      th:attr="data-confirm=${app.company + ' 지원 기록을 삭제할까요?'}"
+                      data-confirm-label="삭제">
+                    <button type="submit" class="btn btn-sm btn-danger">삭제</button>
+                </form>
+            </div>
+        </li>
+    </ul>
+</main>
+</body>
+</html>

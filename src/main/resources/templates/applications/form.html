@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/layout :: page('지원 현황 수정', 'applications', ~{::main})}">
+<body>
+<main class="container">
+    <h2 class="page-title">지원 현황 수정</h2>
+
+    <form class="form-card" method="post" th:object="${applicationForm}"
+          th:action="@{/applications/{id}/edit(id=${applicationId})}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="company">회사</label>
+                <input type="text" id="company" th:field="*{company}">
+                <p class="error" th:if="${#fields.hasErrors('company')}" th:errors="*{company}"></p>
+            </div>
+            <div class="form-group">
+                <label for="position">직무 (선택)</label>
+                <input type="text" id="position" th:field="*{position}">
+                <p class="error" th:if="${#fields.hasErrors('position')}" th:errors="*{position}"></p>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="stage">전형 단계</label>
+                <select id="stage" th:field="*{stage}" class="select-input">
+                    <option th:each="s : ${stages}" th:value="${s}" th:text="${s.label}"></option>
+                </select>
+                <p class="hint">단계를 옮기면 그 단계에 맞는 공부가 '이번 주' 요약에 함께 잡힙니다.</p>
+            </div>
+            <div class="form-group">
+                <label for="result">결과</label>
+                <select id="result" th:field="*{result}" class="select-input">
+                    <option th:each="r : ${results}" th:value="${r}" th:text="${r.label}"></option>
+                </select>
+                <!-- 스스로 그만둔 것을 불합격으로 적게 하면 실제보다 많이 떨어진 기록이 남는다 -->
+                <p class="hint">스스로 그만둔 곳은 '포기' 로 남겨 두세요.</p>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="deadline">다음 마감일 (선택)</label>
+            <input type="date" id="deadline" th:field="*{deadline}">
+        </div>
+
+        <div class="form-group">
+            <label for="memo">메모</label>
+            <textarea id="memo" th:field="*{memo}" class="textarea-short"
+                      placeholder="전형 이름, 준비할 것, 느낀 점 등을 적어 두세요."></textarea>
+            <p class="error" th:if="${#fields.hasErrors('memo')}" th:errors="*{memo}"></p>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">저장</button>
+            <a class="btn" th:href="@{/applications}">취소</a>
+        </div>
+    </form>
+</main>
+</body>
+</html>

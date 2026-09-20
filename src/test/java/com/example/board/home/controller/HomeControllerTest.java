@@ -7,6 +7,7 @@ import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
+import com.example.board.support.FixedClockConfig;
 import com.example.board.home.dto.DashboardView;
 import com.example.board.home.service.DashboardAssembler;
 import com.example.board.member.domain.Member;
@@ -42,18 +43,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(HomeController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class, CookiePolicy.class,
-        HomeControllerTest.FixedClockConfig.class})
+        FixedClockConfig.class})
 class HomeControllerTest {
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        static final LocalDate TODAY = LocalDate.of(2026, 8, 10);
-
-        @Bean
-        Clock clock() {
-            return Clock.fixed(TODAY.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
-        }
-    }
 
     @Autowired MockMvc mockMvc;
     @MockBean DashboardAssembler dashboardAssembler;
@@ -83,7 +74,7 @@ class HomeControllerTest {
         return DashboardView.of("동주", today, List.of(),
                 StudyStatistics.of(List.of(), today, today),
                 StudyStatistics.of(List.of(), today.minusDays(6), today),
-                List.of(), 0, Member.DEFAULT_DAILY_GOAL_MINUTES);
+                List.of(), List.of(), 0, Member.DEFAULT_DAILY_GOAL_MINUTES);
     }
 
     @Test

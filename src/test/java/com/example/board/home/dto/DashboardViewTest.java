@@ -44,7 +44,7 @@ class DashboardViewTest {
         return DashboardView.of("동주", TODAY, plans,
                 StudyStatistics.of(plans, sessions, TODAY, TODAY),
                 StudyStatistics.of(plans, sessions, TODAY.minusDays(6), TODAY),
-                List.of(), 3, GOAL);
+                List.of(), List.of(), 3, GOAL);
     }
 
     @Nested

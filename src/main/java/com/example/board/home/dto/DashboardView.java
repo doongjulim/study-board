@@ -1,5 +1,6 @@
 package com.example.board.home.dto;
 
+import com.example.board.application.domain.JobApplication;
 import com.example.board.dday.domain.Dday;
 import com.example.board.home.domain.GoalProgress;
 import com.example.board.plan.domain.Plan;
@@ -18,6 +19,8 @@ import java.util.List;
 public record DashboardView(String nickname,
                             LocalDate today,
                             List<Dday> upcomingDdays,
+                            /* 지원 마감도 사용자에게는 "곧 다가오는 날" 하나다 - 같은 줄에 놓인다 */
+                            List<JobApplication> upcomingApplications,
                             int streak,
                             GoalProgress goal,
                             int planTotal,
@@ -35,11 +38,12 @@ public record DashboardView(String nickname,
                                    StudyStatistics todayStatistics,
                                    StudyStatistics weekStatistics,
                                    List<Dday> upcomingDdays,
+                                   List<JobApplication> upcomingApplications,
                                    int streak,
                                    int dailyGoalMinutes) {
         List<Plan> open = todayPlans.stream().filter(plan -> !plan.isCompleted()).toList();
 
-        return new DashboardView(nickname, today, upcomingDdays, streak,
+        return new DashboardView(nickname, today, upcomingDdays, upcomingApplications, streak,
                 GoalProgress.of(todayStatistics.actualMinutes(), dailyGoalMinutes),
                 todayStatistics.totalCount(), todayStatistics.completedCount(),
                 open.stream().limit(OPEN_PLAN_LIMIT).toList(),

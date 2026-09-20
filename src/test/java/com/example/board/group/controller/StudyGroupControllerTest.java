@@ -7,6 +7,7 @@ import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.auth.service.TokenService;
 import com.example.board.config.SecurityConfig;
+import com.example.board.support.FixedClockConfig;
 import com.example.board.group.domain.StudyGroup;
 import com.example.board.group.dto.GroupForm;
 import com.example.board.group.service.StudyGroupService;
@@ -48,20 +49,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(StudyGroupController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtTokenProvider.class, AuthCookies.class, CookiePolicy.class,
-        StudyGroupControllerTest.FixedClockConfig.class})
+        FixedClockConfig.class})
 class StudyGroupControllerTest {
 
     private static final long MEMBER_ID = 1L;
-
-    @TestConfiguration
-    static class FixedClockConfig {
-        static final LocalDate TODAY = LocalDate.of(2026, 8, 12);
-
-        @Bean
-        Clock clock() {
-            return Clock.fixed(TODAY.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
-        }
-    }
 
     @Autowired MockMvc mockMvc;
     @MockBean StudyGroupService studyGroupService;

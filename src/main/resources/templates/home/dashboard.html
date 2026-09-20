@@ -9,12 +9,8 @@
     <!-- 인사 + 임박한 목표일 -->
     <h2 class="dash-greeting" th:text="|*{nickname}님, 오늘도 시작해 볼까요|">환영합니다</h2>
 
-    <div class="dday-strip" th:if="${!dashboard.upcomingDdays.isEmpty()}">
-        <a class="dday-chip" th:each="dday : *{upcomingDdays}" th:href="@{/ddays}">
-            <span class="dday-badge" th:text="${dday.label(dashboard.today)}">D-0</span>
-            <span th:text="${dday.title}">제목</span>
-        </a>
-    </div>
+    <div th:replace="~{fragments/deadlines :: deadlineStrip(
+            ${dashboard.upcomingDdays()}, ${dashboard.upcomingApplications()}, ${dashboard.today()})}"></div>
 
     <!-- 오늘 진행률 -->
     <section class="dash-progress">
