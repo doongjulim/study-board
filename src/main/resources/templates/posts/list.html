@@ -21,15 +21,24 @@
 
     <div class="toolbar">
         <form th:action="@{/posts}" method="get" class="search-form">
-            <select name="searchType" class="select-input">
+            <!--
+              라벨이 화면에는 없지만 이름은 있어야 한다. placeholder 는 라벨이 아니다 -
+              값을 적는 순간 사라지고, 스크린리더는 그 칸이 무엇을 묻는지 알 수 없다.
+              (플래너의 한 줄 추가가 쓰는 것과 같은 .sr-only 방식이다)
+            -->
+            <label class="sr-only" for="post-search-type">검색 범위</label>
+            <select id="post-search-type" name="searchType" class="select-input">
                 <option th:each="type : ${searchTypes}"
                         th:value="${type}" th:text="${type.label}"
                         th:selected="${type == searchType}"></option>
             </select>
-            <input type="text" name="keyword" th:value="${keyword}" placeholder="검색어" class="search-input">
+            <label class="sr-only" for="post-keyword">검색어</label>
+            <input type="text" id="post-keyword" name="keyword" th:value="${keyword}"
+                   placeholder="검색어" class="search-input">
             <!-- 분류 탭에서 고른 값이 검색·정렬에도 이어지도록 폼에 실어 보낸다 -->
             <input type="hidden" name="category" th:if="${category != null}" th:value="${category}">
-            <select name="sort" onchange="this.form.submit()" class="select-input">
+            <label class="sr-only" for="post-sort">정렬</label>
+            <select id="post-sort" name="sort" onchange="this.form.submit()" class="select-input">
                 <option value="latest" th:selected="${sort == 'latest'}">최신순</option>
                 <option value="oldest" th:selected="${sort == 'oldest'}">오래된순</option>
                 <option value="title" th:selected="${sort == 'title'}">제목순</option>
