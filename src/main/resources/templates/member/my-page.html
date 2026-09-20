@@ -137,6 +137,21 @@
             </label>
         </div>
 
+        <div class="form-group check-row">
+            <label>
+                <input type="checkbox" th:field="*{weeklyReportEnabled}">
+                일요일 저녁에 이번 주 기록 요약 받기
+            </label>
+            <p class="hint">공부한 기록이 있는 주에만 보내드려요. 인증글 초안이 함께 준비됩니다.</p>
+        </div>
+
+        <div class="form-group check-row">
+            <label>
+                <input type="checkbox" th:field="*{cheerEnabled}">
+                같은 그룹 사람이 응원을 보냈을 때 알림 받기
+            </label>
+        </div>
+
         <div class="actions">
             <button type="submit" class="btn btn-primary">알림 설정 저장</button>
         </div>

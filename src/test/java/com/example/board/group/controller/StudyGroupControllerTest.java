@@ -12,6 +12,7 @@ import com.example.board.group.dto.GroupForm;
 import com.example.board.group.service.StudyGroupService;
 import com.example.board.stats.domain.GroupRanking;
 import com.example.board.stats.domain.WeeklyChallenge;
+import com.example.board.group.service.CheerService;
 import com.example.board.stats.service.GroupStatsService;
 import com.example.board.member.domain.Member;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,12 +66,13 @@ class StudyGroupControllerTest {
     @Autowired MockMvc mockMvc;
     @MockBean StudyGroupService studyGroupService;
     @MockBean GroupStatsService groupStatsService;
+    @MockBean CheerService cheerService;
     @MockBean TokenService tokenService;
 
     /** 호출 여부를 확인하는 테스트가 있으므로 실행 순서와 무관하게 깨끗한 상태에서 시작한다 */
     @BeforeEach
     void resetMocks() {
-        Mockito.reset(studyGroupService, groupStatsService);
+        Mockito.reset(studyGroupService, groupStatsService, cheerService);
     }
 
     private static RequestPostProcessor memberAuth() {
@@ -270,6 +272,57 @@ class StudyGroupControllerTest {
                 .andExpect(redirectedUrl("/groups/10"));
 
         then(studyGroupService).should().removeMember(10L, 2L, MEMBER_ID);
+    }
+
+    // ── 응원 ─────────────────────────────────────────────
+    //
+    // 순위는 상위권을 더 뛰게 하지만 하위권을 조용히 떠나게 한다.
+    // 응원은 반대 방향으로 작동하는 유일한 버튼이다.
+
+    @Test
+    @DisplayName("POST /groups/{id}/cheer/{memberId} - 응원을 보내고 그룹으로 돌아온다")
+    void cheer() throws Exception {
+        given(cheerService.send(10L, MEMBER_ID, 7L)).willReturn(true);
+
+        mockMvc.perform(post("/groups/10/cheer/7").with(csrf()).with(memberAuth()))
+                .andExpect(redirectedUrl("/groups/10"))
+                .andExpect(flash().attribute("message",
+                        org.hamcrest.Matchers.containsString("응원")));
+    }
+
+    @Test
+    @DisplayName("오늘 이미 보냈어도 오류가 아니다 - 성공한 일을 실패로 알리지 않는다")
+    void cheerTwiceIsNotAnError() throws Exception {
+        given(cheerService.send(10L, MEMBER_ID, 7L)).willReturn(false);
+
+        mockMvc.perform(post("/groups/10/cheer/7").with(csrf()).with(memberAuth()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("message", "오늘은 이미 응원을 보냈어요."));
+    }
+
+    @Test
+    @DisplayName("응원은 CSRF 토큰 없이는 통하지 않는다 - 남의 이름으로 알림을 보내는 통로가 된다")
+    void cheerRejectsWithoutCsrf() throws Exception {
+        mockMvc.perform(post("/groups/10/cheer/7").with(memberAuth()))
+                .andExpect(status().isForbidden());
+
+        then(cheerService).should(never()).send(anyLong(), anyLong(), anyLong());
+    }
+
+    @Test
+    @DisplayName("그룹 상세는 오늘 이미 응원한 사람을 함께 넘긴다 - 화면이 버튼을 잠근다")
+    void detailCarriesCheeredToday() throws Exception {
+        given(studyGroupService.findGroupForMember(10L, MEMBER_ID)).willReturn(group());
+        given(studyGroupService.findMembers(10L)).willReturn(List.of());
+        given(groupStatsService.weeklyRanking(any(), any(), any()))
+                .willReturn(GroupRanking.of(List.of(), MEMBER_ID, 7));
+        given(groupStatsService.weeklyChallenge(any(), any()))
+                .willReturn(WeeklyChallenge.of(List.of(), FixedClockConfig.TODAY));
+        given(cheerService.findCheeredToday(10L, MEMBER_ID)).willReturn(java.util.Set.of(7L));
+
+        mockMvc.perform(get("/groups/10").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("cheeredToday", java.util.Set.of(7L)));
     }
 
     @Test

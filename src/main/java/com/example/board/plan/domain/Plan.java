@@ -228,9 +228,25 @@ public class Plan {
      *
      * <p>복제본은 새 하루의 새 계획이므로 반복 묶음·공유·알림 이력을 물려받지 않는다 -
      * 물려받으면 오늘 것이 어제 것의 그림자가 된다.
+     *
+     * <p>원본에 표시를 남기지 않는 순수한 복제는 {@link #copyAt} 이다.
      */
-    public Plan copyTo(LocalDate date) {
+    public Plan rolloverTo(LocalDate date) {
         this.rolledOver = true;   // 두 번 눌러도 두 개가 생기지 않게
+        return copyAt(date);
+    }
+
+    /**
+     * 같은 계획을 다른 날짜로 복제한다. 원본은 아무것도 달라지지 않는다.
+     *
+     * <p>이월({@link #rolloverTo})과 나뉘어 있는 이유는 <b>원본에 남기는 표시가 다르기 때문</b>이다.
+     * 이월은 "이 계획을 다음 날로 넘겼다" 는 그날의 사건이라 원본에 기록이 남지만,
+     * 지난주 계획을 이번 주로 가져오는 것은 지난주에 아무 일도 일으키지 않는다.
+     * 한 메서드가 둘 다 하면, 주간 복사 한 번에 지난주 계획이 전부 '이월함' 으로 표시된다.</p>
+     *
+     * <p>복제본은 새 날의 새 계획이므로 반복 묶음·공유·알림 이력을 물려받지 않는다.</p>
+     */
+    public Plan copyAt(LocalDate date) {
         Plan copy = new Plan(title, content, author, category, date, startTime, endTime,
                 estimatedMinutes);
         copy.shareScope = ShareScope.PRIVATE;

@@ -25,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -82,8 +83,17 @@ public class MemberService {
     @Transactional
     public void updateNotificationSetting(Long memberId, NotificationSettingForm form) {
         findActive(memberId).changeNotificationPreference(
-                form.isReminderEnabled(), form.getReminderLeadMinutes(),
-                form.isPlanSharedEnabled(), form.isCommentEnabled());
+                form.getReminderLeadMinutes(), form.toToggles());
+    }
+
+    /**
+     * 주간 리포트 알림을 받기로 한 활성 회원 id.
+     *
+     * <p>주간 리포트를 만드는 쪽(stats)이 회원 저장소를 직접 알지 않도록 여기서 한 겹 감싼다 -
+     * 다른 모듈이 member 를 참조하는 방식과 같다(읽기 전용).</p>
+     */
+    public List<Long> findIdsAllowingWeeklyReportNotification() {
+        return memberRepository.findIdsAllowingWeeklyReportNotification();
     }
 
     /** 첫 사용 안내를 마쳤다고 기록한다 (끝까지 봤든 건너뛰었든 다시 붙잡지 않는다) */

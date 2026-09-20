@@ -3,6 +3,7 @@ package com.example.board.group.service;
 import com.example.board.group.domain.GroupMember;
 import com.example.board.group.domain.StudyGroup;
 import com.example.board.group.dto.GroupForm;
+import com.example.board.group.repository.CheerRepository;
 import com.example.board.group.repository.GroupMemberRepository;
 import com.example.board.group.repository.StudyGroupRepository;
 import com.example.board.member.domain.Member;
@@ -33,6 +34,7 @@ class StudyGroupServiceTest {
 
     @Mock StudyGroupRepository groupRepository;
     @Mock GroupMemberRepository groupMemberRepository;
+    @Mock CheerRepository cheerRepository;
     @Mock MemberRepository memberRepository;
 
     @InjectMocks StudyGroupService studyGroupService;

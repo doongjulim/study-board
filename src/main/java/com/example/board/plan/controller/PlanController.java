@@ -49,6 +49,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/plans")
 public class PlanController {
 
+    /** 등록을 시작한 화면을 가리키는 값 - 주소가 아니라 이름 하나만 받는다 */
+    private static final String WEEKLY_VIEW = "weekly";
+
     /** 댓글 한 페이지에 담는 스레드 수 */
     private static final int COMMENTS_PER_PAGE = 20;
 
@@ -117,6 +120,15 @@ public class PlanController {
         model.addAttribute("plan", planService.findOwned(id, principal.id()));
         model.addAttribute("shareScopes", ShareScope.values());
         return "plans/row :: planRow";
+    }
+
+    /** 주간 격자 한 칸의 HTML 조각 - 위 {@code row} 와 같은 이유로 서버가 그린다 */
+    @GetMapping("/{id}/week-cell")
+    public String weekCell(@PathVariable Long id,
+                           @AuthenticationPrincipal MemberPrincipal principal,
+                           Model model) {
+        model.addAttribute("plan", planService.findOwned(id, principal.id()));
+        return "plans/row :: weekPlan";
     }
 
     /** 주간 뷰 */
@@ -271,10 +283,18 @@ public class PlanController {
         return RepeatType.values();
     }
 
-    /** 작성 처리 */
+    /**
+     * 작성 처리.
+     *
+     * @param view 등록을 시작한 화면. 주간 뷰의 한 줄 입력이 JS 없이 제출됐을 때
+     *             한 주를 짜던 사람이 일간 뷰로 튕겨 나가지 않도록 돌아갈 곳을 지정한다.
+     *             값은 화면 이름 하나뿐이고, 모르는 값은 기본(일간)으로 다룬다 -
+     *             주소를 통째로 받아 리다이렉트하면 열린 리다이렉트가 된다.
+     */
     @PostMapping
     public String create(@Valid @ModelAttribute PlanForm planForm,
                          BindingResult bindingResult,
+                         @RequestParam(required = false) String view,
                          @AuthenticationPrincipal MemberPrincipal principal,
                          Model model,
                          RedirectAttributes redirectAttributes) {
@@ -287,7 +307,32 @@ public class PlanController {
         planService.create(planForm, principal.id());
         redirectAttributes.addFlashAttribute("message",
                 planForm.getRepeatType().isRepeating() ? "반복 일정이 등록되었습니다." : "일정이 등록되었습니다.");
-        return "redirect:/plans/daily?date=" + planForm.getPlanDate();
+        return "redirect:" + afterCreate(view, planForm.getPlanDate());
+    }
+
+    private String afterCreate(String view, LocalDate planDate) {
+        return WEEKLY_VIEW.equals(view)
+                ? "/plans/weekly?date=" + planDate
+                : "/plans/daily?date=" + planDate;
+    }
+
+    /**
+     * 지난주 계획을 이 주의 같은 요일로 가져온다.
+     *
+     * <p>반복 설정(매일·평일·매주)으로는 "지난주 그대로" 를 만들 수 없었다 - 반복은 등록할 때
+     * 미리 정하는 것이고, 한 주를 살아 본 뒤에 "이대로 한 주 더" 라고 말하는 자리가 없었다.</p>
+     */
+    @PostMapping("/copy-week")
+    public String copyWeek(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week,
+                           @AuthenticationPrincipal MemberPrincipal principal,
+                           RedirectAttributes redirectAttributes) {
+        LocalDate thisWeek = week.with(DayOfWeek.MONDAY);
+        int copied = planService.copyWeek(principal.id(), thisWeek.minusWeeks(1), thisWeek);
+        redirectAttributes.addFlashAttribute("message", copied == 0
+                // 0건은 실패가 아니다 - 가져올 것이 없었거나 이미 다 있었거나
+                ? "가져올 지난주 계획이 없습니다."
+                : "지난주 계획 %d개를 가져왔습니다.".formatted(copied));
+        return "redirect:/plans/weekly?date=" + thisWeek;
     }
 
     /** 수정 폼 */

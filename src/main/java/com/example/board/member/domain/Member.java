@@ -115,10 +115,8 @@ public class Member {
         this.notificationPreference = NotificationPreference.createDefault();
     }
 
-    public void changeNotificationPreference(boolean reminderEnabled, int reminderLeadMinutes,
-                                             boolean planSharedEnabled, boolean commentEnabled) {
-        this.notificationPreference = notificationPreference.change(
-                reminderEnabled, reminderLeadMinutes, planSharedEnabled, commentEnabled);
+    public void changeNotificationPreference(int reminderLeadMinutes, NotificationToggles toggles) {
+        this.notificationPreference = notificationPreference.change(reminderLeadMinutes, toggles);
     }
 
     public void changeNickname(String nickname) {

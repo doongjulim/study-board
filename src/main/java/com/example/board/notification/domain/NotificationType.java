@@ -18,13 +18,21 @@ public enum NotificationType {
     PLAN_SHARED,
 
     /** 내 글·플랜에 댓글이 달렸을 때 */
-    COMMENT;
+    COMMENT,
+
+    /** 일요일 저녁, 그 주의 기록 요약 (주간 인증글 초안으로 가는 진입로) */
+    WEEKLY_REPORT,
+
+    /** 같은 그룹 사람이 보낸 응원 */
+    CHEER;
 
     public boolean allowedBy(NotificationPreference preference) {
         return switch (this) {
             case REMINDER -> preference.isReminderEnabled();
             case PLAN_SHARED -> preference.isPlanSharedEnabled();
             case COMMENT -> preference.isCommentEnabled();
+            case WEEKLY_REPORT -> preference.isWeeklyReportEnabled();
+            case CHEER -> preference.isCheerEnabled();
         };
     }
 }

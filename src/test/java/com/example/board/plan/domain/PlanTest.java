@@ -294,11 +294,11 @@ class PlanTest {
     // ── 이월(복제) ──────────────────────────────────────────────────
 
     @Test
-    @DisplayName("copyTo 는 원본을 남기고 복제한다 - 옮기면 어제의 완료율이 뒤에서 바뀐다")
-    void copyTo_keepsOriginal() {
+    @DisplayName("rolloverTo 는 원본을 남기고 복제한다 - 옮기면 어제의 완료율이 뒤에서 바뀐다")
+    void rolloverTo_keepsOriginal() {
         Plan plan = allDayWithEstimate(90);
 
-        Plan copy = plan.copyTo(LocalDate.of(2026, 7, 10));
+        Plan copy = plan.rolloverTo(LocalDate.of(2026, 7, 10));
 
         assertThat(plan.getPlanDate()).isEqualTo(LocalDate.of(2026, 7, 9));
         assertThat(plan.isRolledOver()).isTrue();
@@ -308,20 +308,32 @@ class PlanTest {
 
     @Test
     @DisplayName("복제본은 예상 소요 시간까지 물려받는다 - 같은 일이므로 걸리는 시간도 같다")
-    void copyTo_carriesEstimate() {
-        Plan copy = allDayWithEstimate(90).copyTo(LocalDate.of(2026, 7, 10));
+    void copy_carriesEstimate() {
+        Plan copy = allDayWithEstimate(90).rolloverTo(LocalDate.of(2026, 7, 10));
 
         assertThat(copy.getEstimatedMinutes()).isEqualTo(90);
         assertThat(copy.getStudyMinutes()).isEqualTo(90);
     }
 
     @Test
+    @DisplayName("copyAt 은 원본에 아무 표시도 남기지 않는다 - 지난주 계획을 가져온다고 지난주가 달라지지는 않는다")
+    void copyAt_leavesSourceUntouched() {
+        Plan plan = allDayWithEstimate(60);
+
+        Plan copy = plan.copyAt(LocalDate.of(2026, 7, 16));
+
+        assertThat(plan.isRolledOver()).isFalse();
+        assertThat(copy.getPlanDate()).isEqualTo(LocalDate.of(2026, 7, 16));
+        assertThat(copy.getEstimatedMinutes()).isEqualTo(60);
+    }
+
+    @Test
     @DisplayName("복제본은 공유 이력을 물려받지 않는다 - 오늘 것이 어제 것의 그림자가 되면 안 된다")
-    void copyTo_doesNotInheritSharing() {
+    void copy_doesNotInheritSharing() {
         Plan plan = allDayWithEstimate(null);
         plan.changeShareScope(ShareScope.PUBLIC);
 
-        Plan copy = plan.copyTo(LocalDate.of(2026, 7, 10));
+        Plan copy = plan.rolloverTo(LocalDate.of(2026, 7, 10));
 
         assertThat(copy.getShareScope()).isEqualTo(ShareScope.PRIVATE);
         assertThat(copy.isShared()).isFalse();

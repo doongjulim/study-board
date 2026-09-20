@@ -563,6 +563,94 @@ class PlanControllerTest {
         assertThat(html).contains("max=\"" + Plan.MAX_ESTIMATED_MINUTES + "\"");
     }
 
+    // ── 주간 뷰에서 한 주 짜기 ────────────────────────────────
+    //
+    // 예전에는 칸마다 '+ 추가' 링크였고 누르면 작성 폼으로 나갔다 - 일곱 칸을 채우려면
+    // 일곱 번 나갔다 돌아와야 했으니 주간 뷰는 사실상 조회 화면이었다.
+
+    @Test
+    @DisplayName("주간 뷰의 칸마다 그날의 한 줄 입력이 있다")
+    void weekly_hasPerDayQuickAdd() throws Exception {
+        given(planService.findWeek(any(LocalDate.class), eq(MEMBER_ID))).willReturn(List.of());
+
+        String html = mockMvc.perform(get("/plans/weekly").param("date", "2026-09-17")
+                        .with(memberAuth()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("week-add-input");
+        // 일곱 칸 모두 - 하나라도 빠지면 그 요일만 예전 방식으로 돌아간다
+        for (int day = 14; day <= 20; day++) {
+            assertThat(html).as("9월 %d일 칸에 입력이 없다", day)
+                    .contains("data-date=\"2026-09-" + day + "\"");
+        }
+    }
+
+    @Test
+    @DisplayName("POST /plans?view=weekly - JS 없이 제출해도 주간 뷰로 돌아온다")
+    void create_returnsToWeeklyView() throws Exception {
+        mockMvc.perform(post("/plans")
+                        .param("title", "월요일 스터디")
+                        .param("category", "MAJOR")
+                        .param("planDate", "2026-09-14")
+                        .param("repeatType", "NONE")
+                        .param("view", "weekly")
+                        .with(csrf()).with(memberAuth()))
+                .andExpect(redirectedUrl("/plans/weekly?date=2026-09-14"));
+    }
+
+    @Test
+    @DisplayName("POST /plans - 모르는 view 값은 기본(일간)으로 다룬다 - 주소를 통째로 받으면 열린 리다이렉트가 된다")
+    void create_ignoresUnknownView() throws Exception {
+        mockMvc.perform(post("/plans")
+                        .param("title", "월요일 스터디")
+                        .param("category", "MAJOR")
+                        .param("planDate", "2026-09-14")
+                        .param("repeatType", "NONE")
+                        .param("view", "https://example.com")
+                        .with(csrf()).with(memberAuth()))
+                .andExpect(redirectedUrl("/plans/daily?date=2026-09-14"));
+    }
+
+    @Test
+    @DisplayName("GET /plans/{id}/week-cell - 주간 격자 한 칸 조각을 돌려준다")
+    void weekCell() throws Exception {
+        Plan plan = plan();
+        ReflectionTestUtils.setField(plan, "id", 5L);
+        given(planService.findOwned(5L, MEMBER_ID)).willReturn(plan);
+
+        mockMvc.perform(get("/plans/5/week-cell").with(memberAuth()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("week-plan")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("자료구조 공부")));
+    }
+
+    @Test
+    @DisplayName("POST /plans/copy-week - 지난주를 이번 주로 가져오고 건수를 알려 준다")
+    void copyWeek() throws Exception {
+        given(planService.copyWeek(MEMBER_ID, LocalDate.of(2026, 9, 7), LocalDate.of(2026, 9, 14)))
+                .willReturn(3);
+
+        mockMvc.perform(post("/plans/copy-week")
+                        .param("week", "2026-09-17")   // 주 가운데 날짜를 넣어도 그 주로 다룬다
+                        .with(csrf()).with(memberAuth()))
+                .andExpect(redirectedUrl("/plans/weekly?date=2026-09-14"))
+                .andExpect(flash().attribute("message",
+                        org.hamcrest.Matchers.containsString("3개")));
+    }
+
+    @Test
+    @DisplayName("POST /plans/copy-week - 가져올 것이 없으면 그렇게 말한다 - 0건은 실패가 아니다")
+    void copyWeek_nothingToCopy() throws Exception {
+        given(planService.copyWeek(eq(MEMBER_ID), any(LocalDate.class), any(LocalDate.class)))
+                .willReturn(0);
+
+        mockMvc.perform(post("/plans/copy-week")
+                        .param("week", "2026-09-14")
+                        .with(csrf()).with(memberAuth()))
+                .andExpect(flash().attribute("message", "가져올 지난주 계획이 없습니다."));
+    }
+
     @Test
     @DisplayName("POST /plans - 하루를 넘는 예상 소요 시간이면 폼으로 돌아가고 저장하지 않는다")
     void create_rejectsAbsurdEstimate() throws Exception {

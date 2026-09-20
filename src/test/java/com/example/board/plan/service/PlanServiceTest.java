@@ -401,6 +401,105 @@ class PlanServiceTest {
                 });
     }
 
+    // ── 지난주 계획 가져오기 ──────────────────────────────────────
+    //
+    // 반복 설정(매일·평일·매주)은 등록할 때 미리 정하는 것이다. 한 주를 살아 본 뒤에
+    // "이대로 한 주 더" 라고 말하는 자리가 없었다.
+
+    /** 2026-09-07(월)~09-13(일) 이 지난주, 09-14(월)~09-20(일) 이 이번 주 */
+    private static final LocalDate LAST_WEEK = LocalDate.of(2026, 9, 7);
+    private static final LocalDate THIS_WEEK = LocalDate.of(2026, 9, 14);
+
+    private Plan planOn(LocalDate date, String title) {
+        return new Plan(title, null, author(), PlanCategory.MAJOR, date, null, null);
+    }
+
+    private void givenWeek(LocalDate weekStart, List<Plan> plans) {
+        given(planRepository.findByAuthor_IdAndPlanDateBetweenOrderByPlanDateAscStartTimeAscIdAsc(
+                1L, weekStart, weekStart.plusDays(6))).willReturn(plans);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Plan> savedPlans() {
+        ArgumentCaptor<List<Plan>> saved = ArgumentCaptor.forClass(List.class);
+        then(planRepository).should().saveAll(saved.capture());
+        return saved.getValue();
+    }
+
+    @Test
+    @DisplayName("지난주 계획을 이번 주 같은 요일로 옮긴다 - 날짜가 아니라 리듬을 옮기는 일이다")
+    void copyWeek_keepsWeekday() {
+        givenWeek(LAST_WEEK, List.of(
+                planOn(LocalDate.of(2026, 9, 7), "월요일 스터디"),
+                planOn(LocalDate.of(2026, 9, 12), "금요일 모의고사")));
+        givenWeek(THIS_WEEK, List.of());
+
+        int copied = planService.copyWeek(1L, LAST_WEEK, THIS_WEEK);
+
+        assertThat(copied).isEqualTo(2);
+        assertThat(savedPlans())
+                .extracting(Plan::getPlanDate, Plan::getTitle)
+                .containsExactly(
+                        tuple(LocalDate.of(2026, 9, 14), "월요일 스터디"),
+                        tuple(LocalDate.of(2026, 9, 19), "금요일 모의고사"));
+    }
+
+    @Test
+    @DisplayName("원본은 아무것도 달라지지 않는다 - 지난주 계획을 가져온다고 지난주가 이월된 것은 아니다")
+    void copyWeek_leavesSourceUntouched() {
+        Plan source = planOn(LocalDate.of(2026, 9, 7), "월요일 스터디");
+        givenWeek(LAST_WEEK, List.of(source));
+        givenWeek(THIS_WEEK, List.of());
+
+        planService.copyWeek(1L, LAST_WEEK, THIS_WEEK);
+
+        assertThat(source.getPlanDate()).isEqualTo(LocalDate.of(2026, 9, 7));
+        assertThat(source.isRolledOver()).isFalse();
+    }
+
+    @Test
+    @DisplayName("같은 자리에 같은 제목이 이미 있으면 건너뛴다 - 두 번 눌러도 두 벌이 되지 않게")
+    void copyWeek_skipsDuplicates() {
+        givenWeek(LAST_WEEK, List.of(
+                planOn(LocalDate.of(2026, 9, 7), "월요일 스터디"),
+                planOn(LocalDate.of(2026, 9, 8), "화요일 코테")));
+        givenWeek(THIS_WEEK, List.of(planOn(LocalDate.of(2026, 9, 14), "월요일 스터디")));
+
+        int copied = planService.copyWeek(1L, LAST_WEEK, THIS_WEEK);
+
+        assertThat(copied).isEqualTo(1);
+        assertThat(savedPlans()).singleElement()
+                .satisfies(copy -> assertThat(copy.getTitle()).isEqualTo("화요일 코테"));
+    }
+
+    @Test
+    @DisplayName("가져올 것이 없으면 0 이다 - 실패가 아니라 '없음' 이다")
+    void copyWeek_emptySource() {
+        givenWeek(LAST_WEEK, List.of());
+        givenWeek(THIS_WEEK, List.of());
+
+        assertThat(planService.copyWeek(1L, LAST_WEEK, THIS_WEEK)).isZero();
+    }
+
+    @Test
+    @DisplayName("같은 주로는 복사할 수 없다 - 스스로를 복사하면 그 주가 두 벌이 된다")
+    void copyWeek_rejectsSameWeek() {
+        assertThatThrownBy(() -> planService.copyWeek(1L, THIS_WEEK, THIS_WEEK.plusDays(3)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("주 가운데 날짜를 넣어도 그 주 월요일 기준으로 다룬다")
+    void copyWeek_normalizesToMonday() {
+        givenWeek(LAST_WEEK, List.of(planOn(LocalDate.of(2026, 9, 9), "수요일 인강")));
+        givenWeek(THIS_WEEK, List.of());
+
+        planService.copyWeek(1L, LocalDate.of(2026, 9, 11), LocalDate.of(2026, 9, 17));
+
+        assertThat(savedPlans()).singleElement()
+                .satisfies(copy -> assertThat(copy.getPlanDate()).isEqualTo(LocalDate.of(2026, 9, 16)));
+    }
+
     @Test
     @DisplayName("이월한 일정은 다시 이월 대상이 되지 않는다 - 두 번 눌러도 두 개가 생기지 않게")
     void rollover_marksSourceAsRolledOver() {

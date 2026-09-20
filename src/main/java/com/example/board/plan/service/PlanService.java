@@ -21,8 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -159,9 +164,55 @@ public class PlanService {
     @Transactional
     public int rollover(Long memberId, LocalDate from, LocalDate to) {
         List<Plan> unfinished = findUnfinished(from, memberId);
-        // 옮기지 않고 복제한다 - 옮기면 어제의 완료율이 뒤에서 바뀐다 (Plan#copyTo 참고)
-        planRepository.saveAll(unfinished.stream().map(plan -> plan.copyTo(to)).toList());
+        // 옮기지 않고 복제한다 - 옮기면 어제의 완료율이 뒤에서 바뀐다 (Plan#rolloverTo 참고)
+        planRepository.saveAll(unfinished.stream().map(plan -> plan.rolloverTo(to)).toList());
         return unfinished.size();
+    }
+
+    /**
+     * 한 주의 계획을 다른 주의 같은 요일로 복사한다. 복사한 건수를 반환한다.
+     *
+     * <p>― 왜 필요한가<br>
+     * 반복 설정(매일·평일·매주)은 있지만 <b>"지난주 그대로"</b> 가 없었다. 취준 공부는 주 단위로
+     * 비슷하게 반복되는데 매주 처음부터 적게 되고, 그러다 보면 계획을 세우는 일 자체를 건너뛴다.
+     *
+     * <p>― 왜 요일을 맞추는가<br>
+     * 날짜가 아니라 리듬을 옮기는 일이다. 월요일 스터디는 이번 주에도 월요일이어야 한다.
+     *
+     * <p>― 왜 같은 제목은 건너뛰는가<br>
+     * 버튼을 두 번 누른 사람에게 계획이 두 벌 생기면, 그 주는 복사한 것이 아니라 망가진 것이다.
+     * 이월이 {@code rolledOver} 표시로 푼 문제를 여기서는 <b>이미 있는 것과 견주어</b> 푼다 -
+     * 원본(지난주)에는 아무 표시도 남기지 않는 것이 맞기 때문이다({@link Plan#copyAt}).
+     */
+    @Transactional
+    public int copyWeek(Long memberId, LocalDate fromWeekStart, LocalDate toWeekStart) {
+        LocalDate from = fromWeekStart.with(DayOfWeek.MONDAY);
+        LocalDate to = toWeekStart.with(DayOfWeek.MONDAY);
+        if (from.equals(to)) {
+            throw new IllegalArgumentException("같은 주로는 복사할 수 없습니다.");
+        }
+
+        Set<String> alreadyThere = findWeek(to, memberId).stream()
+                .map(PlanService::dayAndTitle)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        long days = ChronoUnit.DAYS.between(from, to);
+        List<Plan> copies = new ArrayList<>();
+        for (Plan plan : findWeek(from, memberId)) {
+            Plan copy = plan.copyAt(plan.getPlanDate().plusDays(days));
+            // add 가 false 면 그 자리에 같은 제목이 이미 있다 - 지난주 안의 중복도 함께 걸러진다
+            if (alreadyThere.add(dayAndTitle(copy))) {
+                copies.add(copy);
+            }
+        }
+
+        planRepository.saveAll(copies);
+        return copies.size();
+    }
+
+    /** "같은 날 같은 제목" 을 한 값으로 - 중복 판단의 기준을 한 곳에만 둔다 */
+    private static String dayAndTitle(Plan plan) {
+        return plan.getPlanDate() + "\u0000" + plan.getTitle();
     }
 
     @Transactional

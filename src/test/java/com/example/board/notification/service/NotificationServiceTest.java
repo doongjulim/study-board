@@ -1,5 +1,6 @@
 package com.example.board.notification.service;
 
+import com.example.board.member.domain.NotificationToggles;
 import com.example.board.member.domain.Member;
 import com.example.board.member.repository.MemberRepository;
 import com.example.board.notification.domain.Notification;
@@ -66,7 +67,8 @@ class NotificationServiceTest {
     /** 해당 종류의 알림을 꺼 둔 회원 */
     private Member memberWithNotificationsOff() {
         Member member = memberWithId(1L);
-        member.changeNotificationPreference(false, 10, false, false);
+        member.changeNotificationPreference(10, NotificationToggles.allOn()
+                .withReminder(false).withPlanShared(false).withComment(false).withWeeklyReport(false));
         return member;
     }
 
@@ -104,7 +106,7 @@ class NotificationServiceTest {
     @DisplayName("notify - 리마인더는 켜고 댓글만 꺼 둔 회원은 리마인더를 받는다")
     void notify_perTypeSetting() {
         Member member = memberWithId(1L);
-        member.changeNotificationPreference(true, 10, true, false);
+        member.changeNotificationPreference(10, NotificationToggles.allOn().withComment(false));
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(notificationRepository.save(any(Notification.class)))
                 .willAnswer(inv -> inv.getArgument(0));

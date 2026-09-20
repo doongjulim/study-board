@@ -14,7 +14,7 @@ class NotificationPreferenceTest {
     private static final LocalDateTime TEN_AM = LocalDateTime.of(2026, 8, 12, 10, 0);
 
     private NotificationPreference withLead(int minutes) {
-        return NotificationPreference.createDefault().change(true, minutes, true, true);
+        return NotificationPreference.createDefault().change(minutes, NotificationToggles.allOn());
     }
 
     @Test
@@ -65,7 +65,7 @@ class NotificationPreferenceTest {
         @DisplayName("리마인더를 꺼 두면 언제든 보내지 않는다")
         void disabled() {
             NotificationPreference off =
-                    NotificationPreference.createDefault().change(false, 10, true, true);
+                    NotificationPreference.createDefault().change(10, NotificationToggles.allOn().withReminder(false));
 
             assertThat(off.remindsAt(TEN_AM, TEN_AM)).isFalse();
             assertThat(off.remindsAt(TEN_AM, TEN_AM.plusMinutes(5))).isFalse();
@@ -80,7 +80,7 @@ class NotificationPreferenceTest {
         @DisplayName("종류별로 따로 끌 수 있다")
         void perType() {
             NotificationPreference preference =
-                    NotificationPreference.createDefault().change(true, 15, false, true);
+                    NotificationPreference.createDefault().change(15, NotificationToggles.allOn().withPlanShared(false));
 
             assertThat(preference.isReminderEnabled()).isTrue();
             assertThat(preference.isPlanSharedEnabled()).isFalse();
@@ -92,14 +92,14 @@ class NotificationPreferenceTest {
         @DisplayName("상한을 넘는 리드타임은 거부한다 (스케줄러 조회 구간과 같은 값이다)")
         void rejectsTooLongLead() {
             assertThatThrownBy(() -> NotificationPreference.createDefault()
-                    .change(true, NotificationPreference.MAX_LEAD_MINUTES + 1, true, true))
+                    .change(NotificationPreference.MAX_LEAD_MINUTES + 1, NotificationToggles.allOn()))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
         @Test
         @DisplayName("음수 리드타임은 거부한다")
         void rejectsNegativeLead() {
-            assertThatThrownBy(() -> NotificationPreference.createDefault().change(true, -1, true, true))
+            assertThatThrownBy(() -> NotificationPreference.createDefault().change(-1, NotificationToggles.allOn()))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

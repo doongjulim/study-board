@@ -81,6 +81,23 @@
                     <span class="rank-nickname" th:text="${row.nickname}">닉네임</span>
                     <span class="tag-goal" th:if="${row.goalMet}" title="주간 목표 달성">목표 달성</span>
                     <span class="rank-time" th:text="${row.readableTime}">0분</span>
+                    <!--
+                      응원. 순위 옆에 두는 이유는 숫자를 보고 누르는 버튼이기 때문이다 -
+                      따로 떼어 놓으면 "잘한 사람에게" 가 아니라 "아무에게나" 가 된다.
+                      자기 자신에게는 보낼 수 없고, 오늘 이미 보냈으면 보낸 표시로 바뀐다.
+                    -->
+                    <form th:unless="${row.me}" th:action="@{/groups/{id}/cheer/{memberId}(id=${group.id}, memberId=${row.memberId})}"
+                          method="post" class="inline-form cheer-form">
+                        <button type="submit" class="cheer-btn"
+                                th:classappend="${cheeredToday.contains(row.memberId)} ? 'sent'"
+                                th:disabled="${cheeredToday.contains(row.memberId)}"
+                                th:attr="aria-label=${cheeredToday.contains(row.memberId)
+                                         ? '오늘 ' + row.nickname + '님을 이미 응원했습니다'
+                                         : row.nickname + '님 응원하기'},
+                                         title=${cheeredToday.contains(row.memberId)
+                                         ? '오늘은 이미 응원했어요'
+                                         : '응원 보내기 (하루 한 번)'}">👏</button>
+                    </form>
                 </div>
                 <div class="rank-bar">
                     <span class="rank-bar-fill" th:style="'width:' + ${row.share} + '%'"></span>

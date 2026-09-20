@@ -4,6 +4,7 @@ import com.example.board.group.domain.GroupMember;
 import com.example.board.group.domain.InviteCode;
 import com.example.board.group.domain.StudyGroup;
 import com.example.board.group.dto.GroupForm;
+import com.example.board.group.repository.CheerRepository;
 import com.example.board.group.repository.GroupMemberRepository;
 import com.example.board.group.repository.StudyGroupRepository;
 import com.example.board.member.domain.Member;
@@ -30,6 +31,8 @@ public class StudyGroupService {
 
     private final StudyGroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    /** 그룹이 사라지면 그 안에서 오간 응원도 의미가 없다 (deleteGroupWithMemberships) */
+    private final CheerRepository cheerRepository;
     private final MemberRepository memberRepository;
 
     private final Random random = new SecureRandom();
@@ -149,7 +152,16 @@ public class StudyGroupService {
      * <p>DB 의 cascade 는 그대로 둔다 - 애플리케이션을 거치지 않고 지워지는 경우의 마지막 방어선이다.
      * 기대지 않을 뿐 없앨 이유는 없다.</p>
      */
+    /**
+     * 그룹과 그에 딸린 것들을 함께 지운다.
+     *
+     * <p>DB 에도 {@code on delete cascade} 가 걸려 있지만 거기에 기대지 않는다 -
+     * 그 규칙은 마이그레이션에만 있어서 엔티티로 스키마를 만드는 테스트에는 없고,
+     * ORM 은 그 정리를 몰라 같은 트랜잭션 안에서 이미 사라진 행을 계속 들고 있다.
+     * 그룹에 딸린 것이 늘어나면 지우는 자리도 여기 하나다.</p>
+     */
     private void deleteGroupWithMemberships(StudyGroup group) {
+        cheerRepository.deleteByStudyGroup_Id(group.getId());
         groupMemberRepository.deleteByStudyGroup_Id(group.getId());
         groupRepository.delete(group);
     }

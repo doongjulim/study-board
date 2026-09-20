@@ -18,9 +18,24 @@
         </nav>
         <div class="header-controls">
             <!-- 진행 중인 학습 타이머: 페이지를 옮겨도 유지되도록 헤더에 둔다 (timer.js 가 채운다) -->
-            <div id="timer-box" class="timer-box" th:if="${currentMember != null}" hidden>
+            <!--
+              data-pomodoro-*: 25·5·15 라는 정책을 JS 에 적지 않기 위해 서버가 실어 준다
+              (Pomodoro / PomodoroPolicyAdvice). 두 곳에 적으면 언젠가 한쪽만 바뀐다.
+            -->
+            <div id="timer-box" class="timer-box" th:if="${currentMember != null}" hidden
+                 th:attr="data-focus-seconds=${pomodoro.focusSeconds},
+                          data-short-break-seconds=${pomodoro.shortBreakSeconds},
+                          data-long-break-seconds=${pomodoro.longBreakSeconds},
+                          data-blocks-before-long-break=${pomodoro.blocksBeforeLongBreak}">
                 <span id="timer-label" class="timer-label">학습 중</span>
                 <span id="timer-clock" class="timer-clock">00:00:00</span>
+                <!--
+                  포모도로는 스톱워치를 대체하지 않고 켜고 끄는 층이다 -
+                  인강 한 편이 70분이면 25분에 끊기는 것이 방해가 된다.
+                  aria-pressed 로 켜짐 상태를 알린다(색만으로는 눌린 버튼인지 알 수 없다).
+                -->
+                <button id="pomodoro-toggle" type="button" class="timer-mode"
+                        aria-pressed="false" aria-label="포모도로 모드">🍅</button>
                 <button id="timer-stop" type="button" class="timer-stop" aria-label="학습 종료">⏹</button>
             </div>
             <div class="auth-menu" th:if="${currentMember != null}">

@@ -60,8 +60,19 @@
 }
 .week-plan:hover { filter: brightness(.95); }
 .week-plan.done { text-decoration: line-through; opacity: .6; }
-.week-add { display: inline-block; font-size: .75rem; color: var(--ink-soft); text-decoration: none; margin-top: 4px; }
-.week-add:hover { color: var(--accent); }
+/* 칸에서 바로 적는 한 줄.
+   테두리를 평소에 감추는 이유는 일곱 칸에 입력 상자가 일곱 개 놓이면 격자가 폼처럼 보이기 때문이다 -
+   '+ 추가' 링크이던 때의 인상을 유지하면서, 커서가 닿으면 입력칸임을 드러낸다. */
+.week-add { margin-top: 4px; }
+.week-add-input {
+  width: 100%; box-sizing: border-box; font: inherit; font-size: .75rem;
+  padding: 3px 6px; border: 1px solid transparent; border-radius: 6px;
+  background: transparent; color: var(--ink);
+}
+.week-add-input::placeholder { color: var(--ink-soft); }
+.week-add-input:hover { border-color: var(--line); }
+.week-add-input:focus { outline: 2px solid var(--accent); border-color: transparent; background: var(--paper); }
+.week-add-input:disabled { opacity: .5; }
 
 /* 월간 캘린더 */
 .calendar {
@@ -453,7 +464,25 @@ header.site .nickname:hover { color: var(--accent); }
 .timer-clock { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
 .timer-stop { border: none; background: none; cursor: pointer; font-size: .9rem;
   line-height: 1; padding: 0; color: var(--danger); }
+/* 포모도로 켜기/끄기.
+   꺼져 있을 때 흐리게 두는 이유는 스톱워치가 기본이기 때문이다 - 이 버튼은 권유가 아니라 선택지다.
+   켜짐 여부는 aria-pressed 가 말해 주므로(header.html) 색은 훑을 때의 단서일 뿐이다. */
+.timer-mode { border: none; background: none; cursor: pointer; font-size: .9rem;
+  line-height: 1; padding: 0; opacity: .35; filter: grayscale(1); transition: opacity .15s, filter .15s; }
+.timer-mode:hover { opacity: .7; filter: grayscale(.3); }
+.timer-mode.on { opacity: 1; filter: none; }
 .btn-timer.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* 그룹 응원.
+   보낸 뒤에는 흐려지고 눌리지 않는다 - '보냈음' 을 색이 아니라 상태(disabled)로도 말해야
+   스크린리더와 키보드에서도 같은 것이 전해진다. */
+.cheer-form { display: inline-flex; margin: 0; }
+.cheer-btn { border: none; background: none; cursor: pointer; font-size: .95rem; line-height: 1;
+  padding: 2px 4px; border-radius: 6px; filter: grayscale(1); opacity: .45;
+  transition: opacity .15s, filter .15s, transform .1s; }
+.cheer-btn:hover { opacity: 1; filter: none; transform: scale(1.15); }
+.cheer-btn.sent { opacity: 1; filter: none; cursor: default; transform: none; }
+.cheer-btn:disabled { cursor: default; }
 
 /* ── 에러 페이지 ───────────────────────────────── */
 /* 색상을 하드코딩하지 않고 토큰을 쓰므로 다크모드에서도 대비가 유지된다 */

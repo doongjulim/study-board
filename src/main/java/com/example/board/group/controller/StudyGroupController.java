@@ -3,6 +3,7 @@ package com.example.board.group.controller;
 import com.example.board.auth.MemberPrincipal;
 import com.example.board.group.domain.StudyGroup;
 import com.example.board.group.dto.GroupForm;
+import com.example.board.group.service.CheerService;
 import com.example.board.group.service.StudyGroupService;
 import com.example.board.stats.service.GroupStatsService;
 import jakarta.validation.Valid;
@@ -28,6 +29,8 @@ public class StudyGroupController {
      * 서비스 계층의 의존은 stats → group 한 방향으로만 두고, 화면 조립만 여기서 한다.
      */
     private final GroupStatsService groupStatsService;
+    /** 그룹의 '구성' 과 그 안에서 오가는 '행동' 은 다른 책임이라 서비스가 나뉘어 있다 */
+    private final CheerService cheerService;
     private final Clock clock;
 
     /** 내 그룹 목록 + 만들기·초대 코드 가입 폼 - 항목이 적어 한 화면에서 처리한다 */
@@ -84,7 +87,29 @@ public class StudyGroupController {
         model.addAttribute("isOwner", group.isOwnedBy(principal.id()));
         model.addAttribute("ranking", groupStatsService.weeklyRanking(id, principal.id(), today));
         model.addAttribute("challenge", groupStatsService.weeklyChallenge(id, today));
+        // 오늘 이미 응원한 사람 - 화면이 버튼을 잠근다 (사람마다 따로 묻지 않는다)
+        model.addAttribute("cheeredToday", cheerService.findCheeredToday(id, principal.id()));
         return "groups/detail";
+    }
+
+    /**
+     * 응원 보내기.
+     *
+     * <p>순위는 상위권을 더 뛰게 하지만 하위권을 조용히 떠나게 한다. 응원은 반대 방향으로
+     * 작동하는 유일한 버튼이라 순위표 안에 둔다 - 숫자 옆에 있어야 그 숫자를 보고 누른다.</p>
+     *
+     * <p>이미 오늘 보냈어도 오류로 다루지 않는다 - 두 번 누른 것은 사용자의 잘못이 아니고,
+     * 결과는 어느 쪽이든 같다({@code CheerService#send}).</p>
+     */
+    @PostMapping("/{id}/cheer/{memberId}")
+    public String cheer(@PathVariable Long id,
+                        @PathVariable Long memberId,
+                        @AuthenticationPrincipal MemberPrincipal principal,
+                        RedirectAttributes redirectAttributes) {
+        boolean sent = cheerService.send(id, principal.id(), memberId);
+        redirectAttributes.addFlashAttribute("message",
+                sent ? "응원을 보냈습니다 👏" : "오늘은 이미 응원을 보냈어요.");
+        return "redirect:/groups/" + id;
     }
 
     @PostMapping("/{id}/leave")

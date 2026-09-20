@@ -36,6 +36,19 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             """)
     List<Long> findIdsAllowingPlanSharedNotificationIn(@Param("candidateIds") Collection<Long> candidateIds);
 
+    /**
+     * 주간 리포트 알림을 받기로 한 활성 회원 id.
+     *
+     * <p>일요일 저녁에 한 번 도는 스케줄러가 쓴다. 회원을 통째로 불러오지 않고 id 만 가져오는 이유는,
+     * 실제로 알림이 가는 사람은 <b>그 주에 기록이 있는 사람</b>뿐이라 대부분이 걸러지기 때문이다.</p>
+     */
+    @Query("""
+            select m.id from Member m
+            where m.withdrawnAt is null
+              and m.notificationPreference.weeklyReportEnabled = true
+            """)
+    List<Long> findIdsAllowingWeeklyReportNotification();
+
     /** 캘린더 구독 - 로그인 없이 들어오는 요청이라 토큰만으로 주인을 찾는다 */
     Optional<Member> findByCalendarToken(String calendarToken);
 

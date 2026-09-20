@@ -1,5 +1,6 @@
 package com.example.board.plan.scheduler;
 
+import com.example.board.member.domain.NotificationToggles;
 import com.example.board.member.domain.Member;
 import com.example.board.plan.domain.Plan;
 import com.example.board.plan.domain.PlanCategory;
@@ -140,7 +141,7 @@ class PlanReminderSchedulerTest {
     @DisplayName("리드타임을 길게 잡은 회원은 더 일찍 받는다")
     void longerLeadTime() {
         Plan plan = plan("모의면접", TODAY, LocalTime.of(10, 40));
-        plan.getAuthor().changeNotificationPreference(true, 60, true, true);
+        plan.getAuthor().changeNotificationPreference(60, NotificationToggles.allOn());
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
                 TODAY, LocalTime.of(10, 0), LocalTime.of(11, 0)))
                 .willReturn(List.of(plan));
@@ -155,7 +156,7 @@ class PlanReminderSchedulerTest {
     @DisplayName("리마인더를 꺼 둔 회원에게는 보내지 않는다")
     void reminderDisabled() {
         Plan plan = plan("영어 스터디", TODAY, LocalTime.of(10, 5));
-        plan.getAuthor().changeNotificationPreference(false, 10, true, true);
+        plan.getAuthor().changeNotificationPreference(10, NotificationToggles.allOn().withReminder(false));
         given(planRepository.findByPlanDateAndCompletedFalseAndReminderSentFalseAndStartTimeBetween(
                 TODAY, LocalTime.of(10, 0), LocalTime.of(11, 0)))
                 .willReturn(List.of(plan));
