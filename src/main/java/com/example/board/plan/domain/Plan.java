@@ -23,14 +23,25 @@ public class Plan {
     /** 예상 소요 시간의 상한(분) - 하루. 근거는 {@link #validateEstimate} 에 적었다 */
     public static final int MAX_ESTIMATED_MINUTES = 24 * 60;
 
+    /**
+     * 제목·메모의 길이 상한. <b>컬럼 길이와 같은 값이어야 하므로 여기 한 번만 적고</b>
+     * 컬럼 선언과 폼 검증이 모두 이것을 쓴다.
+     *
+     * <p>밖에서 들어오는 값(캘린더 가져오기)은 우리 폼을 거치지 않으므로 검증이 걸리지 않는다.
+     * 알림 메시지에서 이미 한 번 겪은 일이다 - 컬럼 상한을 넘는 값이 커밋 때 터지면서
+     * 같은 트랜잭션의 다른 저장까지 함께 롤백됐다({@code Notification#abbreviate}).</p>
+     */
+    public static final int MAX_TITLE_LENGTH = 100;
+    public static final int MAX_CONTENT_LENGTH = 1000;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = MAX_TITLE_LENGTH)
     private String title;
 
-    @Column(length = 1000)
+    @Column(length = MAX_CONTENT_LENGTH)
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)

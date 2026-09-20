@@ -20,10 +20,10 @@ import java.time.LocalTime;
 public class PlanForm {
 
     @NotBlank(message = "제목을 입력하세요.")
-    @Size(max = 100, message = "제목은 100자 이하로 입력하세요.")
+    @Size(max = Plan.MAX_TITLE_LENGTH, message = "제목은 100자 이하로 입력하세요.")
     private String title;
 
-    @Size(max = 1000, message = "메모는 1000자 이하로 입력하세요.")
+    @Size(max = Plan.MAX_CONTENT_LENGTH, message = "메모는 1000자 이하로 입력하세요.")
     private String content;
 
     @NotNull(message = "분류를 선택하세요.")

@@ -25,7 +25,7 @@ import java.time.LocalDate;
 public class QuickPlanForm {
 
     @NotBlank(message = "할 일을 입력하세요.")
-    @Size(max = 100, message = "제목은 100자 이하로 입력하세요.")
+    @Size(max = Plan.MAX_TITLE_LENGTH, message = "제목은 100자 이하로 입력하세요.")
     private String title;
 
     @NotNull(message = "날짜를 선택하세요.")

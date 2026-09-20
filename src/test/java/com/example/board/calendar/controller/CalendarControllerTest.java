@@ -7,6 +7,7 @@ import com.example.board.auth.jwt.JwtAuthenticationFilter;
 import com.example.board.auth.jwt.JwtTokenProvider;
 import com.example.board.auth.service.TokenService;
 import com.example.board.calendar.service.CalendarFeedService;
+import com.example.board.calendar.service.CalendarImportService;
 import com.example.board.config.SecurityConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -20,6 +21,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import java.nio.charset.StandardCharsets;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
@@ -29,10 +32,13 @@ import java.time.ZoneId;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.BDDMockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -55,6 +61,7 @@ class CalendarControllerTest {
 
     @Autowired MockMvc mockMvc;
     @MockBean CalendarFeedService calendarFeedService;
+    @MockBean CalendarImportService calendarImportService;
     @MockBean TokenService tokenService;
 
     /** 호출 여부를 확인하는 테스트가 있으므로 실행 순서와 무관하게 깨끗한 상태에서 시작한다 */
@@ -157,4 +164,45 @@ class CalendarControllerTest {
 
         then(calendarFeedService).should(never()).issueToken(any());
     }
+
+    // ── 가져오기 ──────────────────────────────────────────
+
+    @Test
+    @DisplayName("POST /calendar/import - .ics 를 읽어 계획으로 들여오고 결과를 안내에 싣는다")
+    void importIcs() throws Exception {
+        given(calendarImportService.importIcs(eq(MEMBER_ID), any(String.class)))
+                .willReturn(new CalendarImportService.ImportSummary(3, 1, 2));
+
+        mockMvc.perform(multipart("/calendar/import")
+                        .file(new MockMultipartFile("file", "study.ics", "text/calendar",
+                                "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n".getBytes(StandardCharsets.UTF_8)))
+                        .with(csrf()).with(memberAuth()))
+                .andExpect(redirectedUrl("/me"))
+                .andExpect(flash().attribute("message",
+                        org.hamcrest.Matchers.containsString("3개를 가져왔습니다")));
+    }
+
+    @Test
+    @DisplayName("POST /calendar/import - 빈 파일이면 안내만 남기고 아무것도 하지 않는다")
+    void importRejectsEmptyFile() throws Exception {
+        mockMvc.perform(multipart("/calendar/import")
+                        .file(new MockMultipartFile("file", "study.ics", "text/calendar", new byte[0]))
+                        .with(csrf()).with(memberAuth()))
+                .andExpect(redirectedUrl("/me"));
+
+        then(calendarImportService).should(never()).importIcs(any(), any());
+    }
+
+    @Test
+    @DisplayName("POST /calendar/import - 비로그인은 들여올 수 없다")
+    void importRequiresLogin() throws Exception {
+        mockMvc.perform(multipart("/calendar/import")
+                        .file(new MockMultipartFile("file", "study.ics", "text/calendar",
+                                "BEGIN:VCALENDAR".getBytes(StandardCharsets.UTF_8)))
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection());
+
+        then(calendarImportService).should(never()).importIcs(any(), any());
+    }
 }
+
